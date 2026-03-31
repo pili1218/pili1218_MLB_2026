@@ -1,0 +1,83 @@
+{
+  "game_date": "YYYY-MM-DD",
+  "game_time": "HH:MM TZ",
+  "venue": "Stadium Name, City, State",
+  "home_team": "Team Name",
+  "away_team": "Team Name",
+  "weather": {
+    "condition": "Description",
+    "temperature": "XX°F",
+    "wind_speed": "X mph Direction"
+  },
+  "betting": {
+    "line": "X.X",
+    "over_under": "X.X"
+  },
+  "starters": {
+    "home": {
+      "name": "Pitcher Name",
+      "handedness": "Left-handed or Right-handed",
+      "era": "X.XX",
+      "whip": "X.XX",
+      "win_loss": "XX-XX",
+      "batting_avg_against": ".XXX",
+      "innings_pitched": "XXX.X",
+      "strikeouts": "XXX",
+      "walks": "XX",
+      "recent_games": [
+        {
+          "date": "MM/DD",
+          "opponent": "Team Name",
+          "score": "X-X",
+          "result": "Win or Loss",
+          "pitches": "XX",
+          "innings": "X.X",
+          "runs": "X",
+          "earned_runs": "X",
+          "walks": "X",
+          "strikeouts": "X",
+          "hits": "X",
+          "home_runs": "X"
+        }
+      ]
+    },
+    "away": {
+      "name": "Pitcher Name",
+      "handedness": "Left-handed or Right-handed",
+      "era": "X.XX",
+      "whip": "X.XX",
+      "win_loss": "XX-XX",
+      "batting_avg_against": ".XXX",
+      "innings_pitched": "XXX.X",
+      "strikeouts": "XXX",
+      "walks": "XX",
+      "recent_games": []
+    }
+  },
+  "team_stats": {
+    "home": {
+      "batting_avg": ".XXX",
+      "on_base_pct": ".XXX",
+      "avg_runs": "X.X",
+      "recent_form": "X-X",
+      "home_record": "XX-XX",
+      "last_10": "X-X",
+      "vs_left_or_right": "XX-XX vs Lefty/Righty Starters",
+      "streak": "X Win/Loss Streak"
+    },
+    "away": {
+      "batting_avg": ".XXX",
+      "on_base_pct": ".XXX",
+      "avg_runs": "X.X",
+      "recent_form": "X-X",
+      "away_record": "XX-XX",
+      "last_10": "X-X",
+      "vs_left_or_right": "XX-XX vs Lefty/Righty Starters",
+      "streak": "X Win/Loss Streak"
+    }
+  },
+  "lineups": {
+    "home": [],
+    "away": []
+  }
+}

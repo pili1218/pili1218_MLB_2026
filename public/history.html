@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prediction History — MLB Game Analyzer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="bg-stitches"></div>
+
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <svg class="ball-icon" viewBox="0 0 40 40" fill="none">
+          <circle cx="20" cy="20" r="19" fill="white" stroke="#c8102e" stroke-width="1.5"/>
+          <path d="M7 14 Q14 18 7 26" stroke="#c8102e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M33 14 Q26 18 33 26" stroke="#c8102e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M9 13 Q20 10 31 13" stroke="#c8102e" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+          <path d="M9 27 Q20 30 31 27" stroke="#c8102e" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-text">MLB <span class="accent">Prediction</span> History</span>
+      </div>
+      <nav class="header-nav">
+        <a href="/" class="nav-tab">
+          <svg viewBox="0 0 20 20" fill="currentColor" class="nav-icon">
+            <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.553.894l-4 2A1 1 0 016 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd"/>
+          </svg>
+          Analyzer
+        </a>
+        <a href="/history" class="nav-tab nav-tab--active">
+          <svg viewBox="0 0 20 20" fill="currentColor" class="nav-icon">
+            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+            <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+          </svg>
+          History
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <!-- ACCURACY DASHBOARD -->
+    <section id="statsSection" class="stats-section">
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card"><div class="stat-val" id="stTotal">—</div><div class="stat-lbl">Total Predictions</div></div>
+        <div class="stat-card"><div class="stat-val" id="stGraded">—</div><div class="stat-lbl">Graded</div></div>
+        <div class="stat-card stat-card--ml"><div class="stat-val" id="stML">—</div><div class="stat-lbl">ML Accuracy</div></div>
+        <div class="stat-card stat-card--ou"><div class="stat-val" id="stOU">—</div><div class="stat-lbl">O/U Accuracy</div></div>
+        <div class="stat-card"><div class="stat-val" id="stMLW">—</div><div class="stat-lbl">ML W / L</div></div>
+        <div class="stat-card"><div class="stat-val" id="stOUW">—</div><div class="stat-lbl">O/U W / L</div></div>
+      </div>
+
+      <!-- By season type breakdown -->
+      <div id="seasonBreakdown" class="season-breakdown hidden"></div>
+
+      <!-- Running accuracy + confidence tier investigation -->
+      <div id="investigationPanel" class="investigation-panel hidden">
+        <div class="inv-block">
+          <div class="inv-block-title">Running Accuracy Trend</div>
+          <div class="inv-windows" id="invWindows"></div>
+          <div class="inv-trend-row" id="invTrendRow"></div>
+        </div>
+        <div class="inv-block">
+          <div class="inv-block-title">Accuracy by Confidence Tier</div>
+          <div id="tierTable" class="tier-table-wrap"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RECENT GRADED -->
+    <section class="hist-section">
+      <div class="hist-header-row">
+        <h2 class="hist-title">All Predictions</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn-clear" onclick="loadHistory()">Refresh</button>
+        </div>
+      </div>
+
+      <div id="histTable" class="hist-table-wrap">
+        <div class="hist-loading">Loading…</div>
+      </div>
+
+      <div id="pagination" class="pagination"></div>
+    </section>
+
+  </main>
+
+  <!-- RESULT ENTRY MODAL -->
+  <div id="modal" class="modal-overlay hidden" onclick="closeModal(event)">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">Enter Actual Result</div>
+          <div class="modal-sub" id="modalMatchup"></div>
+        </div>
+        <button class="modal-close" onclick="document.getElementById('modal').classList.add('hidden')">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-pred-row" id="modalPredRow"></div>
+
+        <div class="modal-form">
+          <div class="form-group">
+            <label class="form-label" id="homeScoreLabel">Home Score</label>
+            <input class="form-input" type="number" id="homeScore" min="0" placeholder="0" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" id="awayScoreLabel">Away Score</label>
+            <input class="form-input" type="number" id="awayScore" min="0" placeholder="0" />
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label class="form-label">Notes (optional)</label>
+            <input class="form-input" type="text" id="resultNotes" placeholder="e.g. rain delay, injury scratch…" />
+          </div>
+        </div>
+
+        <div id="modalError" class="modal-error hidden"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-clear" onclick="document.getElementById('modal').classList.add('hidden')">Cancel</button>
+        <button class="btn-analyze" onclick="submitResult()">Save Result</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>MLB Game Analyzer · Prediction Tracker · Powered by Claude AI</p>
+  </footer>
+
+  <script src="history.js"></script>
+</body>
+</html>

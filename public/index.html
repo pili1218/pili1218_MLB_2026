@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MLB Game Analyzer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="bg-stitches"></div>
+
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <svg class="ball-icon" viewBox="0 0 40 40" fill="none">
+          <circle cx="20" cy="20" r="19" fill="white" stroke="#c8102e" stroke-width="1.5"/>
+          <path d="M7 14 Q14 18 7 26" stroke="#c8102e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M33 14 Q26 18 33 26" stroke="#c8102e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M9 13 Q20 10 31 13" stroke="#c8102e" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+          <path d="M9 27 Q20 30 31 27" stroke="#c8102e" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-text">MLB <span class="accent">Game</span> Analyzer</span>
+      </div>
+      <nav class="header-nav">
+        <a href="/" class="nav-tab nav-tab--active">
+          <svg viewBox="0 0 20 20" fill="currentColor" class="nav-icon">
+            <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.553.894l-4 2A1 1 0 016 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd"/>
+          </svg>
+          Analyzer
+        </a>
+        <a href="/history" class="nav-tab" id="historyNavTab">
+          <svg viewBox="0 0 20 20" fill="currentColor" class="nav-icon">
+            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+            <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+          </svg>
+          History
+          <span class="nav-badge" id="navBadge" style="display:none"></span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- GLOBE HERO -->
+  <section class="globe-hero">
+    <div class="globe-hero-inner">
+      <div class="globe-text">
+        <h1 class="globe-headline">MLB <span class="globe-accent">Game Analyzer</span></h1>
+        <p class="globe-sub">Upload screenshots · Extract stats · Generate predictions</p>
+        <div class="globe-stats">
+          <div class="globe-stat"><span class="globe-stat-num">3</span><span class="globe-stat-label">AI Models</span></div>
+          <div class="globe-stat-divider"></div>
+          <div class="globe-stat"><span class="globe-stat-num">v2.2</span><span class="globe-stat-label">Framework</span></div>
+          <div class="globe-stat-divider"></div>
+          <div class="globe-stat"><span class="globe-stat-num">MLB</span><span class="globe-stat-label">All Season</span></div>
+        </div>
+      </div>
+      <div class="globe-canvas-wrap">
+        <canvas id="globeCanvas"></canvas>
+        <div id="globeLoading" class="globe-loading">Loading globe…</div>
+        <div class="globe-hint">Drag to rotate · Scroll to zoom</div>
+      </div>
+    </div>
+  </section>
+
+  <main class="main">
+
+    <!-- UPLOAD SECTION -->
+    <section class="upload-section">
+      <div
+        id="dropZone"
+        class="drop-zone"
+        ondragover="handleDragOver(event)"
+        ondragleave="handleDragLeave(event)"
+        ondrop="handleDrop(event)"
+      >
+        <div class="drop-icon">
+          <svg viewBox="0 0 64 64" fill="none">
+            <rect x="4" y="12" width="56" height="40" rx="4" stroke="currentColor" stroke-width="2.5"/>
+            <path d="M32 28 L32 44" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M24 36 L32 28 L40 36" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M20 20 L28 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+          </svg>
+        </div>
+        <p class="drop-title">Drop MLB game screenshots here</p>
+        <p class="drop-sub">or</p>
+        <label class="btn-upload" for="fileInput">Choose Images</label>
+        <input
+          type="file"
+          id="fileInput"
+          accept="image/*"
+          multiple
+          style="display:none"
+          onchange="handleFileSelect(event)"
+        />
+        <p class="drop-hint">Supports PNG, JPG, WEBP · Up to 10 images · 20MB each</p>
+      </div>
+
+      <!-- Preview grid -->
+      <div id="previewGrid" class="preview-grid hidden"></div>
+
+      <!-- Model selector -->
+      <div class="model-selector">
+        <div class="model-selector-label">AI Model</div>
+        <div class="model-cards">
+
+          <button class="model-card" data-model="claude-opus-4-6" onclick="selectModel(this)">
+            <div class="model-card-top">
+              <span class="model-name">Opus 4.6</span>
+              <span class="model-badge badge-best">Best</span>
+            </div>
+            <div class="model-desc">Most accurate. Deep reasoning, best for complex stats &amp; full pitcher logs.</div>
+            <div class="model-meta">
+              <span class="meta-speed slow">●●● Thorough</span>
+            </div>
+          </button>
+
+          <button class="model-card model-card--active" data-model="claude-sonnet-4-6" onclick="selectModel(this)">
+            <div class="model-card-top">
+              <span class="model-name">Sonnet 4.6</span>
+              <span class="model-badge badge-rec">Recommended</span>
+            </div>
+            <div class="model-desc">Balanced speed &amp; accuracy. Great for standard game previews and lineups.</div>
+            <div class="model-meta">
+              <span class="meta-speed mid">●● Balanced</span>
+            </div>
+          </button>
+
+          <button class="model-card" data-model="claude-haiku-4-5-20251001" onclick="selectModel(this)">
+            <div class="model-card-top">
+              <span class="model-name">Haiku 4.5</span>
+              <span class="model-badge badge-fast">Fastest</span>
+            </div>
+            <div class="model-desc">Fastest &amp; cheapest. Good for simple extractions, basic stats only.</div>
+            <div class="model-meta">
+              <span class="meta-speed fast">● Fast</span>
+            </div>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- Analyze button -->
+      <div id="analyzeBar" class="analyze-bar hidden">
+        <span id="fileCount" class="file-count"></span>
+        <div class="btn-group">
+          <button class="btn-clear" onclick="clearAll()">Clear</button>
+          <button class="btn-analyze" id="analyzeBtn" onclick="analyzeImages()">
+            <svg viewBox="0 0 20 20" fill="currentColor" class="btn-icon">
+              <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.553.894l-4 2A1 1 0 016 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd"/>
+            </svg>
+            Analyze &amp; Generate JSON
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATUS / LOADING -->
+    <div id="status" class="status hidden">
+      <div class="spinner"></div>
+      <p id="statusText">Analyzing images with Claude AI…</p>
+    </div>
+
+    <!-- RESULT SECTION -->
+    <section id="resultSection" class="result-section hidden">
+      <div class="result-header">
+        <div class="result-title-row">
+          <h2 class="result-title">Extracted JSON</h2>
+          <div class="result-meta" id="resultMeta"></div>
+        </div>
+        <div class="result-actions">
+          <button class="btn-copy" onclick="copyJSON()" id="copyBtn">
+            <svg viewBox="0 0 20 20" fill="currentColor" class="btn-icon">
+              <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+              <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/>
+            </svg>
+            Copy
+          </button>
+          <button class="btn-download" onclick="downloadJSON()">
+            <svg viewBox="0 0 20 20" fill="currentColor" class="btn-icon">
+              <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+            Download JSON
+          </button>
+          <button class="btn-new" onclick="analyzeAnother()">New Analysis</button>
+        </div>
+      </div>
+
+      <!-- Game summary cards -->
+      <div id="gameSummary" class="game-summary"></div>
+
+      <!-- JSON output -->
+      <div class="code-wrap">
+        <pre id="jsonOutput" class="json-output"></pre>
+      </div>
+    </section>
+
+    <!-- DEEP ANALYSIS / BETTING STRATEGY SECTION -->
+    <section id="predictSection" class="predict-section hidden">
+
+      <div class="predict-header">
+        <div class="predict-title-row">
+          <svg class="predict-icon-svg" viewBox="0 0 24 24" fill="none">
+            <polygon points="12,2 22,9.5 12,22 2,9.5" stroke="currentColor" stroke-width="1.8" fill="rgba(245,197,24,0.08)"/>
+            <line x1="2" y1="9.5" x2="22" y2="9.5" stroke="currentColor" stroke-width="1.4" opacity="0.6"/>
+            <line x1="12" y1="2" x2="7" y2="9.5" stroke="currentColor" stroke-width="1.4" opacity="0.6"/>
+            <line x1="12" y1="2" x2="17" y2="9.5" stroke="currentColor" stroke-width="1.4" opacity="0.6"/>
+            <line x1="7" y1="9.5" x2="12" y2="22" stroke="currentColor" stroke-width="1.4" opacity="0.6"/>
+            <line x1="17" y1="9.5" x2="12" y2="22" stroke="currentColor" stroke-width="1.4" opacity="0.6"/>
+          </svg>
+          <div>
+            <h2 class="predict-title">Deep Analysis</h2>
+            <p class="predict-subtitle">Regular Season &amp; Postseason · Betting Strategy</p>
+          </div>
+        </div>
+        <div class="predict-header-right">
+          <div id="predictStatus" class="predict-status-inline hidden">
+            <div class="spinner-sm"></div>
+            <span id="predictStatusText">Analyzing…</span>
+          </div>
+          <a href="/history" class="btn-history" target="_blank">
+            <svg viewBox="0 0 20 20" fill="currentColor" class="btn-icon">
+              <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+              <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+            </svg>
+            History
+          </a>
+          <button class="btn-predict" id="predictBtn" onclick="runDeepAnalysis()">
+            <svg viewBox="0 0 20 20" fill="currentColor" class="btn-icon">
+              <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.01.03-.02.044-.032A5 5 0 0010 5a5 5 0 00-.044 9.968A2 2 0 0012 14z"/>
+            </svg>
+            Run Deep Analysis
+          </button>
+        </div>
+      </div>
+
+      <div id="predictResult" class="predict-result hidden">
+
+        <!-- Win Probability -->
+        <div class="pb">
+          <div class="pb-label">Win Probability</div>
+          <div id="winProbSection" class="win-prob-col"></div>
+        </div>
+
+        <!-- O/U + Confidence side by side -->
+        <div class="pb ou-conf-block">
+          <div id="ouSection" class="ou-wrap"></div>
+          <div id="confSection" class="conf-wrap"></div>
+        </div>
+
+        <!-- Betting Strategy -->
+        <div class="pb">
+          <div class="pb-label">Betting Strategy</div>
+          <div id="betSection"></div>
+        </div>
+
+        <!-- Framework Metrics -->
+        <div class="pb">
+          <div class="pb-label">Framework Metrics</div>
+          <div id="metricsSection" class="metrics-grid"></div>
+        </div>
+
+        <!-- Flags & Overrides -->
+        <div class="pb">
+          <div class="pb-label">Active Flags &amp; Overrides</div>
+          <div id="flagsSection" class="flags-wrap"></div>
+        </div>
+
+        <!-- Narrative -->
+        <div class="pb">
+          <div class="pb-label">Analysis Narrative</div>
+          <div id="narrativeSection"></div>
+        </div>
+
+        <!-- Export String -->
+        <div class="pb predict-export-block">
+          <div class="pb-label">Export String</div>
+          <div id="exportSection"></div>
+        </div>
+
+        <!-- Save to History -->
+        <div class="pb save-block">
+          <div class="save-row">
+            <div class="save-info">
+              <div class="save-title">Save to Prediction Tracker</div>
+              <div class="save-sub">Store this prediction. Enter the actual score after the game to track model accuracy.</div>
+            </div>
+            <button class="btn-save" id="saveBtn" onclick="savePrediction()">
+              <svg viewBox="0 0 20 20" fill="currentColor" class="btn-icon">
+                <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293z"/>
+              </svg>
+              Save Prediction
+            </button>
+          </div>
+          <div id="saveStatus" class="save-status hidden"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>MLB Game Analyzer · Regular Season &amp; Postseason · Powered by Claude AI · <span id="footerModel">claude-sonnet-4-6</span></p>
+  </footer>
+
+  <script src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script src="globe.js"></script>
+</body>
+</html>

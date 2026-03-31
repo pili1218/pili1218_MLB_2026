@@ -1,0 +1,25 @@
+# Environment — NEVER commit API keys
+.env
+
+# Database — local data only
+predictions.db
+
+# Dependencies — install via npm install
+node_modules/
+
+# Screenshots — generated locally, too large for git
+screenshot/
+
+# Dev tooling — local capture script
+capture-screenshots.js
+
+# Next.js build artifacts (future use)
+.next/
+out/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Claude Code local settings
+.claude/settings.local.json
