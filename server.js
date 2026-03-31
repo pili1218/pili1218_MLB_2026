@@ -10,7 +10,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ─── Database Setup ───────────────────────────────────────────────────────────
-const db = new Database(path.join(__dirname, "predictions.db"));
+const dbPath = process.env.VERCEL
+  ? "/tmp/predictions.db"
+  : path.join(__dirname, "predictions.db");
+const db = new Database(dbPath);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS predictions (
@@ -889,6 +892,11 @@ app.get("/history", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "history.html"));
 });
 
+// Explicit route for /history (Vercel doesn't auto-resolve .html)
+app.get("/history", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "history.html"));
+});
+
 // 404 handler — catches unknown routes and returns JSON instead of HTML
 app.use((_req, res) => {
   res.status(404).json({ error: "Route not found" });
@@ -899,6 +907,8 @@ app.use((err, _req, res, _next) => {
   console.error("Unhandled error:", err);
   res.status(500).json({ error: err.message || "Server error" });
 });
+
+module.exports = app;
 
 app.listen(PORT, () => {
   console.log(`\n✅ MLB Analyzer running at http://localhost:${PORT}\n`);
