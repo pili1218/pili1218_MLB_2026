@@ -1,0 +1,522 @@
+==============================================================================
+  MLB GAME ANALYZER — COMPLETE USER GUIDE
+  Framework v2.2 | Powered by Claude AI
+==============================================================================
+
+OVERVIEW
+--------
+The MLB Game Analyzer is a web application that uses Claude AI to analyze
+MLB game screenshots, extract structured statistical data, and generate deep
+pre-game predictions using a proprietary analytical framework (v2.2). It
+covers both Regular Season and Postseason games and provides win probability,
+Over/Under prediction, betting strategy, and a full confidence score — all
+tracked in a local history database for ongoing accuracy measurement.
+
+------------------------------------------------------------------------------
+SECTION 1 — PURPOSE
+------------------------------------------------------------------------------
+
+The app has three core goals:
+
+1. DATA EXTRACTION
+   Upload screenshots from any MLB data source (ESPN, Baseball Reference,
+   The Athletic, DraftKings, etc.). Claude AI reads the images and converts
+   all visible game data — lineups, pitcher stats, weather, betting lines,
+   team records — into a clean, structured JSON file.
+
+2. DEEP PREDICTION
+   Feed that JSON into the MLB Game Predictor Framework v2.2. Claude AI
+   applies a multi-metric analytical model that calculates six quantitative
+   scores, checks overrides and conflict flags, and outputs win probabilities,
+   an Over/Under call, a confidence score, and a betting tier recommendation.
+
+3. ACCURACY TRACKING
+   Every prediction can be saved to a local database. After games are played,
+   you enter the actual scores. The app tracks Moneyline (ML) and Over/Under
+   (O/U) accuracy across all predictions, broken down by confidence tier,
+   season type, and recent trend windows (Last 5, Last 10, All-time).
+
+------------------------------------------------------------------------------
+SECTION 2 — THE TWO PAGES
+------------------------------------------------------------------------------
+
+PAGE 1 — ANALYZER (/)
+  The main working page. Contains the upload zone, model selector, JSON
+  output, additional context input, and deep analysis results.
+
+PAGE 2 — HISTORY (/history or /history.html)
+  The tracking dashboard. Shows the stats banner, investigation panel,
+  full prediction table, and grading interface for entering actual results.
+
+------------------------------------------------------------------------------
+SECTION 3 — WORKFLOW: STEP BY STEP
+------------------------------------------------------------------------------
+
+STEP 1 — GATHER YOUR SCREENSHOTS
+  Before using the app, take screenshots of the game data you want analyzed.
+  Useful sources include:
+    - Starting pitcher stats and recent game logs
+    - Team records, home/away splits, last 5–10 games
+    - Batting lineup and batting order
+    - Bullpen ERA/WHIP
+    - Weather forecast for the stadium
+    - Betting lines (Moneyline and Over/Under)
+    - Division standings and games back
+    - Head-to-head records
+  You can upload up to 10 images per analysis. The more data in the images,
+  the more accurate the extraction and prediction.
+
+STEP 2 — UPLOAD IMAGES
+  On the Analyzer page (/):
+    - Drag and drop screenshots into the upload zone, OR
+    - Click "Choose Images" to browse your file system
+  Supported formats: PNG, JPG, WEBP. Max 20MB per image.
+  A preview grid will appear showing all selected images. Click the X on any
+  thumbnail to remove it before analyzing.
+
+STEP 3 — SELECT YOUR AI MODEL
+  Choose one of three Claude AI models based on your needs:
+
+  OPUS 4.6 (Best)
+    Most accurate. Uses deepest reasoning. Best for complex matchups with
+    full pitcher logs, detailed stats, and postseason games. Slowest.
+
+  SONNET 4.6 (Recommended — Default)
+    Balanced speed and accuracy. Best for standard regular season games.
+    Good at filling missing data from knowledge base. Fast enough for
+    daily use.
+
+  HAIKU 4.5 (Fastest)
+    Quickest and cheapest. Good for basic extractions when you only have
+    simple stats. Less reliable for filling missing fields.
+
+STEP 4 — ANALYZE & GENERATE JSON
+  Click "Analyze & Generate JSON". The app will:
+    1. Upload your images to the server
+    2. Send them to Claude AI with extraction instructions
+    3. Claude reads every visible stat from the images (Tier 1 data)
+    4. Any missing fields are filled from Claude's MLB knowledge base
+       (Tier 2 data — pitcher stats, team records, weather, betting lines)
+    5. A multi-pass verification loop checks the JSON for errors:
+       - Missing required fields
+       - Implausible ERA/WHIP values
+       - Invalid betting lines
+       - Up to 3 correction passes until the output is clean
+    6. The verified JSON is displayed on screen
+
+  The status bar shows:
+    "✓ Verified clean after N passes" — output is reliable
+    "⚠ N minor issue(s) remain after N passes" — output has caveats
+
+STEP 5 — REVIEW THE EXTRACTED JSON
+  The JSON output shows all extracted game data including:
+    - Game date, time, venue, season type
+    - Home and away team names and starters
+    - Starting pitcher: ERA, WHIP, xFIP, last 5 game scores, last 3 ERA
+    - Team records, streaks, home/away splits
+    - Batting stats: wRC+, avg runs scored
+    - Bullpen: ERA, WHIP, xFIP
+    - Defense: DRS or OAA
+    - Weather: temperature, humidity, wind speed and direction
+    - Home plate umpire tendency
+    - Betting: Moneyline odds and Over/Under line
+    - Head-to-head records
+    - Division standings and games back
+
+  You can Copy the JSON or Download it as a .json file for your records.
+
+  Data source tracking is included:
+    "extracted_from_image" — fields read directly from your screenshots
+    "filled_from_knowledge" — fields Claude recalled from its knowledge base
+    "estimated" — fields approximated when neither source was available
+    "Data Notice" — fields that could not be found even after knowledge search
+
+STEP 6 — ADD ADDITIONAL CONTEXT (Optional)
+  After the JSON appears, an "Additional Context" text box is shown.
+  Type any extra information that was NOT in your screenshots:
+    - Injury updates ("Shohei Ohtani is day-to-day with a wrist bruise")
+    - Late lineup changes ("Judge scratched from lineup")
+    - Weather updates ("Wind shifted, now blowing out at 18mph")
+    - Scouting notes ("Closer unavailable after 3 straight days pitching")
+    - Any other information you want the model to factor in
+
+  This text is sent directly into the prediction prompt as high-priority
+  scouting notes and can significantly change the output.
+
+STEP 7 — RUN DEEP ANALYSIS
+  Click "Run Deep Analysis". The app sends the extracted JSON (plus your
+  additional context if any) to Claude AI with the full v2.2 framework.
+  The same multi-pass verification loop runs on the prediction output.
+
+  The analysis takes 15–60 seconds depending on the model selected.
+
+STEP 8 — READ THE PREDICTION RESULTS
+  The prediction panel shows 7 blocks of output:
+
+  A. WIN PROBABILITY
+     Home team % vs Away team % shown as progress bars.
+     The leading team is highlighted. Probabilities always sum to 100%.
+     Maximum possible: 80% / 20%.
+
+  B. OVER/UNDER PREDICTION
+     OVER or UNDER the betting line. Shown with:
+       - Direction arrow (up = OVER, down = UNDER)
+       - The O/U line (e.g. 8.5)
+       - Confidence level: High (72% Over), Moderate (61%), Low (54%)
+
+  C. CONFIDENCE SCORE (out of 100)
+     How reliable the model believes this prediction is. Floor is 25.
+     Shows itemized deductions. Color coded:
+       70–100 = Green (High Confidence)
+       50–69  = Gold (Moderate Confidence)
+       25–49  = Red (Low Confidence)
+
+  D. BETTING STRATEGY
+     Tier recommendation: Strong / Moderate / Slight / Pass
+       Strong:   win% >= 62% AND confidence >= 65
+       Moderate: win% 56–62% AND confidence >= 58
+       Slight:   win% 52–56% AND confidence >= 50
+       Pass:     does not meet any threshold
+     Includes specific Moneyline and Totals recommendations.
+
+  E. FRAMEWORK METRICS
+     Six quantitative scores displayed as a grid:
+       GVI  — Game Volatility Index (1–100). High = OVER bias, Low = UNDER bias
+       TMS  — True Momentum Score for each team (−14 to +18)
+       PMS  — Playoff/Motivation Score for each team (100 baseline + bonuses)
+       PVS  — Pitcher Volatility Score (std dev of last 5 game scores)
+       RED  — Recent ERA Differential (surging vs slumping indicator)
+       PDCF — Primary Driver Conflict Flag indicator
+
+  F. ACTIVE FLAGS & OVERRIDES
+     All triggered analytical flags shown as chips, e.g.:
+       "Surging (Home SP)" — pitcher on a hot streak
+       "Division Race (Away)" — team within 3 games of division lead
+       "WP-Override A fired" — extreme pitcher quality mismatch activated
+       "Early Season Calibration" — April 1–14 adjustments active
+       "Away Momentum Amplifier active" — away team TMS leads by 5+
+       "Both SP Slumping" — both starters in poor recent form
+
+  G. ANALYSIS NARRATIVE
+     2–3 sentence plain-English summary of the key factors driving the
+     prediction and the betting recommendation.
+
+STEP 9 — SAVE THE PREDICTION
+  Click "Save Prediction" to store it in the local database.
+  The prediction is saved with all metrics, flags, and outputs.
+  You will enter the actual game result later (after the game is played).
+
+STEP 10 — ENTER ACTUAL RESULTS (History Page)
+  After the game is played, go to the History page (/history).
+  Find the prediction row, click "Grade" and enter:
+    - Actual winning team
+    - Final home score and away score
+    - Notes (optional — injuries, weather events, anything notable)
+  The app auto-calculates:
+    - ML Correct (yes/no) — did the predicted winner win?
+    - O/U Correct (yes/no) — did the total land on the correct side?
+  All accuracy stats update immediately.
+
+------------------------------------------------------------------------------
+SECTION 4 — THE HISTORY PAGE IN DETAIL
+------------------------------------------------------------------------------
+
+STATS BANNER (top)
+  Six live stat cards:
+    Total Predictions — all saved games
+    Graded            — games with actual results entered
+    ML Accuracy %     — Moneyline win rate (green >= 58%, gold >= 50%)
+    O/U Accuracy %    — Over/Under win rate (green >= 55%, gold >= 48%)
+    ML W / L          — wins and losses on Moneyline picks
+    O/U W / L         — wins and losses on Over/Under picks
+  The banner auto-refreshes every 30 seconds.
+
+INVESTIGATION PANEL
+  Appears once you have graded predictions. Contains:
+
+  Running Accuracy Trend — three windows side by side:
+    Last 5 games  — most recent performance
+    Last 10 games — medium-term performance
+    All-time      — full historical performance
+  Trend arrows show whether recent form is improving (↑), stable (→),
+  or declining (↓) vs the 10-game window.
+
+  Accuracy by Confidence Tier — table showing ML and O/U accuracy
+  broken down by the confidence level assigned at prediction time:
+    High / Moderate / Low
+  Calibration verdict per tier:
+    Well Calibrated — High tier hits >= 60%
+    Overconfident   — High tier hits < 50%
+    Consistent      — Moderate tier hits >= 55%
+    Underestimated  — Low tier hits >= 55% (model was too conservative)
+    Neutral         — average performance
+
+PREDICTION TABLE
+  Shows all saved predictions with columns:
+    Date, Game, Starters, Win%, O/U, Confidence Score,
+    Betting Tier, Actual Result, ML Result, O/U Result, Investigation
+  The Investigation column shows per-row analysis:
+    - Calibration label (e.g. "Correct — High Conf" or "Miss — Low Conf")
+    - Edge % (how far the win probability was from 50%)
+    - Score vs line (how the actual total compared to the O/U line)
+
+GRADING A PREDICTION
+  Click the "Grade" button on any ungraded row to open the grading panel.
+  Enter the actual winner, home score, and away score.
+  The app automatically computes whether the ML and O/U picks were correct.
+
+PAGINATION
+  The table shows 25 predictions per page with Previous/Next navigation.
+
+REFRESH BUTTON
+  Forces an immediate reload of all predictions and stats.
+
+------------------------------------------------------------------------------
+SECTION 5 — THE ANALYTICAL FRAMEWORK (v2.2) IN DETAIL
+------------------------------------------------------------------------------
+
+The prediction engine uses a six-metric hierarchical framework:
+
+METRIC 1 — PVS (Pitcher Volatility Score)
+  Standard deviation of a starter's Game Score across last 5 starts.
+  Game Score = 50 + (IP x 3) + (K x 2) - (ER x 10) - (BB x 2) - (H x 1)
+  PVS > 15 triggers "High Volatility" flag. High PVS adds to GVI.
+
+METRIC 2 — RED (Recent ERA Differential)
+  RED = (Average ERA over last 3 starts) - (Season ERA)
+  RED < -1.0 = "Surging" — pitcher better than season average
+  RED > +1.5 = "Slumping" — pitcher worse than season average
+  Minimum Starts Gate: If pitcher has < 3 confirmed starts this season,
+  RED is set to 0 and marked unavailable. No override can fire.
+
+METRIC 3 — TMS (True Momentum Score)
+  Weighted score across last 5 games. Win = +3, Loss = -2.
+  Most recent game counts double (2x weight).
+  Formula: G1 + G2 + G3 + G4 + (G5 x 2). Range: -14 to +18.
+  Travel penalty: -2 if team crossed 2+ time zones in last 24 hours.
+  Early Season: if team has played < 5 games, TMS weighted at 50%.
+  Away Momentum Amplifier: if away team leads TMS by 5+ points and no
+  override is active, away team gets an extra +2% win probability.
+
+METRIC 4 — PMS (Playoff/Motivation Score)
+  Base 100 + bonuses for stakes.
+  Regular Season bonuses:
+    Division Race (within 3 games): +30
+    Wild Card Race (within 3 games): +20
+    Must-Win (5+ loss streak in race): +15
+    Divisional Rivalry: +15
+    Late Season (September): +10
+    Series Momentum (won last 2+): +10
+  Postseason bonuses:
+    Elimination Game: +50
+    Series Clinch Opportunity: +25
+    Series Momentum (won 2+ in a row): +15
+    Divisional Rivalry: +15
+  Effect: DELTA PMS / 50 = win probability shift, capped at +/-4%.
+
+METRIC 5 — RCF (Regression Candidate Flag)
+  Fires when pitcher xFIP exceeds ERA by 1.20 or more.
+  Effect: substitutes xFIP for ERA in all win probability calculations.
+  Flags the pitcher as "Regression Risk."
+
+METRIC 6 — GVI (Game Volatility Index)
+  Composite score 1–100. Start at 50, apply table adjustments:
+  +15 per pitcher with PVS > 15 (high volatility)
+  -15 per pitcher with ERA/xFIP < 2.50 (elite suppressor)
+  -8  per pitcher with ERA/xFIP 2.50–3.00 (strong ace)
+  +10 per team with 30-day wRC+ > 110 (hot offense)
+  +10 wind blowing OUT 8–15 mph
+  +20 wind blowing OUT > 15 mph
+  -10 wind blowing IN > 8 mph
+  -10 temperature < 50F
+  -8  pitcher's park
+  +8  hitter's park
+  -5  pitcher-friendly umpire
+  +5  batter-friendly umpire
+  -5  per team with elite defense (DRS/OAA top third)
+  +5  postseason or both teams in active race
+  -5  April 1–14 (Early Season Calibration)
+  -5  additional if April 1–14 AND O/U line > 8.0
+  GVI > 65 = OVER bias. GVI < 35 = UNDER bias.
+
+WIN PROBABILITY OVERRIDES
+  WP-Override A (highest priority):
+    Surging ace (xFIP < 3.25, RED < -1.0) vs Slumping pitcher (RED > +1.5)
+    → +14% to surging pitcher's team
+  WP-Override B:
+    Home Fortress (home win% >= .650) vs road team win% < .500
+    → +10% to home team
+  If both fire simultaneously, Override A takes priority.
+
+CONFLICT PROTOCOL (PDCF)
+  Fires when: road team has higher TMS AND home team has Home Fortress flag.
+  Tiebreaker hierarchy:
+    1st: Bullpen xFIP differential > 0.40 → +4% to better bullpen team
+    2nd: Platoon wRC+ differential > 15 → +3% to platoon-advantaged team
+    3rd: RISP wRC+ advantage → +2% to better situational hitting team
+    Fallback: 52% home / 48% away
+  PDCF deducts -30 from confidence score.
+
+TEAM MELTDOWN FLAG (TMF)
+  Fires if either team has 5+ consecutive losses.
+  Away team TMF: -3% from home win probability
+  Home team TMF: -5% from home win probability
+  TMF deducts -20 from confidence score.
+
+OVER/UNDER HIERARCHY (checked in order, stop at first trigger)
+  OU-A: Pitcher Form Dominance
+    Surging vs Slumping → OVER (Strong if slumping team wRC+ > 108)
+    Both Surging → Strong UNDER (vetoed if wind OUT > 15mph)
+    Both Slumping → OVER (Strong if either team wRC+ > 108)
+  OU-B: Environmental Override
+    Wind OUT > 8mph → OVER
+    Wind IN > 8mph → UNDER
+    Wind OUT > 15mph → Strong OVER
+  OU-C: Offensive Volatility
+    Both teams 15-day wRC+ > 115 → OVER
+  OU-D: Standard Drivers
+    Balance xFIP < 3.25 (UNDER bias), hot offense (OVER bias), park factor,
+    temperature < 50F (UNDER bias)
+  OU-E: GVI Tiebreaker
+    GVI > 65 → OVER, GVI < 35 → UNDER, GVI 35–65 → neutral
+    High-GVI/High-Line Dampener: if GVI > 75 AND line > 8.0, cap
+    confidence at Moderate regardless of signal strength.
+
+CONFIDENCE DEDUCTIONS
+  PDCF  -30: road TMS-favored + home Fortress conflict
+  MCF   -25: model pick contradicts betting line favorite
+  HFCF  -20: either team reaches 68% win probability
+  TMF   -20: either team on 5+ game losing streak
+  HVIF  -15: GVI > 75
+  HSGV  -15: postseason elimination game or both teams within 1 game of cutoff
+  VMF   -10: GVI > 70 AND win probability 55–65%
+  ESDU  -10: Early Season flag + 2 or more knowledge-estimated fields
+  BSS   -10: both pitchers RED > +1.5
+  SWR   -10: precipitation probability > 40%
+  Floor: 25. Cannot go below 25 regardless of deductions.
+
+EARLY SEASON CALIBRATION (April 1–14)
+  During the first two weeks of the season, the model adjusts:
+  - Home field base reduced from +2% to +1%
+  - Home Fortress threshold raised to .700 (harder to trigger)
+  - GVI reduced by 5
+  - Additional GVI -5 if O/U line > 8.0
+  - TMS applied at 50% weight for teams with < 5 games played
+  - Minimum Starts Gate enforced strictly on RED
+
+DATA HANDLING POLICY
+  Tier 1: Data read directly from your uploaded images
+  Tier 2: Missing fields filled from Claude's MLB knowledge base
+  Tier 3: Data Notice — only issued when both Tier 1 and Tier 2 fail
+  The model NEVER halts due to missing data. It always produces a result.
+
+MULTI-PASS VERIFICATION
+  Both the extraction and prediction phases run a verification loop:
+  - Generate output
+  - Check against validation rules (field presence, value ranges, logic)
+  - If > 1 issue found, re-prompt Claude with a specific fix list
+  - Repeat up to 3 passes
+  - Accept output when <= 1 issue remains
+  Verification status is shown in the UI after each stage.
+
+------------------------------------------------------------------------------
+SECTION 6 — BETTING STRATEGY TIERS EXPLAINED
+------------------------------------------------------------------------------
+
+STRONG
+  Win probability >= 62% AND confidence score >= 65
+  Highest conviction plays. Model has strong signal and high data quality.
+
+MODERATE
+  Win probability 56–62% AND confidence score >= 58
+  Solid edge. Worth playing at normal unit size.
+
+SLIGHT
+  Win probability 52–56% AND confidence score >= 50
+  Marginal edge. Consider reduced unit size or skip.
+
+PASS
+  Does not meet any threshold.
+  The model sees no reliable edge worth betting.
+
+------------------------------------------------------------------------------
+SECTION 7 — TIPS FOR BEST RESULTS
+------------------------------------------------------------------------------
+
+1. MORE SCREENSHOTS = BETTER PREDICTIONS
+   The framework needs pitcher stats, team records, bullpen data, weather,
+   and batting stats. The more images you provide, the less the model has
+   to estimate from its knowledge base.
+
+2. INCLUDE THE BETTING LINE
+   A screenshot showing the current Moneyline and O/U line is very useful.
+   It helps the model calibrate and check for MCF (Model Contradiction Flag).
+
+3. USE ADDITIONAL CONTEXT FOR LATE BREAKING NEWS
+   Injuries, scratches, and weather changes often happen the day of the game.
+   Always check beat reporters before running analysis and add notes in the
+   Additional Context box.
+
+4. CHECK THE DATA SOURCE SECTION IN THE JSON
+   If many fields say "filled_from_knowledge" rather than
+   "extracted_from_image," your screenshots are missing key data. Try
+   adding more images with pitcher logs and team stats.
+
+5. PAY ATTENTION TO CONFIDENCE SCORE
+   A score below 50 means the model has low conviction. Do not treat low
+   confidence predictions as strong plays regardless of win probability.
+
+6. GRADE EVERY PREDICTION
+   The running accuracy and tier calibration tables only work if you grade
+   results. Consistent grading lets you see which tiers and situations
+   the model handles best — and where it needs improvement.
+
+7. BEST MODEL CHOICE
+   Use Opus 4.6 for postseason games and important high-stakes matchups.
+   Use Sonnet 4.6 for daily regular season analysis.
+   Use Haiku 4.5 only when speed is the priority and stats are simple.
+
+------------------------------------------------------------------------------
+SECTION 8 — FILE STRUCTURE
+------------------------------------------------------------------------------
+
+server.js           — Express backend. Handles image uploads, Claude API
+                      calls, SQLite database, verification loops, all API routes.
+public/index.html   — Analyzer page structure
+public/history.html — History page structure
+public/app.js       — Analyzer page logic (upload, extract, predict, save)
+public/history.js   — History page logic (stats, grading, investigation)
+public/globe.js     — D3.js rotating globe visualization
+public/style.css    — All styles for both pages
+CLAUDE.md           — Full framework specification v2.2 (analytical rules)
+.claude/commands/mlb-predict.md — Skill definition for /mlb-predict command
+predictions.db      — SQLite database (local only, not in git)
+.env                — API key file (local only, never committed to git)
+package.json        — Node.js dependencies
+vercel.json         — Vercel deployment configuration
+
+------------------------------------------------------------------------------
+SECTION 9 — RUNNING THE APP LOCALLY
+------------------------------------------------------------------------------
+
+Requirements:
+  - Node.js (v18 or higher)
+  - An Anthropic API key (claude.ai/account)
+
+First time setup:
+  1. Run: npm install
+  2. Create a .env file in the project root with:
+       ANTHROPIC_API_KEY=sk-ant-api03-YOUR-KEY-HERE
+  3. Run: npm start
+  4. Open: http://localhost:3000
+
+The server will create predictions.db automatically on first run.
+All data is stored locally. Nothing is sent to external services except
+Claude API calls for AI analysis.
+
+------------------------------------------------------------------------------
+
+MLB Game Analyzer — Framework v2.2
+Built with Node.js, Express, SQLite, Claude AI, D3.js
+
+==============================================================================

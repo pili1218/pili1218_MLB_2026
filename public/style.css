@@ -766,6 +766,65 @@ body {
 .json-bool  { color: #56b6c2; }
 .json-null  { color: #56b6c2; }
 
+/* ─── Extra Notes Section ─────────────────────────────────────────────────── */
+.notes-section {
+  margin-top: 16px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px 24px;
+}
+.notes-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.notes-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--gold);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.notes-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.notes-optional {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text3);
+}
+.notes-sub {
+  font-size: 0.8rem;
+  color: var(--text3);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.notes-textarea {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 0.875rem;
+  font-family: inherit;
+  line-height: 1.5;
+  padding: 12px 14px;
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.notes-textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+.notes-textarea::placeholder {
+  color: var(--text3);
+}
+
 /* ─── Deep Analysis / Predict Section ─────────────────────────────────────── */
 .predict-section {
   margin-top: 24px;
@@ -1280,6 +1339,128 @@ body {
   gap: 10px;
   padding-top: 12px;
   border-top: 1px solid var(--border);
+}
+
+/* ─── Daily Summary + Strategy Row ─────────────────────────────────────────── */
+.daily-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+@media (max-width: 768px) {
+  .daily-row { grid-template-columns: 1fr; }
+}
+.daily-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px 22px;
+}
+.daily-box-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.daily-box-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.daily-box-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.daily-box-sub {
+  font-size: 0.78rem;
+  color: var(--text3);
+  margin-top: 2px;
+}
+.daily-record-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.daily-record-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg3);
+  border: 1px solid;
+  border-radius: 10px;
+  padding: 6px 14px;
+}
+.daily-rec-label {
+  font-size: 0.72rem;
+  color: var(--text3);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.daily-rec-val {
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.daily-rec-pct {
+  font-size: 0.78rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+.daily-summary-text {
+  font-size: 0.875rem;
+  color: var(--text2);
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+.daily-games-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.daily-result-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  padding: 6px 10px;
+  background: var(--bg3);
+  border-radius: 8px;
+}
+.daily-game-label {
+  color: var(--text2);
+  margin-left: 4px;
+}
+.strategy-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.strategy-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--bg3);
+  border-left: 3px solid;
+  border-radius: 0 10px 10px 0;
+  padding: 10px 14px;
+}
+.strategy-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+  width: 18px;
+  text-align: center;
+}
+.strategy-text {
+  font-size: 0.83rem;
+  color: var(--text2);
+  line-height: 1.5;
 }
 
 /* ─── Investigation Panel ──────────────────────────────────────────────────── */

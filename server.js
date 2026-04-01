@@ -583,7 +583,7 @@ app.post("/api/analyze", async (req, res) => {
 
 app.post("/api/predict", async (req, res) => {
   try {
-    const { gameData, model: requestedModel } = req.body;
+    const { gameData, model: requestedModel, extraNotes } = req.body;
 
     if (!gameData) {
       return res.status(400).json({ error: "No game data provided" });
@@ -595,10 +595,14 @@ app.post("/api/predict", async (req, res) => {
 
     const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : "claude-opus-4-6";
 
+    const notesBlock = extraNotes && extraNotes.trim()
+      ? `\n\nADDITIONAL CONTEXT FROM USER (treat as high-priority scouting notes — incorporate into your analysis):\n${extraNotes.trim()}`
+      : "";
+
     // ── Pass 1: initial prediction ──────────────────────────────────────────
     let messages = [{
       role: "user",
-      content: `Apply the MLB Game Predictor v2.2 framework to this extracted game data. Fill any missing fields from your knowledge base first, then return the complete JSON prediction:\n\n${JSON.stringify(gameData, null, 2)}`,
+      content: `Apply the MLB Game Predictor v2.2 framework to this extracted game data. Fill any missing fields from your knowledge base first, then return the complete JSON prediction:\n\n${JSON.stringify(gameData, null, 2)}${notesBlock}`,
     }];
 
     let parsed, issues, pass = 0;

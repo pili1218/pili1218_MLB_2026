@@ -164,7 +164,10 @@ function showResult(data) {
   renderGameSummary(data);
   renderJSON(data);
 
-  // Reveal the Deep Analysis panel and reset it
+  // Reveal the notes input and Deep Analysis panel, reset both
+  document.getElementById("notesSection").classList.remove("hidden");
+  document.getElementById("extraNotes").value = "";
+
   const ps = document.getElementById("predictSection");
   ps.classList.remove("hidden");
   document.getElementById("predictResult").classList.add("hidden");
@@ -322,6 +325,7 @@ function downloadJSON() {
 function analyzeAnother() {
   clearAll();
   hideResult();
+  document.getElementById("notesSection").classList.add("hidden");
   document.getElementById("predictSection").classList.add("hidden");
   document.getElementById("predictResult").classList.add("hidden");
   lastPrediction = null;
@@ -347,10 +351,11 @@ async function runDeepAnalysis() {
   document.getElementById("predictResult").classList.add("hidden");
 
   try {
+    const extraNotes = document.getElementById("extraNotes").value.trim();
     const res = await fetch("/api/predict", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gameData: lastResult, model: selectedModel }),
+      body: JSON.stringify({ gameData: lastResult, model: selectedModel, extraNotes }),
     });
 
     const json = await res.json();

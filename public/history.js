@@ -59,6 +59,13 @@ async function loadStats() {
       renderTierTable(json.by_tier || []);
     }
 
+    // Daily summary + strategy
+    if (json.graded > 0) {
+      document.getElementById("dailyRow").style.display = "grid";
+      renderDailySummary(json);
+      renderStrategyBox(json);
+    }
+
   } catch (err) {
     console.error("Stats error:", err);
   }
@@ -157,6 +164,157 @@ function renderTierTable(tiers) {
         }).join("")}
       </tbody>
     </table>`;
+}
+
+// ─── Daily Results Summary ────────────────────────────────────────────────────
+function renderDailySummary(json) {
+  const graded  = json.graded  || 0;
+  const total   = json.total   || 0;
+  const mlWins  = json.ml_wins  || 0;
+  const mlLoss  = json.ml_losses || 0;
+  const ouWins  = json.ou_wins  || 0;
+  const ouLoss  = json.ou_losses || 0;
+  const ouGraded = json.ou_graded || 0;
+  const mlAcc   = json.ml_accuracy;
+  const ouAcc   = json.ou_accuracy;
+  const pending = total - graded;
+
+  document.getElementById("dailySummaryDate").textContent = `${graded} graded · ${pending} pending`;
+
+  const mlColor = mlAcc == null ? "var(--text3)" : mlAcc >= 60 ? "var(--green)" : mlAcc >= 50 ? "var(--gold)" : "var(--red)";
+  const ouColor = ouAcc == null ? "var(--text3)" : ouAcc >= 58 ? "var(--green)" : ouAcc >= 48 ? "var(--gold)" : "var(--red)";
+
+  // Summary sentence
+  let summary = "";
+  if (graded === 0) {
+    summary = "No graded results yet. Enter actual scores after games to start tracking accuracy.";
+  } else if (mlAcc >= 65) {
+    summary = `Strong overall record of ${mlWins}–${mlLoss} on Moneyline (${mlAcc}%). The framework is performing above expectations.`;
+  } else if (mlAcc >= 50) {
+    summary = `Profitable overall at ${mlWins}–${mlLoss} on Moneyline (${mlAcc}%). Model is above breakeven — continue building the sample.`;
+  } else {
+    summary = `Current record ${mlWins}–${mlLoss} on Moneyline (${mlAcc}%). Below breakeven — review the confidence tier table for patterns.`;
+  }
+
+  // Season type breakdown chips
+  const bySeasonHtml = (json.by_season_type || []).map(s => {
+    const acc = s.total > 0 ? (s.ml_wins / s.total * 100).toFixed(1) : null;
+    const c = acc == null ? "var(--text3)" : acc >= 58 ? "var(--green)" : acc >= 50 ? "var(--gold)" : "var(--red)";
+    return `<div class="daily-result-row">
+      <span style="color:var(--text2);font-weight:600">${esc(s.season_type || "Unknown")}</span>
+      <span style="color:${c};font-weight:700;margin-left:auto">${acc != null ? acc + "% ML" : "—"}</span>
+      <span style="color:var(--text3);font-size:0.75rem">${s.total} games</span>
+    </div>`;
+  }).join("");
+
+  document.getElementById("dailySummaryContent").innerHTML = `
+    <div class="daily-record-row">
+      <div class="daily-record-pill" style="border-color:${mlColor}">
+        <span class="daily-rec-label">ML</span>
+        <span class="daily-rec-val" style="color:${mlColor}">${mlWins}–${mlLoss}</span>
+        ${mlAcc != null ? `<span class="daily-rec-pct" style="color:${mlColor}">${mlAcc}%</span>` : ""}
+      </div>
+      ${ouGraded > 0 ? `<div class="daily-record-pill" style="border-color:${ouColor}">
+        <span class="daily-rec-label">O/U</span>
+        <span class="daily-rec-val" style="color:${ouColor}">${ouWins}–${ouLoss}</span>
+        ${ouAcc != null ? `<span class="daily-rec-pct" style="color:${ouColor}">${ouAcc}%</span>` : ""}
+      </div>` : ""}
+      <div class="daily-record-pill" style="border-color:var(--border)">
+        <span class="daily-rec-label">Total</span>
+        <span class="daily-rec-val" style="color:var(--text)">${total}</span>
+        <span class="daily-rec-pct" style="color:var(--text3)">${graded} graded</span>
+      </div>
+    </div>
+    <p class="daily-summary-text">${summary}</p>
+    ${bySeasonHtml ? `<div class="daily-games-list">${bySeasonHtml}</div>` : ""}`;
+}
+
+// ─── Betting Strategy Suggestion ─────────────────────────────────────────────
+function renderStrategyBox(json) {
+  const suggestions = [];
+  const warnings = [];
+
+  const mlAcc   = json.ml_accuracy;
+  const ouAcc   = json.ou_accuracy;
+  const last5ML  = json.last5_ml;
+  const last10ML = json.last10_ml;
+  const last5OU  = json.last5_ou;
+  const last10OU = json.last10_ou;
+  const tiers   = json.by_tier || [];
+
+  const highTier = tiers.find(t => t.tier === "High");
+  const modTier  = tiers.find(t => t.tier === "Moderate");
+  const lowTier  = tiers.find(t => t.tier === "Low");
+
+  const highML = highTier && highTier.total > 0 ? +(highTier.ml_wins / highTier.total * 100).toFixed(1) : null;
+  const modML  = modTier  && modTier.total  > 0 ? +(modTier.ml_wins  / modTier.total  * 100).toFixed(1) : null;
+  const lowML  = lowTier  && lowTier.total  > 0 ? +(lowTier.ml_wins  / lowTier.total  * 100).toFixed(1) : null;
+
+  // ML trend
+  if (last5ML != null && last10ML != null) {
+    const drift = last5ML - last10ML;
+    if (drift >= 8) {
+      suggestions.push({ icon: "↑", color: "var(--green)", text: `ML picks are trending up strongly (+${drift.toFixed(1)}% last 5 vs last 10). Consider increasing unit size on high-conviction plays.` });
+    } else if (drift <= -8) {
+      warnings.push({ icon: "↓", color: "var(--red)", text: `ML picks are in a cold streak (${drift.toFixed(1)}% last 5 vs last 10). Reduce bet sizes and wait for model to stabilize.` });
+    } else {
+      suggestions.push({ icon: "→", color: "var(--text2)", text: `ML accuracy is stable (${last5ML}% last 5 games). Continue current approach.` });
+    }
+  }
+
+  // O/U trend
+  if (last5OU != null && last10OU != null) {
+    const drift = last5OU - last10OU;
+    if (drift >= 8) {
+      suggestions.push({ icon: "↑", color: "var(--green)", text: `O/U picks are improving (+${drift.toFixed(1)}% recent trend). The totals model is well-calibrated right now.` });
+    } else if (drift <= -8) {
+      warnings.push({ icon: "↓", color: "var(--red)", text: `O/U accuracy dropping (${drift.toFixed(1)}% recent trend). Skip totals plays until the model re-calibrates.` });
+    }
+  }
+
+  // Confidence tier advice
+  if (highML != null) {
+    if (highML >= 62) {
+      suggestions.push({ icon: "★", color: "var(--gold)", text: `High confidence plays are hitting at ${highML}%. Prioritize these — the model is well-calibrated at the top tier.` });
+    } else if (highML < 50) {
+      warnings.push({ icon: "⚠", color: "var(--red)", text: `High confidence plays are underperforming (${highML}%). Avoid treating these as strong plays — the model may be overconfident early in the season.` });
+    }
+  }
+  if (modML != null && modML >= 58) {
+    suggestions.push({ icon: "✓", color: "var(--green)", text: `Moderate confidence plays are hitting ${modML}% — outperforming expectations. These are your most reliable plays right now.` });
+  }
+  if (lowML != null && lowML >= 58) {
+    suggestions.push({ icon: "↑", color: "var(--gold)", text: `Even Low confidence picks are hitting ${lowML}%. The model may be under-rating its own signals — watch these for value.` });
+  }
+
+  // Overall ML accuracy
+  if (mlAcc != null) {
+    if (mlAcc >= 65) {
+      suggestions.push({ icon: "🔥", color: "var(--green)", text: `Overall ML accuracy at ${mlAcc}% — well above breakeven. Stay active and trust the framework.` });
+    } else if (mlAcc < 45) {
+      warnings.push({ icon: "⛔", color: "var(--red)", text: `Overall ML accuracy at ${mlAcc}% — below breakeven. Review recent misses for systematic patterns before placing new bets.` });
+    }
+  }
+
+  // O/U overall
+  if (ouAcc != null && ouAcc < 45) {
+    warnings.push({ icon: "⚠", color: "var(--red)", text: `O/U accuracy at ${ouAcc}% overall. Consider skipping totals plays until accuracy improves above 50%.` });
+  }
+
+  // Default if no signals
+  if (!suggestions.length && !warnings.length) {
+    suggestions.push({ icon: "📊", color: "var(--text2)", text: "Keep grading predictions to build a large enough sample for reliable strategy recommendations. Aim for at least 10 graded games." });
+  }
+
+  const renderItem = (item) => `
+    <div class="strategy-item" style="border-left-color:${item.color}">
+      <span class="strategy-icon" style="color:${item.color}">${item.icon}</span>
+      <span class="strategy-text">${item.text}</span>
+    </div>`;
+
+  document.getElementById("strategyContent").innerHTML =
+    warnings.map(renderItem).join("") +
+    suggestions.map(renderItem).join("");
 }
 
 // ─── History Table ────────────────────────────────────────────────────────────
