@@ -603,7 +603,7 @@ app.post("/api/predict", async (req, res) => {
     // ── Pass 1: initial prediction ──────────────────────────────────────────
     let messages = [{
       role: "user",
-      content: `Apply the MLB Game Predictor v2.2 framework to this extracted game data. Fill any missing fields from your knowledge base first, then return the complete JSON prediction:\n\n${JSON.stringify(gameData, null, 2)}${notesBlock}`,
+      content: `Apply the MLB Game Predictor v2.3 framework to this extracted game data. Fill any missing fields from your knowledge base first, then return the complete JSON prediction:\n\n${JSON.stringify(gameData, null, 2)}${notesBlock}`,
     }];
 
     let parsed, issues, pass = 0;
