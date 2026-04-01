@@ -877,6 +877,56 @@ app.get("/api/stats", (_req, res) => {
   }
 });
 
+// ─── Data Import (one-time migration) ────────────────────────────────────────
+app.post("/api/import", (req, res) => {
+  try {
+    const secret = req.headers["x-import-secret"];
+    if (!secret || secret !== process.env.IMPORT_SECRET) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const rows = req.body.rows;
+    if (!Array.isArray(rows)) return res.status(400).json({ error: "rows array required" });
+
+    const importRow = db.prepare(`
+      INSERT OR IGNORE INTO predictions (
+        id, saved_at, game_date, season_type, home_team, away_team,
+        home_starter, away_starter, home_win_pct, away_win_pct,
+        ou_line, ou_prediction, ou_confidence, ou_over_pct, confidence_score,
+        gvi, home_tms, away_tms, home_pms, away_pms,
+        home_pvs, away_pvs, home_red, away_red, pdcf_active,
+        active_flags, active_overrides, betting_recommendation,
+        key_driver, reasoning, export_string, full_prediction,
+        actual_winner, actual_home_score, actual_away_score, actual_total,
+        ml_result, ou_result, ml_correct, ou_correct, notes
+      ) VALUES (
+        @id, @saved_at, @game_date, @season_type, @home_team, @away_team,
+        @home_starter, @away_starter, @home_win_pct, @away_win_pct,
+        @ou_line, @ou_prediction, @ou_confidence, @ou_over_pct, @confidence_score,
+        @gvi, @home_tms, @away_tms, @home_pms, @away_pms,
+        @home_pvs, @away_pvs, @home_red, @away_red, @pdcf_active,
+        @active_flags, @active_overrides, @betting_recommendation,
+        @key_driver, @reasoning, @export_string, @full_prediction,
+        @actual_winner, @actual_home_score, @actual_away_score, @actual_total,
+        @ml_result, @ou_result, @ml_correct, @ou_correct, @notes
+      )
+    `);
+
+    const importAll = db.transaction((rows) => {
+      let inserted = 0;
+      for (const row of rows) {
+        const result = importRow.run(row);
+        inserted += result.changes;
+      }
+      return inserted;
+    });
+
+    const inserted = importAll(rows);
+    res.json({ success: true, inserted, total: rows.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Delete prediction ────────────────────────────────────────────────────────
 app.delete("/api/predictions/:id", (req, res) => {
   try {
