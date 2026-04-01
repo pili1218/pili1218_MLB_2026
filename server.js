@@ -14,6 +14,7 @@ const dbPath = process.env.VERCEL
   ? "/tmp/predictions.db"
   : path.join(__dirname, "predictions.db");
 const db = new Database(dbPath);
+console.log(`[DB] Using database at: ${dbPath}`);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS predictions (
