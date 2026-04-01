@@ -60,10 +60,13 @@ async function loadStats() {
     }
 
     // Daily summary + strategy
+    const dailyRow = document.getElementById("dailyRow");
     if (json.graded > 0) {
-      document.getElementById("dailyRow").style.display = "grid";
+      dailyRow.style.display = "grid";
       renderDailySummary(json);
       renderStrategyBox(json);
+    } else {
+      dailyRow.style.display = "none";
     }
 
   } catch (err) {
@@ -338,6 +341,9 @@ async function loadHistory(page = 1) {
 
 function renderTable(rows) {
   const wrap = document.getElementById("histTable");
+  // Cache rows for safe modal lookup
+  _rowCache = {};
+  rows.forEach(r => { _rowCache[r.id] = r; });
 
   if (!rows.length) {
     wrap.innerHTML = `<div class="hist-loading" style="color:var(--text3)">No predictions saved yet. Run a deep analysis and click "Save Prediction".</div>`;
@@ -478,8 +484,8 @@ function renderRow(r) {
       <td class="td-investigation">${buildInvestigation(r)}</td>
       <td class="td-actions">
         ${r.ml_correct === null
-          ? `<button class="btn-enter-result" onclick="openModal(${r.id}, '${esc(r.away_team)}', '${esc(r.home_team)}', '${esc(r.ou_prediction)}', '${esc(r.ou_line)}', ${r.home_win_pct}, ${r.away_win_pct})">Enter Result</button>`
-          : `<button class="btn-enter-result btn-reenter" onclick="openModal(${r.id}, '${esc(r.away_team)}', '${esc(r.home_team)}', '${esc(r.ou_prediction)}', '${esc(r.ou_line)}', ${r.home_win_pct}, ${r.away_win_pct})">Edit</button>`
+          ? `<button class="btn-enter-result" onclick="openModalById(${r.id})">Enter Result</button>`
+          : `<button class="btn-enter-result btn-reenter" onclick="openModalById(${r.id})">Edit</button>`
         }
         <button class="btn-del" onclick="deletePred(${r.id})" title="Delete">✕</button>
       </td>
@@ -499,6 +505,14 @@ function renderPagination(total, page, limit) {
 }
 
 // ─── Result Modal ─────────────────────────────────────────────────────────────
+// Safe modal opener — looks up row data by ID to avoid inline string escaping issues
+let _rowCache = {};
+function openModalById(id) {
+  const r = _rowCache[id];
+  if (!r) return;
+  openModal(r.id, r.away_team, r.home_team, r.ou_prediction, r.ou_line, r.home_win_pct, r.away_win_pct);
+}
+
 function openModal(id, away, home, ouPred, ouLine, homePct, awayPct) {
   activePredId = id;
   const predWinner = homePct >= awayPct ? home : away;
@@ -555,9 +569,9 @@ async function submitResult() {
     if (!res.ok) throw new Error(json.error);
 
     document.getElementById("modal").classList.add("hidden");
-    // Recalculate all accuracy metrics immediately
-    loadStats();
-    loadHistory(currentPage);
+    // Recalculate all accuracy metrics and reload table immediately
+    await Promise.all([loadStats(), loadHistory(currentPage)]);
+    document.getElementById("histTable").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (err) {
     errEl.textContent = "Error: " + err.message;
     errEl.classList.remove("hidden");
