@@ -66,40 +66,124 @@
 
     <!-- UPLOAD SECTION -->
     <section class="upload-section">
-      <div
-        id="dropZone"
-        class="drop-zone"
-        ondragover="handleDragOver(event)"
-        ondragleave="handleDragLeave(event)"
-        ondrop="handleDrop(event)"
-      >
-        <div class="drop-icon">
-          <svg viewBox="0 0 64 64" fill="none">
-            <rect x="4" y="12" width="56" height="40" rx="4" stroke="currentColor" stroke-width="2.5"/>
-            <path d="M32 28 L32 44" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-            <path d="M24 36 L32 28 L40 36" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M20 20 L28 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+
+      <!-- Input mode tabs -->
+      <div class="input-tabs">
+        <button class="input-tab input-tab--active" id="tabScreenshots" onclick="switchInputTab('screenshots')">
+          <svg viewBox="0 0 20 20" fill="currentColor" class="input-tab-icon">
+            <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/>
           </svg>
-        </div>
-        <p class="drop-title">Drop MLB game screenshots here</p>
-        <p class="drop-sub">or</p>
-        <label class="btn-upload" for="fileInput">Choose Images</label>
-        <input
-          type="file"
-          id="fileInput"
-          accept="image/*"
-          multiple
-          style="display:none"
-          onchange="handleFileSelect(event)"
-        />
-        <p class="drop-hint">Supports PNG, JPG, WEBP · Up to 10 images · 20MB each</p>
+          Screenshots
+        </button>
+        <button class="input-tab" id="tabJsonText" onclick="switchInputTab('jsontext')">
+          <svg viewBox="0 0 20 20" fill="currentColor" class="input-tab-icon">
+            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h7a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+          </svg>
+          JSON / Text
+        </button>
       </div>
 
-      <!-- Preview grid -->
-      <div id="previewGrid" class="preview-grid hidden"></div>
+      <!-- SCREENSHOTS PANEL -->
+      <div id="panelScreenshots">
+        <div
+          id="dropZone"
+          class="drop-zone"
+          ondragover="handleDragOver(event)"
+          ondragleave="handleDragLeave(event)"
+          ondrop="handleDrop(event)"
+        >
+          <div class="drop-icon">
+            <svg viewBox="0 0 64 64" fill="none">
+              <rect x="4" y="12" width="56" height="40" rx="4" stroke="currentColor" stroke-width="2.5"/>
+              <path d="M32 28 L32 44" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              <path d="M24 36 L32 28 L40 36" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M20 20 L28 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+            </svg>
+          </div>
+          <p class="drop-title">Drop MLB game screenshots here</p>
+          <p class="drop-sub">or</p>
+          <label class="btn-upload" for="fileInput">Choose Images</label>
+          <input
+            type="file"
+            id="fileInput"
+            accept="image/*"
+            multiple
+            style="display:none"
+            onchange="handleFileSelect(event)"
+          />
+          <p class="drop-hint">Supports PNG, JPG, WEBP · Up to 10 images · 5MB each</p>
+        </div>
 
-      <!-- Model selector -->
-      <div class="model-selector">
+        <!-- Preview grid -->
+        <div id="previewGrid" class="preview-grid hidden"></div>
+
+        <!-- Analyze button -->
+        <div id="analyzeBar" class="analyze-bar hidden">
+          <span id="fileCount" class="file-count"></span>
+          <div class="btn-group">
+            <button class="btn-clear" onclick="clearAll()">Clear</button>
+            <button class="btn-analyze" id="analyzeBtn" onclick="analyzeImages()">
+              <svg viewBox="0 0 20 20" fill="currentColor" class="btn-icon">
+                <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.553.894l-4 2A1 1 0 016 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd"/>
+              </svg>
+              Analyze &amp; Generate JSON
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- JSON / TEXT PANEL -->
+      <div id="panelJsonText" class="hidden">
+        <div class="jt-panel">
+
+          <!-- JSON file drop/upload -->
+          <div class="jt-file-zone" id="jsonDropZone"
+            ondragover="handleJsonDragOver(event)"
+            ondragleave="handleJsonDragLeave(event)"
+            ondrop="handleJsonDrop(event)">
+            <svg viewBox="0 0 40 40" fill="none" class="jt-file-icon">
+              <rect x="4" y="2" width="24" height="32" rx="3" stroke="currentColor" stroke-width="2"/>
+              <path d="M22 2 L32 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M22 2 L22 12 L32 12" stroke="currentColor" stroke-width="1.5" fill="none"/>
+              <text x="8" y="26" font-size="7" fill="currentColor" font-family="monospace">.json</text>
+            </svg>
+            <p class="jt-file-title">Drop a <code>.json</code> file here</p>
+            <label class="btn-upload" for="jsonFileInput">Choose JSON File</label>
+            <input type="file" id="jsonFileInput" accept=".json,application/json" style="display:none" onchange="handleJsonFileSelect(event)" />
+          </div>
+
+          <div class="jt-divider"><span>— or paste content below —</span></div>
+
+          <!-- Paste textarea -->
+          <div class="jt-paste-area">
+            <div class="jt-paste-header">
+              <span class="jt-paste-label">Paste JSON or plain text</span>
+              <span class="jt-paste-hint" id="jtStatus"></span>
+            </div>
+            <textarea
+              id="jtPasteBox"
+              class="jt-textarea"
+              placeholder='Paste extracted JSON, game stats text, or any structured game data here…'
+              oninput="handlePasteInput()"
+            ></textarea>
+          </div>
+
+          <!-- Action bar -->
+          <div class="jt-action-bar" id="jtActionBar" style="display:none">
+            <button class="btn-clear" onclick="clearJsonText()">Clear</button>
+            <button class="btn-analyze" id="jtLoadBtn" onclick="loadJsonText()">
+              <svg viewBox="0 0 20 20" fill="currentColor" class="btn-icon">
+                <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.553.894l-4 2A1 1 0 016 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd"/>
+              </svg>
+              <span id="jtBtnLabel">Load JSON</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Model selector (shared) -->
+      <div class="model-selector" id="modelSelector">
         <div class="model-selector-label">AI Model</div>
         <div class="model-cards">
 
@@ -139,19 +223,6 @@
         </div>
       </div>
 
-      <!-- Analyze button -->
-      <div id="analyzeBar" class="analyze-bar hidden">
-        <span id="fileCount" class="file-count"></span>
-        <div class="btn-group">
-          <button class="btn-clear" onclick="clearAll()">Clear</button>
-          <button class="btn-analyze" id="analyzeBtn" onclick="analyzeImages()">
-            <svg viewBox="0 0 20 20" fill="currentColor" class="btn-icon">
-              <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.553.894l-4 2A1 1 0 016 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd"/>
-            </svg>
-            Analyze &amp; Generate JSON
-          </button>
-        </div>
-      </div>
     </section>
 
     <!-- STATUS / LOADING -->

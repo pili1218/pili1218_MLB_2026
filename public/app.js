@@ -25,6 +25,15 @@ function selectModel(btn) {
   document.getElementById("footerModel").textContent = selectedModel;
 }
 
+// ─── Input Tab Switcher ───────────────────────────────────────────────────────
+function switchInputTab(tab) {
+  const isScreenshots = tab === 'screenshots';
+  document.getElementById('tabScreenshots').classList.toggle('input-tab--active', isScreenshots);
+  document.getElementById('tabJsonText').classList.toggle('input-tab--active', !isScreenshots);
+  document.getElementById('panelScreenshots').classList.toggle('hidden', !isScreenshots);
+  document.getElementById('panelJsonText').classList.toggle('hidden', isScreenshots);
+}
+
 // ─── Drag & Drop ─────────────────────────────────────────────────────────────
 function handleDragOver(e) {
   e.preventDefault();
@@ -127,6 +136,92 @@ async function analyzeImages() {
     btn.disabled = false;
     hideStatus();
   }
+}
+
+// ─── JSON / Text Panel ───────────────────────────────────────────────────────
+function handleJsonDragOver(e) {
+  e.preventDefault();
+  document.getElementById('jsonDropZone').classList.add('dragover');
+}
+function handleJsonDragLeave(e) {
+  e.preventDefault();
+  document.getElementById('jsonDropZone').classList.remove('dragover');
+}
+function handleJsonDrop(e) {
+  e.preventDefault();
+  document.getElementById('jsonDropZone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) readJsonFile(file);
+}
+function handleJsonFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) readJsonFile(file);
+  e.target.value = '';
+}
+function readJsonFile(file) {
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    document.getElementById('jtPasteBox').value = ev.target.result;
+    handlePasteInput();
+  };
+  reader.readAsText(file);
+}
+function handlePasteInput() {
+  const val = document.getElementById('jtPasteBox').value.trim();
+  const bar = document.getElementById('jtActionBar');
+  const status = document.getElementById('jtStatus');
+  const btnLabel = document.getElementById('jtBtnLabel');
+  if (!val) { bar.style.display = 'none'; status.textContent = ''; return; }
+  bar.style.display = 'flex';
+  try {
+    JSON.parse(val);
+    status.textContent = '✓ Valid JSON detected — will load directly';
+    status.className = 'jt-paste-hint jt-valid';
+    btnLabel.textContent = 'Load JSON';
+  } catch (_) {
+    status.textContent = '⚡ Plain text — AI will extract game data';
+    status.className = 'jt-paste-hint jt-text';
+    btnLabel.textContent = 'Parse with AI';
+  }
+}
+async function loadJsonText() {
+  const val = document.getElementById('jtPasteBox').value.trim();
+  if (!val) return;
+  let parsed;
+  try {
+    parsed = JSON.parse(val);
+    // Valid JSON — skip analyze, use directly
+    lastResult = parsed;
+    showResult(parsed);
+    return;
+  } catch (_) { /* not JSON — send to AI */ }
+  // Plain text path — send to /api/parse-text
+  const btn = document.getElementById('jtLoadBtn');
+  btn.disabled = true;
+  showStatus('Parsing text with AI…');
+  hideResult();
+  try {
+    const res = await fetch('/api/parse-text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: val, model: selectedModel }),
+    });
+    const json = await res.json();
+    if (!res.ok || json.error) throw new Error(json.error || `Server error ${res.status}`);
+    lastResult = json.data;
+    showResult(json.data);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    btn.disabled = false;
+    hideStatus();
+  }
+}
+function clearJsonText() {
+  document.getElementById('jtPasteBox').value = '';
+  document.getElementById('jtActionBar').style.display = 'none';
+  document.getElementById('jtStatus').textContent = '';
+  hideResult();
 }
 
 // ─── Status helpers ───────────────────────────────────────────────────────────

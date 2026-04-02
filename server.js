@@ -545,6 +545,32 @@ function parseJsonResponse(text) {
   return JSON.parse(t);
 }
 
+// ─── Parse plain text / raw stats into structured JSON ───────────────────────
+app.post("/api/parse-text", async (req, res) => {
+  try {
+    const { text, model: requestedModel } = req.body;
+    if (!text || !text.trim()) return res.status(400).json({ error: "No text provided" });
+    if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured" });
+    const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : "claude-sonnet-4-6";
+    const message = await client.messages.create({
+      model,
+      max_tokens: 4000,
+      system: SYSTEM_PROMPT,
+      messages: [{
+        role: "user",
+        content: `The following is plain text or pasted game data for an MLB matchup. Extract all available fields into the exact JSON structure template below. Fill every field you can find in the text.\n\nTemplate:\n${JSON_TEMPLATE}\n\nGame data to parse:\n\n${text.trim()}`,
+      }],
+    });
+    const rawText = message.content[0].text.trim();
+    const parsed = parseJsonResponse(rawText);
+    res.json({ success: true, data: parsed });
+  } catch (err) {
+    console.error("Parse-text error:", err);
+    if (err instanceof SyntaxError) res.status(500).json({ error: "Failed to parse AI response as JSON", detail: err.message });
+    else res.status(500).json({ error: err.message || "Parse failed" });
+  }
+});
+
 app.post("/api/analyze", async (req, res) => {
   try {
     await runMulter(req, res);

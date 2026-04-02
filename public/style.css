@@ -1906,3 +1906,89 @@ body {
   .prob-team-label { font-size: 0.78rem; }
   .ou-conf-block { grid-template-columns: 1fr; }
 }
+
+/* ─── Input Tabs ───────────────────────────────────────────────────────── */
+.input-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.input-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text3);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.input-tab:hover { color: var(--text1); }
+.input-tab--active { color: var(--accent); border-bottom-color: var(--accent); }
+.input-tab-icon { width: 16px; height: 16px; }
+
+/* ─── JSON / Text Panel ─────────────────────────────────────────────────── */
+.jt-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.jt-file-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.jt-file-zone.dragover { border-color: var(--accent); background: rgba(200,16,46,0.05); }
+.jt-file-icon { width: 40px; height: 40px; color: var(--text3); }
+.jt-file-title { color: var(--text2); font-size: 0.9rem; margin: 0; }
+.jt-file-title code { background: var(--bg3); padding: 1px 5px; border-radius: 4px; font-size: 0.85rem; }
+.jt-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text3);
+  font-size: 0.8rem;
+}
+.jt-divider::before, .jt-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.jt-paste-area { display: flex; flex-direction: column; gap: 6px; }
+.jt-paste-header { display: flex; align-items: center; justify-content: space-between; }
+.jt-paste-label { color: var(--text2); font-size: 0.85rem; font-weight: 500; }
+.jt-paste-hint { font-size: 0.78rem; color: var(--text3); }
+.jt-valid { color: #4ade80 !important; }
+.jt-text  { color: #facc15 !important; }
+.jt-textarea {
+  width: 100%;
+  min-height: 160px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text1);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  padding: 12px;
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.jt-textarea:focus { outline: none; border-color: var(--accent); }
+.jt-textarea::placeholder { color: var(--text3); }
+.jt-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
