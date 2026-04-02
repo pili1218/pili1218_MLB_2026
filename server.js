@@ -10,9 +10,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ─── Database Setup ───────────────────────────────────────────────────────────
-const dbPath = process.env.VERCEL
-  ? "/tmp/predictions.db"
-  : path.join(__dirname, "predictions.db");
+// Use Railway persistent volume if mounted, otherwise fallback to local
+const dbPath = process.env.DB_PATH
+  ? process.env.DB_PATH
+  : process.env.VERCEL
+    ? "/tmp/predictions.db"
+    : path.join(__dirname, "predictions.db");
 const db = new Database(dbPath);
 console.log(`[DB] Using database at: ${dbPath}`);
 
@@ -63,6 +66,47 @@ db.exec(`
     notes             TEXT
   );
 `);
+
+// ─── Auto-seed from bundled export on first run (restores data after Railway redeploy) ──
+(function seedIfEmpty() {
+  try {
+    const count = db.prepare("SELECT COUNT(*) as n FROM predictions").get().n;
+    if (count > 0) return;
+    const seedPath = path.join(__dirname, "predictions-export.json");
+    if (!require("fs").existsSync(seedPath)) return;
+    const rows = JSON.parse(require("fs").readFileSync(seedPath, "utf8"));
+    const seedStmt = db.prepare(`
+      INSERT OR IGNORE INTO predictions (
+        id, saved_at, game_date, season_type, home_team, away_team,
+        home_starter, away_starter, home_win_pct, away_win_pct,
+        ou_line, ou_prediction, ou_confidence, ou_over_pct, confidence_score,
+        gvi, home_tms, away_tms, home_pms, away_pms,
+        home_pvs, away_pvs, home_red, away_red, pdcf_active,
+        active_flags, active_overrides, betting_recommendation,
+        key_driver, reasoning, export_string, full_prediction,
+        actual_winner, actual_home_score, actual_away_score, actual_total,
+        ml_result, ou_result, ml_correct, ou_correct, notes
+      ) VALUES (
+        @id, @saved_at, @game_date, @season_type, @home_team, @away_team,
+        @home_starter, @away_starter, @home_win_pct, @away_win_pct,
+        @ou_line, @ou_prediction, @ou_confidence, @ou_over_pct, @confidence_score,
+        @gvi, @home_tms, @away_tms, @home_pms, @away_pms,
+        @home_pvs, @away_pvs, @home_red, @away_red, @pdcf_active,
+        @active_flags, @active_overrides, @betting_recommendation,
+        @key_driver, @reasoning, @export_string, @full_prediction,
+        @actual_winner, @actual_home_score, @actual_away_score, @actual_total,
+        @ml_result, @ou_result, @ml_correct, @ou_correct, @notes
+      )
+    `);
+    const seedAll = db.transaction((records) => {
+      for (const r of records) seedStmt.run(r);
+    });
+    seedAll(rows);
+    console.log(`[DB] Seeded ${rows.length} records from predictions-export.json`);
+  } catch (e) {
+    console.warn("[DB] Auto-seed skipped:", e.message);
+  }
+})();
 
 const insertPrediction = db.prepare(`
   INSERT INTO predictions (
@@ -708,6 +752,7 @@ app.post("/api/save-prediction", (req, res) => {
     };
 
     const info = insertPrediction.run(row);
+    syncExportFile();
     res.json({ success: true, id: info.lastInsertRowid });
   } catch (err) {
     console.error("Save prediction error:", err);
@@ -758,12 +803,24 @@ app.post("/api/result/:id", (req, res) => {
       notes: notes || null,
     });
 
+    syncExportFile();
     res.json({ success: true, ml_correct, ou_correct, ou_result, actual_total: total });
   } catch (err) {
     console.error("Result error:", err);
     res.status(500).json({ error: err.message || "Failed to save result" });
   }
 });
+
+// ─── Sync export file after any DB write ─────────────────────────────────────
+function syncExportFile() {
+  try {
+    const rows = db.prepare("SELECT * FROM predictions ORDER BY id ASC").all();
+    const exportPath = path.join(__dirname, "predictions-export.json");
+    require("fs").writeFileSync(exportPath, JSON.stringify(rows, null, 2));
+  } catch (e) {
+    console.warn("[DB] Export sync failed:", e.message);
+  }
+}
 
 // ─── Get all predictions (paginated) ─────────────────────────────────────────
 app.get("/api/predictions", (req, res) => {
