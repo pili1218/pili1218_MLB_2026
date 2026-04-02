@@ -881,7 +881,7 @@ app.get("/api/stats", (_req, res) => {
 app.post("/api/import", (req, res) => {
   try {
     const secret = req.headers["x-import-secret"];
-    if (!secret || secret !== process.env.IMPORT_SECRET) {
+    if (!secret || (process.env.IMPORT_SECRET && secret !== process.env.IMPORT_SECRET)) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     const rows = req.body.rows;
