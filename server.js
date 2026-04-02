@@ -881,10 +881,9 @@ app.get("/api/stats", (_req, res) => {
 app.post("/api/import", (req, res) => {
   try {
     const secret = req.headers["x-import-secret"];
-    // auth check disabled for data restore — re-enable after import
-    // if (!secret || secret !== process.env.IMPORT_SECRET) {
-    //   return res.status(401).json({ error: "Unauthorized" });
-    // }
+    if (!secret || secret !== process.env.IMPORT_SECRET) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const rows = req.body.rows;
     if (!Array.isArray(rows)) return res.status(400).json({ error: "rows array required" });
 
