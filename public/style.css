@@ -1870,6 +1870,208 @@ body {
 .hidden { display: none !important; }
 
 /* ─── Footer ───────────────────────────────────────────────────────────── */
+/* ─── Manual Entry Button ─────────────────────────────────────────────── */
+.btn-manual-entry {
+  background: transparent;
+  border: 1px solid var(--blue);
+  color: var(--blue);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.btn-manual-entry:hover {
+  background: var(--blue);
+  color: #fff;
+}
+
+/* ─── Manual Entry Modal ──────────────────────────────────────────────── */
+.manual-modal-box {
+  max-width: 600px;
+  width: 95%;
+}
+.manual-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.manual-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.manual-tab:hover { color: var(--text); }
+.manual-tab--active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.manual-panel { margin-bottom: 12px; }
+.manual-hint {
+  font-size: 0.75rem;
+  color: var(--text3);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+.manual-hint code {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: 'Consolas', monospace;
+  font-size: 0.75rem;
+  color: var(--text2);
+}
+.manual-textarea {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'Consolas', monospace;
+  font-size: 0.8rem;
+  padding: 10px 12px;
+  resize: vertical;
+  line-height: 1.5;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.manual-textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+.manual-preview {
+  margin-top: 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 0.8rem;
+}
+.manual-preview--error {
+  border-color: var(--red);
+  color: var(--red);
+  font-size: 0.78rem;
+}
+.mp-row {
+  display: flex;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border);
+}
+.mp-row:last-child { border-bottom: none; }
+.mp-lbl {
+  color: var(--text3);
+  font-size: 0.75rem;
+  min-width: 70px;
+  padding-top: 1px;
+}
+.mp-val {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+.manual-common {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* ─── Changelog ───────────────────────────────────────────────────────── */
+.changelog-section {
+  max-width: 900px;
+  margin: 32px auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.changelog-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: var(--bg2);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.changelog-header:hover { background: var(--bg3); }
+.changelog-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text2);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.changelog-badge {
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.changelog-chevron {
+  margin-left: auto;
+  color: var(--text3);
+  font-size: 0.75rem;
+  transition: transform 0.2s;
+}
+.changelog-chevron.open { transform: rotate(180deg); }
+.changelog-body {
+  background: var(--bg);
+  padding: 0 20px;
+  transition: max-height 0.3s ease;
+}
+.changelog-body.hidden { display: none; }
+.changelog-entry {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.changelog-entry:last-child { border-bottom: none; }
+.changelog-entry--current .changelog-version { color: var(--accent2); }
+.changelog-version {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.changelog-date {
+  font-size: 0.75rem;
+  color: var(--text3);
+  font-weight: 400;
+  margin-left: 8px;
+}
+.changelog-desc {
+  font-size: 0.8rem;
+  color: var(--text2);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+.changelog-items {
+  margin: 0;
+  padding-left: 18px;
+  list-style: disc;
+}
+.changelog-items li {
+  font-size: 0.78rem;
+  color: var(--text3);
+  line-height: 1.6;
+  margin-bottom: 2px;
+}
+.changelog-items li strong { color: var(--text2); }
+
 .footer {
   position: relative;
   z-index: 1;

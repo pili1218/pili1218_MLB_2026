@@ -49,7 +49,7 @@
         <div class="globe-stats">
           <div class="globe-stat"><span class="globe-stat-num">3</span><span class="globe-stat-label">AI Models</span></div>
           <div class="globe-stat-divider"></div>
-          <div class="globe-stat"><span class="globe-stat-num">v2.3</span><span class="globe-stat-label">Framework</span></div>
+          <div class="globe-stat"><span class="globe-stat-num">v2.6</span><span class="globe-stat-label">Framework</span></div>
           <div class="globe-stat-divider"></div>
           <div class="globe-stat"><span class="globe-stat-num">MLB</span><span class="globe-stat-label">All Season</span></div>
         </div>
@@ -388,6 +388,84 @@
     </section>
 
   </main>
+
+  <section class="changelog-section">
+    <div class="changelog-header" id="changelogToggle">
+      <span class="changelog-title">Framework Changelog</span>
+      <span class="changelog-badge">v2.6</span>
+      <span class="changelog-chevron" id="changelogChevron">▼</span>
+    </div>
+    <div class="changelog-body hidden" id="changelogBody">
+      <div class="changelog-entry changelog-entry--current">
+        <div class="changelog-version">v2.6 <span class="changelog-date">2026-04-06</span></div>
+        <div class="changelog-desc">Post-slate structural tweaks. 5 rules addressing variance realism, wind-ace interaction, doubleheader logic, O/U gap minimum, and slate discipline.</div>
+        <ul class="changelog-items">
+          <li><strong>O/U Bet Gap Minimum (2.0 runs)</strong> — only recommend O/U bet when |Projected Total − line| ≥ 2.0; a 1.2-run gap is only 0.27 SD (~53% edge)</li>
+          <li><strong>Doubleheader G2 Flag</strong> — DH G2 always leans OVER, never bet UNDER; tired bullpens give up more runs in Game 2</li>
+          <li><strong>Wind-Ace Interaction</strong> — wind OUT cancelled when either SP xFIP ≤ 3.25; both aces cancel entirely (TOR@CWS: 17mph wind, total = 3)</li>
+          <li><strong>ML threshold raised to 65%</strong> — prior 62% was too low; implied probability must exceed 65% for meaningful single-game edge</li>
+          <li><strong>Slate Discipline Cap</strong> — maximum 2 bets per daily slate; skip discipline is working, over-betting marginal picks is the problem</li>
+        </ul>
+      </div>
+      <div class="changelog-entry">
+        <div class="changelog-version">v2.5 <span class="changelog-date">2026-04-05</span></div>
+        <div class="changelog-desc">Accuracy revision from 32-game empirical results (ML 47%, O/U 50/50, away teams won 53%). 6 structural fixes.</div>
+        <ul class="changelog-items">
+          <li><strong>Mandatory April O/U Gate</strong> — explicit gate forces Moderate cap after direction is set; all 16 prior April predictions violated it (High O/U was 47.1% vs Moderate 61.5%)</li>
+          <li><strong>xFIP Estimation Gate</strong> — knowledge-estimated xFIP cannot drive High O/U confidence; combined estimation cap (2+ estimated inputs) forces Moderate</li>
+          <li><strong>Home Bonus Accumulation Cap</strong> — April home bonuses capped at +8% above baseline; model was picking HOME 68.8% vs 46.9% actual wins</li>
+          <li><strong>No-Edge Pass Threshold</strong> — final win probability 47–53% → ML bet = Pass; close games went 1-for-8 (12.5%)</li>
+          <li><strong>Low-Line UNDER Floor</strong> — O/U line ≤7.5 in April → UNDER capped at Low; every UNDER on 7.5 April line missed high</li>
+          <li><strong>OU-F recalibration</strong> — UNDER default lowered to Low confidence; 32-game data shows 50/50 actual split; new KXF −10 deduction for estimated-xFIP UNDER</li>
+        </ul>
+      </div>
+      <div class="changelog-entry">
+        <div class="changelog-version">v2.4 <span class="changelog-date">2026-03-28</span></div>
+        <div class="changelog-desc">Accuracy revision from 26-game empirical results (ML 46%, OVER 46%, UNDER 62%, away teams won 58%). 7 structural fixes.</div>
+        <ul class="changelog-items">
+          <li>April Away Baseline: Tier A −2% home, Tier B −1% home</li>
+          <li>Home TMS Dampener: April home TMS advantage capped at +1%</li>
+          <li>TMS ultra-early tiered cap: &lt;5 games = 0%, 5–9 = 25%, ≥10 = 100%</li>
+          <li>April O/U Confidence Hard Cap: ALL O/U capped at Moderate in April</li>
+          <li>High-Line April UNDER Default: line ≥9.0 + temp &lt;68°F → UNDER (Low)</li>
+          <li>Single-Ace UNDER April Cap: Moderate max; High requires 3+ suppression signals</li>
+          <li>AHP deduction: −8 when home team wins in April (empirical: 42% accuracy)</li>
+        </ul>
+      </div>
+      <div class="changelog-entry">
+        <div class="changelog-version">v2.3 <span class="changelog-date">2025-04-10</span></div>
+        <div class="changelog-desc">20-game empirical results (ML 40%, OVER 40%, UNDER 70%). 7 structural fixes.</div>
+        <ul class="changelog-items">
+          <li>April OVER Confidence Cap: all OVER in April capped at Moderate</li>
+          <li>Wind-Cold Interaction: wind OUT bonus cancelled if temp &lt;60°F</li>
+          <li>§3.8 expanded to Tier A / Tier B April calibration</li>
+          <li>TMS early-season soft cap extended to &lt;10 games</li>
+          <li>OU-F April UNDER Default rule added</li>
+          <li>AOP −10 and KHA −15 confidence deductions added</li>
+        </ul>
+      </div>
+      <div class="changelog-entry">
+        <div class="changelog-version">v2.2 <span class="changelog-date">2025-04-03</span></div>
+        <div class="changelog-desc">10-game empirical analysis (ML 30%). 7 structural flaws fixed.</div>
+        <ul class="changelog-items">
+          <li>Minimum Starts Gate on RED (no knowledge-fill for &lt;3 starts)</li>
+          <li>Early Season Calibration Flag (April 1–14)</li>
+          <li>Away Momentum Amplifier (+2% extra for 5+ TMS gap)</li>
+          <li>TMF win probability effect (−3% away / −5% home)</li>
+          <li>OU-A Condition 3: Both Slumping → Lean OVER + WP equalization</li>
+          <li>High-GVI/High-Line Dampener for OU-E</li>
+        </ul>
+      </div>
+      <div class="changelog-entry">
+        <div class="changelog-version">v2.1</div>
+        <div class="changelog-desc">Expanded to Regular Season + Postseason. PMS split into RS/Postseason tables. Added race flags, HSGV.</div>
+      </div>
+      <div class="changelog-entry">
+        <div class="changelog-version">v2.0</div>
+        <div class="changelog-desc">Defined TMS/GVI formulas, Over% table, confidence floor, RCF, PDCF, HFCF/TMF thresholds.</div>
+      </div>
+    </div>
+  </section>
 
   <footer class="footer">
     <p>MLB Game Analyzer · Regular Season &amp; Postseason · Powered by Claude AI · <span id="footerModel">claude-sonnet-4-6</span></p>

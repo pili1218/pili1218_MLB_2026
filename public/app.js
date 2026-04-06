@@ -15,6 +15,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       badge.style.display = "inline-block";
     }
   } catch (_) { /* silent */ }
+
+  // Changelog toggle
+  const toggle = document.getElementById("changelogToggle");
+  const body   = document.getElementById("changelogBody");
+  const chev   = document.getElementById("changelogChevron");
+  if (toggle && body && chev) {
+    toggle.addEventListener("click", () => {
+      const open = !body.classList.contains("hidden");
+      body.classList.toggle("hidden", open);
+      chev.classList.toggle("open", !open);
+    });
+  }
 });
 
 // ─── Model Selector ───────────────────────────────────────────────────────────

@@ -279,7 +279,7 @@ Add a "data_sources" object at the end of the JSON listing which fields were fil
 
 Return ONLY valid JSON with no markdown, no explanation, just the raw JSON object.`;
 
-const PREDICT_SYSTEM = `You are the MLB Game Predictor AI v2.1 with deep knowledge of MLB statistics, player profiles, and team performance. You handle both Regular Season and Postseason games.
+const PREDICT_SYSTEM = `You are the MLB Game Predictor AI v2.6 with deep knowledge of MLB statistics, player profiles, and team performance. You handle both Regular Season and Postseason games.
 
 ## STEP 0 — FILL MISSING DATA BEFORE ANALYSIS
 
@@ -289,6 +289,7 @@ Before calculating any metric, inspect every field in the provided game data. Fo
    - ERA, WHIP, xFIP, K/9, BB/9 for the named pitcher (current or most recent season)
    - Recent game log: reconstruct last 3–5 starts with estimated innings, earned runs, strikeouts, walks
    - Season W/L record and innings pitched totals
+   - CRITICAL: Tag every xFIP value as "confirmed" (from current-season game logs) or "estimated" (from knowledge/prior season). This tag is mandatory for Step 5.
 
 2. TEAM DATA — Recall from your MLB knowledge:
    - Current or recent season overall record, home record, road record
@@ -298,7 +299,7 @@ Before calculating any metric, inspect every field in the provided game data. Fo
    - Division standings and games back
 
 3. ADVANCED METRICS — Estimate if missing:
-   - xFIP: if not provided, estimate from ERA + BB rate profile (xFIP ≈ ERA + 0.3 for average control, lower for elite control)
+   - xFIP: if not provided, estimate from ERA + BB rate profile (xFIP ≈ ERA + 0.3 for average control, lower for elite control) — TAG AS "estimated"
    - wRC+: estimate from team OBP and slugging trends (league average = 100)
    - DRS/OAA: use known defensive reputation of the team
 
@@ -323,54 +324,111 @@ Determine from the game data whether this is Regular Season or Postseason. Look 
 
 **PVS:** Std dev of Game Score across last 5 starts. Game Score = 50 + (IP*3) + (K*2) - (ER*10) - (BB*2) - (H*1). Flag PVS > 15.
 
-**RED:** Avg ERA last 3 starts minus season ERA. Per-start ERA = (earned_runs/innings)*9. Flag RED<-1.0 = "Surging", RED>+1.5 = "Slumping". If RCF active (xFIP > ERA by >=1.20), substitute xFIP for ERA in all §4 calculations.
+**RED:** Avg ERA last 3 starts minus season ERA. Per-start ERA = (earned_runs/innings)*9. Flag RED<-1.0 = "Surging", RED>+1.5 = "Slumping".
+MINIMUM STARTS GATE: If pitcher has <3 confirmed regular-season MLB starts this season, set RED=0, mark RED_unavailable. WP-Override A cannot fire. No knowledge-fill exceptions.
+If RCF active (xFIP > ERA by >=1.20), substitute xFIP for ERA in all §4 calculations.
 
 **TMS:** G1+G2+G3+G4+(G5*2) where Win=+3, Loss=-2, G5=most recent. Range -14 to +18. Apply -2 if team traveled 2+ time zones in last 24h.
+EARLY SEASON TMS CAP: <5 games played = 0% weight (ignore TMS). 5-9 games = 25% weight. >=10 games = 100% weight.
 
 **PMS:** Base 100 + season-appropriate bonuses:
-  REGULAR SEASON: Division Race within 3 games (+30), Wild Card Race within 3 games (+20), Must-Win 5+ loss streak in race (+15), Divisional Rivalry (+15), September game (+10), Series momentum won 2+ in row (+10). Apply highest race bonus only (not both).
+  REGULAR SEASON: Division Race within 3 games (+30), Wild Card Race within 3 games (+20), Must-Win 5+ loss streak in race (+15), Divisional Rivalry (+15), September game (+10), Series momentum won 2+ in row (+10). Apply highest race bonus only.
   POSTSEASON: Elimination Game (+50), Series Clinch (+25), Series Momentum won 2+ in row (+15), Divisional Rivalry (+15).
-  Win% shift = (Home PMS - Away PMS) / 50, capped at ±4%, applied to home team.
+  Win% shift = (Home PMS - Away PMS) / 50, capped at ±4%.
 
 **RCF:** xFIP > ERA by >=1.20 → flag "Regression Risk". Substitute xFIP for ERA downstream.
 
-**GVI:** Start 50. Adjustments: +15 per pitcher PVS>15; -15 per pitcher ERA/xFIP<2.50; -8 per pitcher ERA/xFIP 2.50-3.00; +10 per team 30-day wRC+>110; +10 wind OUT 8-15mph; +20 wind OUT >15mph; -10 wind IN >8mph; -10 temp<50F; +8 hitter's park; -8 pitcher's park; +5 batter-friendly ump; -5 pitcher-friendly ump; -5 per team with elite defense; +5 if postseason OR both teams in active race. Cap 1-100. Flag GVI>65=OVER bias, GVI<35=UNDER bias.
+**DOUBLEHEADER G2 CHECK (v2.6):** Before computing GVI, check if this is DH G2. If yes: set dh_g2=true, add +8 to GVI, apply OVER lean in §5, never output UNDER bet recommendation.
+
+**PROJECTED TOTAL (v2.6):** Compute projected_total = (home_avg_runs + away_avg_runs) × park_factor_multiplier. Bullpen adjustment: +0.5 if either bullpen ERA > 4.50; -0.3 if either < 3.50. Record this value. O/U bet requires |projected_total - ou_line| ≥ 2.0 runs — if gap < 2.0, set ou_bet_eligible=false.
+
+**GVI:** Start 50. Adjustments: +15 per pitcher PVS>15; -15 per pitcher ERA/xFIP<2.50; -8 per pitcher ERA/xFIP 2.50-3.00; +10 per team 30-day wRC+>110; +10 wind OUT 8-15mph; +20 wind OUT >15mph; -10 wind IN >8mph; -10 temp<50F; +8 hitter's park; -8 pitcher's park; +5 batter-friendly ump; -5 pitcher-friendly ump; -5 per team with elite defense; +5 if postseason OR both teams in active race.
+APRIL GVI ADJUSTMENTS: -5 if April 1-14; additional -5 if April 1-14 AND line>8.0; additional -5 if April AND OVER signal active.
+DH G2 ADJUSTMENT (v2.6): +8 to GVI if dh_g2=true.
+Cap 1-100. Flag GVI>65=OVER bias, GVI<35=UNDER bias.
+High-GVI/High-Line Dampener: GVI>75 AND line>8.0 → cap OU-E at Moderate.
 
 ## §4 WIN PROBABILITY SYNTHESIS
 
-Start 50/50. Apply all in order:
-1. Home base: +2%
-2. PMS shift: (HomePMS-AwayPMS)/50 capped ±4%
-3. H2H: >=65% record last 3 seasons → +3% to that team
-4. Defense: -2% to opponent per team with elite DRS/OAA
-5. WP-Override A (priority): Surging ace (xFIP<3.25, RED<-1.0) vs Slumping (RED>+1.5) → +14%. Flag "WP-Override A fired".
-6. WP-Override B: Home Fortress (home win%>=.650) vs road team (road win%<.500) → +10%. Flag "WP-Override B fired".
-7. No dominant override → Driver 1 (Momentum): higher TMS +4% (halved to +2% if facing opponent xFIP<3.00). Driver 2 (Venue): Home Fortress +5%.
-8. PDCF: road team higher TMS AND home team Home Fortress → flag PDCF, apply tiebreakers:
+**APRIL BASELINE (v2.5):**
+- April 1-14: start 48% home / 52% away. Home Fortress threshold raised to .700.
+- April 15-30: start 49% home / 51% away.
+- May onward: start 52% home / 48% away.
+
+Apply all in order:
+1. PMS shift: (HomePMS-AwayPMS)/50 capped ±4%
+2. H2H: >=65% record last 3 seasons → +3% to that team
+3. Defense: -2% to opponent per team with elite DRS/OAA
+4. WP-Override A (priority): Surging ace (xFIP<3.25, RED<-1.0, NOT RED_unavailable) vs Slumping (RED>+1.5, NOT RED_unavailable) → +14%. Flag "WP-Override A fired". WP-Override A is EXEMPT from Home Bonus Cap.
+5. WP-Override B: Home Fortress (home win%>=.650, or >=.700 if April) vs road team (road win%<.500) → +10%. Flag "WP-Override B fired".
+6. No dominant override:
+   - Driver 1 (Momentum): higher TMS +4%, subject to early-season cap.
+     HOME TMS DAMPENER (April): if HOME team has higher TMS in April → +1% only (not +4%).
+     AWAY MOMENTUM AMPLIFIER: away team TMS leads by 5+ points AND no WP-Override → additional +2% (total +6% away TMS).
+   - Driver 2 (Venue): Home Fortress +5%.
+7. Both SP Slumping: both RED>+1.5 → subtract 8% from favored team's win probability.
+8. TMF: away team TMF → -3% home win%. Home team TMF → -5% home win%.
+9. PDCF: road team higher TMS AND home team Home Fortress → apply tiebreakers:
    Bullpen xFIP diff>0.40 → +4% | Platoon wRC+ diff>15 → +3% | RISP wRC+ → +2% | All tied: 52/48 home.
-9. Normalize to 100. Cap 80/20. Check HFCF (>=68%). Check MCF (contradicts betting favorite).
+10. HOME BONUS ACCUMULATION CAP (v2.5, April only): Sum all bonuses added to home team above April baseline. If total > +8%, trim excess (discard in order: Defense → H2H → PMS → Fortress). WP-Override A exempt.
+11. Normalize to 100. Cap 80/20. Check HFCF (>=68%). Check MCF (contradicts betting favorite).
+12. NO-EDGE PASS THRESHOLD (v2.5): If final home win% is 47-53% → set ml_edge="no-edge". ML betting recommendation = Pass. Continue to O/U normally.
 
-## §5 O/U SYNTHESIS — stop at first trigger
+## §5 O/U SYNTHESIS
 
-OU-A: Surging vs Slumping → Lean OVER (Strong OVER if slumping team 15-day wRC+>108). Both Surging → Strong UNDER. Veto: wind OUT>15mph nullifies UNDER only; reinforces OVER to High confidence.
-OU-B: Wind OUT>8mph → OVER. Wind IN>8mph → UNDER. Wind OUT>15mph → Strong OVER.
+**⚠️ MANDATORY APRIL O/U GATE (v2.5):** If game_date is April 1-30, record april_ou_gate=ACTIVE. Run OU-A through OU-E to determine DIRECTION only. Then, AFTER setting direction, FORCE confidence to Moderate before writing output. Do NOT output High in April. Only exception: UNDER may reach High if ALL of the following are confirmed (not estimated): ace xFIP<3.00 from current-season starts + pitcher's park + temp<55F + GVI<30. This is the final step — apply it last.
+
+**xFIP ESTIMATION GATE (v2.5):** If a pitcher's xFIP is tagged "estimated" (not confirmed from current-season logs), that xFIP cannot drive High O/U confidence — cap at Moderate. If 2+ key inputs are estimated (xFIP, RED, 30-day wRC+), force Moderate regardless of GVI.
+
+Evaluate in strict order, stop at first trigger:
+
+OU-A: Surging vs Slumping → Lean OVER (Strong OVER if slumping team 15-day wRC+>108). Both Surging → Strong UNDER (Moderate max in April). Both Slumping (both RED>+1.5) → Lean OVER + WP equalize -8% favored team.
+SINGLE-ACE APRIL CAP: In April, single-ace UNDER → Moderate max. High requires 3+ confirmed suppression factors.
+Wind OUT>15mph veto: nullifies OU-A UNDER; reinforces OU-A OVER to High confidence.
+WIND-COLD GATE: If wind OUT AND temp<60F → cancel wind OVER bonus, fall through to OU-D.
+
+OU-B: Wind OUT>8mph → OVER (cancelled if temp<60F). Wind IN>8mph → UNDER (never vetoed by pitcher quality). Wind OUT>15mph → Strong OVER (cancelled if temp<60F; Lean OVER if temp 60-64F).
+WIND-ACE INTERACTION (v2.6): Before firing any wind OUT signal — check confirmed xFIP. Both SPs xFIP > 3.50 → OU-B fires normally. Either SP xFIP ≤ 3.25 (confirmed) → downgrade to OU-D input only, not primary OU-B trigger. Both SPs xFIP ≤ 3.25 → cancel OU-B entirely, fall to OU-D. Flag "Wind-Ace Veto active".
+
 OU-C: Both teams 15-day wRC+>115 → OVER.
-OU-D: Balance Ace Suppressor (xFIP<3.25) vs Red Hot Offense (wRC+>110, avg_runs>5.0). Park factor and temp<50F.
-OU-E: GVI>65 → OVER. GVI<35 → UNDER. GVI 35-65 → neutral.
 
-Confidence: High=2+ signals align. Moderate=1 strong. Low=GVI only.
+OU-D: Balance Ace Suppressor (xFIP<3.25) vs Red Hot Offense (wRC+>110, avg_runs>5.0). Park factor. Temp<50F → UNDER bias. Conflict → fall to OU-E.
+
+OU-E: GVI>65 → OVER. GVI<35 → UNDER. GVI 35-65 → neutral, lean nearest driver or match market.
+
+OU-F (April UNDER Default): If April AND neither OU-B nor OU-C fired → default UNDER (Low confidence).
+HIGH-LINE EXTENSION: April AND line>=9.0 AND temp<68F → force UNDER (Low) even if OU-B fired.
+LOW-LINE UNDER CAP: April AND line<=8.0 AND UNDER → cap at Moderate.
+LOW-LINE UNDER FLOOR (v2.5): April AND line<=7.5 AND UNDER → cap at Low. Every UNDER on 7.5 line in April missed high.
+Exception: override to OVER if temp>=68F AND hitter's park AND avg_runs>5.0 both teams.
+EMPIRICAL NOTE (v2.5): 32-game data shows 50/50 actual OVER/UNDER with lines running +0.52 below actuals. UNDER default is Low confidence only.
+
+After determining direction, apply Mandatory April O/U Gate and xFIP Estimation Gate before setting final confidence.
+
+Confidence assignment:
+- High: 3+ confirmed suppression signals stack AND not in April — OR 2+ OVER signals clearly align outside April
+- Moderate: 1 strong signal or 2 conflicting resolved by GVI; maximum tier in April (per gate)
+- Low: GVI tiebreaker only, unresolved conflict, OU-F default, or high-line UNDER
+
 Over%: High OVER=72%, Moderate OVER=61%, Low OVER=54%, Low UNDER=46%, Moderate UNDER=39%, High UNDER=28%.
 
-## §6 CONFIDENCE — start 100, floor 25
+## §6 CONFIDENCE — start 100, floor 25, April ceiling 70
 
-PDCF:-30. MCF:-25. HFCF(>=68%):-20. TMF(5+ loss streak):-20. HVIF(GVI>75):-15. HSGV(elimination game OR both teams within 1 game of cutoff):-15. SWR(precip>40%):-10.
+PDCF:-30. MCF:-25. HFCF(>=68%):-20. TMF(5+ loss streak):-20. HVIF(GVI>75):-15. HSGV(elimination game OR both teams within 1 game of cutoff):-15. KHA(April AND 3+ pitcher stats from knowledge):-15. VMF(GVI>70 AND win% 55-65%):-10. ESDU(early season AND 2+ fields estimated):-10. BSS(both pitchers RED>+1.5):-10. AOP(OVER pick in April):-10. SWR(precip>40%):-10. AHP(home team wins in April):-8. KXF(UNDER driven by estimated xFIP):-10.
+April ceiling: cap final score at 70 for any April game.
 
-## BETTING RECOMMENDATION
+## BETTING RECOMMENDATION (v2.6)
 
-win%>=62% AND conf>=65 → "Strong lean: [Team] ML · [OU] [Line] ([conf])"
-win% 56-62% AND conf>=58 → "Moderate lean: [Team] ML · [OU] [Line] ([conf])"
-win% 52-56% AND conf>=50 → "Slight lean: [Team] ML · [OU] [Line] ([conf])"
-else → "No strong ML play · Slight lean [OU] [Line] (low conviction)"
+VARIANCE NOTE: MLB total SD ≈ 4.5 runs. A 1.2-run model edge = only 0.27 SD = ~53% theoretical win rate. Only recommend bets with clear structural edges, not marginal signals.
+
+ML TIERS:
+ml_edge="no-edge" (47-53%) → "Pass ML · [OU] [Line] ([conf])"
+win%>=65% AND conf>=65 → "Strong lean: [Team] ML · [OU] [Line] ([conf])"
+win% 58-65% AND conf>=58 → "Moderate lean: [Team] ML · [OU] [Line] ([conf])"
+win% 54-58% AND conf>=50 → "Slight lean: [Team] ML · [OU] [Line] ([conf])"
+else → "Pass · [OU] [Line] (low conviction)"
+
+O/U BET GATE (v2.6): Check ou_bet_eligible. If false (projected_total gap < 2.0 runs) → O/U bet = "Pass (insufficient gap — projected [X] vs line [Y])". If dh_g2=true AND direction=UNDER → O/U bet = "Pass (DH G2 — never bet Under)". Otherwise apply normal tier.
 
 ## OUTPUT SCHEMA
 
@@ -680,7 +738,7 @@ app.post("/api/predict", async (req, res) => {
     // ── Pass 1: initial prediction ──────────────────────────────────────────
     let messages = [{
       role: "user",
-      content: `Apply the MLB Game Predictor v2.3 framework to this extracted game data. Fill any missing fields from your knowledge base first, then return the complete JSON prediction:\n\n${JSON.stringify(gameData, null, 2)}${notesBlock}`,
+      content: `Apply the MLB Game Predictor v2.6 framework to this extracted game data. Fill any missing fields from your knowledge base first, then return the complete JSON prediction:\n\n${JSON.stringify(gameData, null, 2)}${notesBlock}`,
     }];
 
     let parsed, issues, pass = 0;
@@ -1012,6 +1070,107 @@ app.post("/api/import", (req, res) => {
 
     const inserted = importAll(rows);
     res.json({ success: true, inserted, total: rows.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Manual prediction entry ──────────────────────────────────────────────────
+app.post("/api/manual-entry", (req, res) => {
+  try {
+    const { type, export_string, json_text, game_date, season_type, notes } = req.body;
+    let pred = {};
+
+    if (type === "export_string" && export_string) {
+      // Format: Away @ Home,Home SP (HOME),Away SP (AWAY),56%,44%,8.5,61% (Over)
+      const parts = export_string.split(",").map(s => s.trim());
+      if (parts.length < 7) return res.status(400).json({ error: "Export string needs 7 fields: Away @ Home, Home SP, Away SP, Home%, Away%, Line, Over% (Over/Under)" });
+
+      const atIdx = parts[0].indexOf(" @ ");
+      if (atIdx === -1) return res.status(400).json({ error: 'First field must contain " @ " — e.g. "Red Sox @ Yankees"' });
+
+      pred.away_team    = parts[0].slice(0, atIdx).trim();
+      pred.home_team    = parts[0].slice(atIdx + 3).trim();
+      pred.home_starter = parts[1] || null;
+      pred.away_starter = parts[2] || null;
+      pred.home_win_pct = parseInt(parts[3]) || null;
+      pred.away_win_pct = parseInt(parts[4]) || null;
+      pred.ou_line      = parts[5] || null;
+
+      const ouPctMatch = (parts[6] || "").match(/(\d+)%/);
+      pred.ou_over_pct  = ouPctMatch ? parseInt(ouPctMatch[1]) : null;
+      const ouDirMatch  = (parts[6] || "").match(/\((Over|Under)\)/i);
+      pred.ou_prediction = ouDirMatch ? ouDirMatch[1].toUpperCase() : null;
+
+      if (pred.ou_over_pct != null) {
+        const p = pred.ou_over_pct;
+        pred.ou_confidence = (p >= 70 || p <= 30) ? "High" : (p >= 59 || p <= 41) ? "Moderate" : "Low";
+      }
+
+    } else if (type === "json" && json_text) {
+      try { pred = JSON.parse(json_text); }
+      catch (e) { return res.status(400).json({ error: "Invalid JSON: " + e.message }); }
+    } else {
+      return res.status(400).json({ error: "type must be 'export_string' or 'json', with the corresponding text field" });
+    }
+
+    const stmt = db.prepare(`
+      INSERT INTO predictions (
+        saved_at, game_date, season_type, home_team, away_team,
+        home_starter, away_starter, home_win_pct, away_win_pct,
+        ou_line, ou_prediction, ou_confidence, ou_over_pct, confidence_score,
+        gvi, home_tms, away_tms, home_pms, away_pms,
+        home_pvs, away_pvs, home_red, away_red, pdcf_active,
+        active_flags, active_overrides, betting_recommendation,
+        key_driver, reasoning, export_string, full_prediction, notes
+      ) VALUES (
+        @saved_at, @game_date, @season_type, @home_team, @away_team,
+        @home_starter, @away_starter, @home_win_pct, @away_win_pct,
+        @ou_line, @ou_prediction, @ou_confidence, @ou_over_pct, @confidence_score,
+        @gvi, @home_tms, @away_tms, @home_pms, @away_pms,
+        @home_pvs, @away_pvs, @home_red, @away_red, @pdcf_active,
+        @active_flags, @active_overrides, @betting_recommendation,
+        @key_driver, @reasoning, @export_string, @full_prediction, @notes
+      )
+    `);
+
+    const n = v => (v === undefined || v === null || v === "") ? null : v;
+    const result = stmt.run({
+      saved_at:             new Date().toISOString(),
+      game_date:            n(game_date) || n(pred.game_date),
+      season_type:          n(season_type) || n(pred.season_type) || "Regular Season",
+      home_team:            n(pred.home_team),
+      away_team:            n(pred.away_team),
+      home_starter:         n(pred.home_starter),
+      away_starter:         n(pred.away_starter),
+      home_win_pct:         n(pred.home_win_pct),
+      away_win_pct:         n(pred.away_win_pct),
+      ou_line:              n(pred.ou_line),
+      ou_prediction:        n(pred.ou_prediction),
+      ou_confidence:        n(pred.ou_confidence),
+      ou_over_pct:          n(pred.ou_over_pct),
+      confidence_score:     n(pred.confidence_score),
+      gvi:                  n(pred.gvi),
+      home_tms:             n(pred.home_tms),
+      away_tms:             n(pred.away_tms),
+      home_pms:             n(pred.home_pms),
+      away_pms:             n(pred.away_pms),
+      home_pvs:             n(pred.home_pvs),
+      away_pvs:             n(pred.away_pvs),
+      home_red:             n(pred.home_red),
+      away_red:             n(pred.away_red),
+      pdcf_active:          pred.pdcf_active ? 1 : 0,
+      active_flags:         pred.active_flags ? (typeof pred.active_flags === "string" ? pred.active_flags : JSON.stringify(pred.active_flags)) : null,
+      active_overrides:     pred.active_overrides ? (typeof pred.active_overrides === "string" ? pred.active_overrides : JSON.stringify(pred.active_overrides)) : null,
+      betting_recommendation: n(pred.betting_recommendation),
+      key_driver:           n(pred.key_driver),
+      reasoning:            n(pred.reasoning),
+      export_string:        type === "export_string" ? export_string : n(pred.export_string),
+      full_prediction:      type === "json" ? json_text : n(pred.full_prediction),
+      notes:                n(notes) || n(pred.notes) || "Manual entry",
+    });
+
+    res.json({ success: true, id: result.lastInsertRowid });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

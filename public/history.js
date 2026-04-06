@@ -596,3 +596,127 @@ function esc(s) {
     .replace(/&/g, "&amp;").replace(/</g, "&lt;")
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
+
+// ─── Manual Entry Modal ───────────────────────────────────────────────────────
+let _manualTab = "export";
+
+function openManualEntry() {
+  document.getElementById("exportStringInput").value = "";
+  document.getElementById("jsonInput").value = "";
+  document.getElementById("manualDate").value = new Date().toISOString().slice(0, 10);
+  document.getElementById("manualSeasonType").value = "Regular Season";
+  document.getElementById("manualNotes").value = "";
+  document.getElementById("exportPreview").classList.add("hidden");
+  document.getElementById("manualError").classList.add("hidden");
+  switchManualTab("export");
+  document.getElementById("manualModal").classList.remove("hidden");
+  document.getElementById("exportStringInput").focus();
+}
+
+function closeManualModal(e) {
+  if (e.target.id === "manualModal") document.getElementById("manualModal").classList.add("hidden");
+}
+
+function switchManualTab(tab) {
+  _manualTab = tab;
+  document.getElementById("panelExport").classList.toggle("hidden", tab !== "export");
+  document.getElementById("panelJson").classList.toggle("hidden", tab !== "json");
+  document.getElementById("tabExport").classList.toggle("manual-tab--active", tab === "export");
+  document.getElementById("tabJson").classList.toggle("manual-tab--active", tab === "json");
+}
+
+function parseExportString(str) {
+  const parts = str.split(",").map(s => s.trim());
+  if (parts.length < 7) return null;
+  const atIdx = parts[0].indexOf(" @ ");
+  if (atIdx === -1) return null;
+  const away = parts[0].slice(0, atIdx).trim();
+  const home = parts[0].slice(atIdx + 3).trim();
+  const homePct = parseInt(parts[3]) || null;
+  const awayPct = parseInt(parts[4]) || null;
+  const line    = parts[5] || null;
+  const ouPctM  = (parts[6] || "").match(/(\d+)%/);
+  const ouDirM  = (parts[6] || "").match(/\((Over|Under)\)/i);
+  return {
+    away_team:     away,
+    home_team:     home,
+    home_starter:  parts[1] || null,
+    away_starter:  parts[2] || null,
+    home_win_pct:  homePct,
+    away_win_pct:  awayPct,
+    ou_line:       line,
+    ou_over_pct:   ouPctM ? parseInt(ouPctM[1]) : null,
+    ou_prediction: ouDirM ? ouDirM[1].toUpperCase() : null,
+  };
+}
+
+function previewExportString() {
+  const raw = document.getElementById("exportStringInput").value.trim();
+  const previewEl = document.getElementById("exportPreview");
+  if (!raw) { previewEl.classList.add("hidden"); return; }
+  const p = parseExportString(raw);
+  if (!p || !p.home_team) {
+    previewEl.className = "manual-preview manual-preview--error";
+    previewEl.textContent = "Cannot parse — check format: Away @ Home, Home SP, Away SP, 56%, 44%, 8.5, 61% (Over)";
+    return;
+  }
+  const ouDir = p.ou_prediction || "—";
+  const ouColor = ouDir === "OVER" ? "var(--accent2)" : "var(--blue)";
+  previewEl.className = "manual-preview";
+  previewEl.innerHTML = `
+    <div class="mp-row"><span class="mp-lbl">Matchup</span><span class="mp-val">${esc(p.away_team)} @ ${esc(p.home_team)}</span></div>
+    <div class="mp-row"><span class="mp-lbl">Starters</span><span class="mp-val">${esc(p.away_starter)} vs ${esc(p.home_starter)}</span></div>
+    <div class="mp-row"><span class="mp-lbl">Win%</span><span class="mp-val">${esc(p.home_team)} ${p.home_win_pct ?? "—"}% · ${esc(p.away_team)} ${p.away_win_pct ?? "—"}%</span></div>
+    <div class="mp-row"><span class="mp-lbl">O/U</span><span class="mp-val" style="color:${ouColor}">${ouDir} ${esc(p.ou_line)} (${p.ou_over_pct ?? "—"}% Over)</span></div>`;
+}
+
+async function submitManualEntry() {
+  const errEl = document.getElementById("manualError");
+  errEl.classList.add("hidden");
+
+  const game_date   = document.getElementById("manualDate").value;
+  const season_type = document.getElementById("manualSeasonType").value;
+  const notes       = document.getElementById("manualNotes").value;
+
+  if (!game_date) {
+    errEl.textContent = "Game date is required.";
+    errEl.classList.remove("hidden");
+    return;
+  }
+
+  let body;
+  if (_manualTab === "export") {
+    const export_string = document.getElementById("exportStringInput").value.trim();
+    if (!export_string) {
+      errEl.textContent = "Paste an export string first.";
+      errEl.classList.remove("hidden");
+      return;
+    }
+    body = { type: "export_string", export_string, game_date, season_type, notes };
+  } else {
+    const json_text = document.getElementById("jsonInput").value.trim();
+    if (!json_text) {
+      errEl.textContent = "Paste JSON first.";
+      errEl.classList.remove("hidden");
+      return;
+    }
+    body = { type: "json", json_text, game_date, season_type, notes };
+  }
+
+  try {
+    const res  = await fetch("/api/manual-entry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error);
+
+    document.getElementById("manualModal").classList.add("hidden");
+    await Promise.all([loadStats(), loadHistory(1)]);
+    document.getElementById("histTable").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (err) {
+    errEl.textContent = "Error: " + err.message;
+    errEl.classList.remove("hidden");
+  }
+}

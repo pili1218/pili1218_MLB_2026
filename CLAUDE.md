@@ -1,9 +1,10 @@
-# MLB Game Predictor — Analytical Framework v2.3
+# MLB Game Predictor — Analytical Framework v2.4
 
 > **Operational protocol for Claude Code.**
+> Do not make any changes until you have 95% confidence in what you need to build. Ask me follow-up questions until you reach that confidence.
 > When analyzing an MLB matchup, follow every section in order. Do not skip steps.
 > Applies to **Regular Season and Postseason**. Season-specific rules are clearly labeled.
-> v2.3 — Accuracy revision based on 20-game empirical results (ML 40%, O/U 55%): 7 structural flaws fixed.
+> v2.6 — Structural tweaks from post-slate review (2026-04-06): 5 rules added addressing variance realism, wind-ace interaction, doubleheader logic, O/U bet gap minimum, and slate bet cap.
 
 ---
 
@@ -103,7 +104,12 @@ where G = +3 (Win) or −2 (Loss), and G5 is the most recent game.
 
 **Travel/Fatigue modifier:** If a team traveled across 2+ time zones within the last 24 hours, reduce their TMS by 2.
 
-**Early Season TMS Cap (v2.3):** If team has played **fewer than 10 regular season games**, apply TMS at **50% weight** in §4 Driver 1. Early-season win/loss streaks of 3–5 games are random variance, not true momentum signals.
+**Early Season TMS Cap (v2.3/v2.4):**
+- **< 5 games played:** Apply TMS at **0% weight** in §4 Driver 1 — ignore entirely. A 2–4 game sample is pure noise.
+- **5–9 games played:** Apply TMS at **25% weight** in §4 Driver 1.
+- **≥ 10 games played:** Apply TMS at full **100% weight**.
+
+**Home TMS Dampener (v2.4):** In **April 1–30**, when the **home team** holds the TMS advantage, reduce the home team's TMS Driver 1 bonus from +4% to **+1%**. The away team's TMS advantage retains full +4% (or +6% with Away Momentum Amplifier). Empirical basis: home TMS-favored teams won only 38% vs 50% for away TMS-favored teams — home TMS is an unreliable signal in April.
 
 **Flag:** Higher TMS = form favorite (used in §4 Driver 1)
 
@@ -181,9 +187,14 @@ Composite score from 1–100. Start at **50**, apply all applicable adjustments.
 
 **High-GVI / High-Line Dampener (v2.2):** When GVI > 75 AND the betting O/U line > 8.0, the GVI-driven OU-E signal is **capped at Moderate confidence** (not Strong/High).
 
-**April OVER Confidence Cap (v2.3):** When game date is **April 1–30**, cap any OVER confidence at **Moderate** regardless of GVI, wind, or OU-B signal strength — UNLESS temperature ≥ 68°F AND park factor is Hitter's Park. Empirical data: OVER accuracy in April = 40%, UNDER = 70%.
+**April O/U Confidence Hard Cap (v2.4):** When game date is **April 1–30**, cap **ALL O/U confidence at Moderate** — for both OVER and UNDER — regardless of GVI, wind, or signal count. The "High" confidence tier does not exist for O/U in April. Exception: UNDER can reach High only when **3+ suppression factors stack simultaneously** (e.g., ace xFIP < 3.00 + pitcher's park + temp < 55°F + GVI < 30). Empirical: High confidence O/U in April was 46% correct vs Moderate at 62% — the High tier was inverting accuracy.
+
+**High-Line April UNDER Default (v2.4):** When game date is **April 1–30** AND O/U line **≥ 9.0** AND temperature < 68°F → classify as **UNDER (Low confidence)** regardless of wind, GVI, or OU-B direction. This overrides any wind OVER signal for high lines in April. Exception: override to OVER only if temp ≥ 68°F AND hitter's park AND avg_runs both teams > 5.5. Empirical: OVER on 9.0+ lines in April was 43% correct — the market already prices in high offense; calling OVER on top is noise.
 
 **Wind-Cold Interaction Rule (v2.3):** When wind blows OUT AND temperature < 60°F, **cancel the wind OVER bonus entirely** — cold air kills ball carry. Fall through to OU-D/OU-E instead. Wind IN is still valid regardless of temperature.
+
+**xFIP Estimation Gate (v2.5):** When a pitcher's xFIP is knowledge-estimated rather than confirmed from current-season game logs, that pitcher's xFIP may still drive O/U direction but **cannot elevate O/U confidence to High**. Cap at Moderate for any call where the primary suppressor signal relies on an estimated xFIP. Tag the pitcher as `xFIP_estimated`. Applies to both UNDER and OVER directions.
+> **Combined Estimation Cap (v2.5):** When 2+ key inputs (xFIP, RED, 30-day wRC+) are knowledge-estimated for either team, cap O/U confidence at Moderate regardless of direction or GVI value. Empirical basis: all 5 UNDER High misses had estimated xFIP as the primary GVI suppressor — average actual total was 11 runs on lines of 7.5–8.0.
 
 ---
 
@@ -204,25 +215,77 @@ Composite score from 1–100. Start at **50**, apply all applicable adjustments.
 
 | Adjustment | Effect |
 |-----------|--------|
-| Home field base bonus | **Remove entirely (0%)** — empirical data shows away teams winning 55% in April |
+| Home field base bonus | **−2% to home team** (48% home / 52% away baseline) — empirical data shows away teams winning **58%** in April; prior 0% was not enough correction |
 | Home Fortress threshold | Raise qualifying floor to **.700** home win% (harder to trigger) |
+| Home Bonus Accumulation Cap | Total home bonuses from §4 Step 3 capped at +8% above baseline (see §4) |
 | GVI calibration | Apply **−5 to GVI** |
 | High O/U line dampener | If betting line > **8.0**, add additional **−5 to GVI** |
 | RED gate | Enforce Minimum Starts Gate (§3.2) strictly — no exceptions |
-| TMS early weight | Apply TMS at **50% weight** if team has played **fewer than 10 regular season games** |
-| OVER cap | Cap all OVER confidence at **Moderate** (see §3.6 April OVER Confidence Cap) |
+| TMS early weight | Apply per §3.3 tiered cap: 0% if <5 games, 25% if 5–9 games |
+| Home TMS Dampener | Home TMS advantage capped at +1% (not +4%) — see §3.3 |
+| O/U confidence cap | Cap ALL O/U confidence at **Moderate** — High tier unavailable (see §3.6) |
+| xFIP Estimation Gate | Estimated xFIP cannot drive High confidence — cap at Moderate (see §3.6) |
+| High-line UNDER default | O/U line ≥ 9.0 AND temp < 68°F → UNDER (Low) regardless of wind (see §3.6) |
 | Wind-Cold gate | Cancel wind OVER bonus if temp < 60°F (see §3.6 Wind-Cold Interaction Rule) |
+| No-Edge Pass | Final win probability 47–53% → betting recommendation = Pass (no ML edge) |
 
 **Tier B — April 15–30 trigger** (remainder of April):
 
 | Adjustment | Effect |
 |-----------|--------|
-| Home field base bonus | Reduce from +2% to **+1%** |
-| TMS early weight | Apply TMS at **50% weight** if team has played **fewer than 10 games** |
-| OVER cap | Cap all OVER confidence at **Moderate** (empirical: early April OVER failure persists) |
+| Home field base bonus | **−1% to home team** (49% home / 51% away baseline) |
+| Home Bonus Accumulation Cap | Total home bonuses from §4 Step 3 capped at +8% above baseline (see §4) |
+| TMS early weight | Apply per §3.3 tiered cap: 0% if <5 games, 25% if 5–9 games |
+| Home TMS Dampener | Home TMS advantage capped at +1% (not +4%) — see §3.3 |
+| O/U confidence cap | Cap ALL O/U confidence at **Moderate** — High tier unavailable |
+| xFIP Estimation Gate | Estimated xFIP cannot drive High confidence — cap at Moderate |
+| High-line UNDER default | O/U line ≥ 9.0 AND temp < 68°F → UNDER (Low) — see §3.6 |
 | Wind-Cold gate | Cancel wind OVER bonus if temp < 60°F |
+| No-Edge Pass | Final win probability 47–53% → betting recommendation = Pass (no ML edge) |
 
 **Flag label:** `"Early Season Calibration (April 1–14)"` or `"April Calibration (April 15–30)"`
+
+---
+
+### 3.9 Variance Realism & Bet Eligibility (v2.6)
+
+#### MLB Total Variance Acknowledgment
+The standard deviation of MLB game totals is approximately **4.5 runs per game**. A model-projected edge of 1.2–1.9 runs above/below the O/U line represents only **0.25–0.4 standard deviations** — a theoretical win rate of ~53–56%. This edge only materializes over 100–200 bets; in any 5-game sample, 20%–80% accuracy is normal random variance. This context must inform confidence scoring and bet selection.
+
+#### O/U Bet Gap Minimum (v2.6)
+Before issuing any O/U betting recommendation (Slight or above), compute the **projected game total**:
+
+`Projected Total = (Home avg_runs + Away avg_runs) × Park Factor multiplier`
+
+Apply any bullpen adjustment: if either bullpen ERA > 4.50, add +0.5 runs; if either bullpen ERA < 3.50, subtract 0.3 runs.
+
+**Gate:** Only issue an O/U bet recommendation if `|Projected Total − O/U Line| ≥ 2.0 runs`. If gap < 2.0 runs → O/U betting recommendation = **Pass (insufficient gap)**. The O/U direction prediction is still output (for tracking), but no active bet is recommended.
+
+> Empirical basis: 1.2–1.9 run gaps produce only ~53–56% theoretical edge — statistically indistinguishable from noise in single-game samples. A 2.0-run minimum represents ~0.44 standard deviations, giving a more meaningful theoretical win rate of ~57–59%.
+
+#### Doubleheader Game 2 Flag (v2.6)
+**Trigger:** Game is identified as the **second game of a doubleheader** (DH G2).
+
+**Effect:**
+- **OVER lean applied** — tired bullpens in DH G2 give up more runs, not fewer. Both teams' bullpen depth is depleted from Game 1.
+- **Never recommend UNDER in DH G2** — regardless of GVI, OU-A pitcher form, or low line. Starter length increases in DH G2 do not suppress runs; they shift liability from bullpen to a potentially fatigued starter.
+- Add +8 to GVI for DH G2 (replaces any neutral bullpen assumption).
+- Flag: `"DH G2 — OVER lean applied"`
+
+**Identification:** Flag DH G2 when game notes, context, or scheduling indicates same-day doubleheader Game 2.
+
+#### Wind-Ace Interaction Rule (v2.6)
+Wind blowing **OUT** > 8 mph activates OU-B OVER signal **only when the starting pitchers are mid-tier or weaker**. When an **ace-tier starter** (xFIP ≤ 3.25 confirmed, or ERA ≤ 2.80) is pitching, wind OUT is **cancelled as an OVER signal** — elite pitchers suppress ball carry through controlled pitch profiles regardless of wind conditions.
+
+**Rule:**
+- Wind OUT > 8 mph AND **both SPs xFIP > 3.50** → OU-B OVER fires normally
+- Wind OUT > 8 mph AND **either SP xFIP ≤ 3.25** → OU-B OVER signal is **reduced to OU-D input only** (not a primary trigger)
+- Wind OUT > 8 mph AND **both SPs xFIP ≤ 3.25** (dual aces) → OU-B OVER signal is **cancelled entirely** → fall through to OU-D
+- Wind IN > 8 mph is **not affected** by pitcher quality — suppressive wind works regardless of pitcher tier
+
+> Empirical basis: TOR@CWS had 16–17 mph confirmed wind OUT. Total = 3 runs. Wind adds ~0.4 runs on average across thousands of games — a signal completely invisible when elite pitchers are dealing.
+
+**Flag:** `"Wind-Ace Veto active"` when wind OVER cancelled by ace-tier SP.
 
 ---
 
@@ -255,14 +318,20 @@ If an override fires, record the flag, apply the adjustment, then continue to PM
 
 Start from **50/50 baseline**. Apply in order:
 
-1. **Home field base:** +2% to home team (reduced to +1% if April 15–30 flag active; reduced to **0%** if April 1–14 flag active — away teams win 55% empirically in opening two weeks)
+1. **Home field base:** +2% to home team. **April adjustments (v2.4):**
+   - April 1–14: **−2% to home team** (48/52 home/away baseline) — away teams won 58% empirically
+   - April 15–30: **−1% to home team** (49/51 home/away baseline)
 2. **PMS differential:** Apply ΔPMS / 50, capped at ±4%
 3. **H2H adjustment:** +3% to team with ≥65% H2H record
-4. **Driver 1 — Momentum:** Team with higher TMS gets +4%
+4. **Driver 1 — Momentum:** Team with higher TMS gets +4%, subject to:
+   - **Early Season TMS cap** (§3.3): 0% weight if team <5 games, 25% if 5–9 games
+   - **Home TMS Dampener (v2.4):** In April 1–30, if the HOME team has higher TMS → award only **+1%** to home team (not +4%)
    > **Away Momentum Amplifier (v2.2):** If the **away team** has a higher TMS AND the TMS gap is **5+ points** AND no WP-Override is active → award away team an **additional +2%** (total away TMS bonus = +6% before home field offsets). Flag: "Away Momentum Amplifier active".
 5. **Driver 2 — Venue Control:** Home Fortress Flag active → +5% home team
 6. **Defensive adjustment:** −2% per team with elite defense applied to their opponent
 7. **TMF win probability adjustment:** Apply per §3.7 if TMF is active for either team
+
+> **Home Bonus Accumulation Cap (v2.5):** In **April 1–30**, after applying all Step 3 items above, sum all bonuses added to the home team's probability above the April baseline (48% Tier A / 49% Tier B). If total home bonus exceeds **+8%**, trim the excess. Discard the least impactful bonus first (Defense → H2H → PMS → Fortress). This cap does **not** apply to WP-Override A (pitcher mismatch is a genuine signal). Empirical basis: model was picking HOME 68.8% of the time vs 46.9% actual home wins — stacked bonuses were overwhelming the April away corrections.
 
 ### Step 4 — Execute Conflict Protocol
 
@@ -289,25 +358,31 @@ If one team holds a clear advantage, they are the strong favorite.
 - Cap at maximum **80% / 20%**
 - Check HFCF (≥68%) → flag and apply −20 confidence
 - Check MCF (contradicts betting line favorite) → flag and apply −25 confidence
+- **No-Edge Pass Threshold (v2.5):** When the final home win probability falls in the **47–53% range** after all adjustments and normalization, set `ml_edge = "no-edge"`. The ML betting recommendation must be **Pass** — do not force a side. The O/U prediction still runs normally. Empirical basis: close games (45–55% model win%) went 1-for-8 (12.5%) — worse than random, indicating the model has zero edge in this range.
 
 ---
 
 ## 5. Hierarchical Over/Under Synthesis
 
+> **⚠️ MANDATORY APRIL O/U GATE (v2.5):** Before evaluating any OU-A through OU-E signal, check the game date. If **April 1–30**: record `april_ou_gate = ACTIVE`. After the signal direction is determined from whichever OU step triggers first, **force confidence to Moderate** — do not output High. Only exception: UNDER may reach High if 3+ suppression factors stack **with confirmed (not estimated) data** simultaneously: confirmed ace xFIP < 3.00 from current-season starts + pitcher's park + temp < 55°F + GVI < 30. This gate is mandatory — apply it last, after determining direction, before writing the output. Empirical: 16 of 16 April predictions violated this cap; High O/U in April was 47.1% vs Moderate at 61.5%.
+
 > Evaluate **OU-A → OU-B → OU-C → OU-D → OU-E** in strict order. Stop at first trigger.
 
 ### [OU-A] Pitcher Form Dominance Protocol *(PRIMARY)*
 - **Condition 1 — Surging vs Slumping:** → Lean OVER. Escalate to Strong OVER only if the slumping pitcher's team also has 15-day wRC+ > 108.
-- **Condition 2 — Two Surging pitchers:** → Strong UNDER
+- **Condition 2 — Two Surging pitchers:** → Strong UNDER. **April cap (v2.4):** Capped at Moderate confidence in April per §3.6.
 - **Condition 3 — Both Slumping (v2.2):** Both pitchers RED > +1.5 → **Lean OVER** (both staffs leaking runs). Escalate to Strong OVER if either team's 15-day wRC+ > 108. Additionally, apply win probability equalization: subtract 8% from the favored team's win probability (both rotation liabilities = less reliable favorite). Flag: "Both SP Slumping — WP Equalized".
 - **Veto (per-condition):**
   - Condition 2 (UNDER) nullified by wind blowing OUT > 15 mph → drop to OU-B
   - Condition 1 (OVER) reinforced by wind blowing OUT > 15 mph → Strong OVER, High confidence
+- **Single-Ace UNDER April Cap (v2.4):** In April 1–30, when UNDER direction is driven **solely by one surging pitcher** (Condition 1 or 2 with a single ace, not dual aces), cap UNDER confidence at **Moderate**. High UNDER in April requires 3+ suppression factors stacking simultaneously (ace xFIP < 3.00 + pitcher's park + temp < 55°F or dual aces). Empirical: 3 of 4 single-ace High UNDER calls in April failed, with actual totals of 8, 11, 12 on a 7.5 line.
 
 ### [OU-B] Environmental Override *(PRIMARY)*
-- Wind blowing **OUT** > 8 mph → **OVER** *(cancelled if temp < 60°F — cold kills ball carry; fall through to OU-D)*
-- Wind blowing **IN** > 8 mph → **UNDER** *(valid regardless of temperature)*
-- Wind blowing **OUT** > 15 mph → **Strong OVER** *(cancelled if temp < 60°F; downgraded to Lean OVER if temp 60–64°F)*
+- Wind blowing **OUT** > 8 mph → **OVER** *(cancelled if temp < 60°F; also subject to Wind-Ace Interaction Rule §3.9)*
+- Wind blowing **IN** > 8 mph → **UNDER** *(valid regardless of temperature or pitcher quality)*
+- Wind blowing **OUT** > 15 mph → **Strong OVER** *(cancelled if temp < 60°F; downgraded to Lean OVER if temp 60–64°F; subject to Wind-Ace Interaction Rule §3.9)*
+
+> **Wind-Ace Interaction (v2.6):** Before triggering OU-B for wind OUT, check pitcher xFIP. Both SPs xFIP > 3.50 → fires normally. Either SP xFIP ≤ 3.25 → downgrade to OU-D input only. Both SPs xFIP ≤ 3.25 → cancel OU-B entirely. Wind IN is never cancelled by pitcher quality.
 
 ### [OU-C] Offensive Volatility Override *(PRIMARY)*
 - Both teams' **15-day wRC+** > 115 → **OVER**
@@ -325,16 +400,23 @@ Balance the following signals:
 - GVI < 35 → **UNDER**
 - GVI 35–65 → Neutral — lean toward nearest active driver; if none, match betting market direction
 
-### [OU-F] April UNDER Default Rule (v2.3 NEW)
+### [OU-F] April UNDER Default Rule (v2.3, enhanced v2.4)
 **Trigger:** Game date April 1–30 AND no OU-B or OU-C signal fired.
 → Default lean is **UNDER** regardless of GVI OVER bias.
 → Override only if: temp ≥ 68°F AND hitter's park AND avg_runs both teams > 5.0.
-Empirical basis: UNDER hit 70%, OVER hit 40% in April sample of 20 games.
+
+**High-Line Extension (v2.4):** Game date April 1–30 AND O/U line ≥ 9.0 AND temp < 68°F → force **UNDER (Low confidence)** even if OU-B fired. High-line OVER in April (9.0+) was 43% correct — the wind/GVI signal adds no edge on top of a high line.
+
+**Low-Line UNDER Confidence Cap (v2.4):** When O/U line **≤ 8.0** AND model predicts UNDER in April → cap confidence at **Moderate**. The market has already priced in a low-scoring environment; a "double UNDER" with High confidence adds noise, not signal. Empirical: 3 High-confidence UNDER calls on 7.5 lines all failed (actual totals: 8, 11, 12).
+
+**Low-Line UNDER Floor (v2.5):** When O/U line **≤ 7.5** AND model predicts UNDER in April → cap confidence at **Low**. Lines ≤7.5 are the market's most suppressive pricing; the UNDER has no additional edge. Empirical: every UNDER call on a 7.5 line in April missed high (totals: 8, 8, 12, 16).
+
+Empirical basis (updated v2.5): 32-game dataset shows 50/50 OVER/UNDER actual split with average totals running **+0.52 above lines**. The UNDER default is retained as a precautionary lean but the prior 62% edge claim is not confirmed in current data — use Low confidence on the default, not Moderate.
 
 **O/U Confidence assignment:**
-- **High:** 2+ override/driver signals clearly align
-- **Moderate:** 1 strong override signal or 2 conflicting drivers resolved by GVI
-- **Low:** GVI tiebreaker only or unresolved conflict
+- **High:** 3+ suppression signals stack AND not in April (April hard-cap applies) — OR 2+ OVER signals clearly align outside April
+- **Moderate:** 1 strong override signal or 2 conflicting drivers resolved by GVI; maximum tier in April
+- **Low:** GVI tiebreaker only, unresolved conflict, or high-line UNDER default in April
 
 **Over % conversion table:**
 
@@ -348,7 +430,7 @@ Empirical basis: UNDER hit 70%, OVER hit 40% in April sample of 20 games.
 
 ## 6. Confidence Scoring & Variance Flags
 
-Start at **100 points**. Minimum score: **25**.
+Start at **100 points**. Minimum score: **25**. **April maximum score: 70** — any calculated confidence above 70 in April 1–30 is capped at 70. Empirical: the two highest-confidence April games (85, 65+) both produced wrong ML picks; inflated confidence in small-sample-size season leads to over-betting.
 
 | Flag | Code | Deduction | Trigger Condition |
 |------|------|-----------|------------------|
@@ -364,6 +446,8 @@ Start at **100 points**. Minimum score: **25**.
 | Significant Weather Risk | SWR | −10 | Precipitation probability > 40% |
 | April OVER Pick | AOP (v2.3) | −10 | OVER prediction in April — empirical accuracy only 40% |
 | Knowledge-Heavy April | KHA (v2.3) | −15 | April game AND 3+ pitcher stats filled from knowledge base (2024 data used, not 2025 confirmed) |
+| April Home Pick | AHP (v2.4) | −8 | Home team predicted as winner in April — empirical: home picks correct only 42% of the time in April |
+| Knowledge xFIP Primary | KXF (v2.5) | −10 | UNDER call primarily driven by knowledge-estimated xFIP — confirmed xFIP not available for the key suppressor pitcher |
 
 > **Note:** HSGV replaces the postseason-only EGV from v1.0. It applies to high-pressure situations in both regular season and postseason.
 
@@ -427,8 +511,31 @@ All outputs must include a `data_sources` record indicating which fields came fr
 5. **O/U Prediction** — call, confidence level, Over %
 6. **Confidence Score** — final score out of 100, all deductions itemized
 7. **Key Driver Narrative** — 2–3 sentences plain English
-8. **Betting Strategy** — tier (Strong / Moderate / Slight / Pass) with specific recommendation
+8. **Betting Strategy** — tier (Strong / Moderate / Slight / Pass) with specific recommendation; note O/U gap eligibility and DH G2 flag if applicable
 9. **Export String**
+
+### 8.1b Betting Strategy Thresholds (v2.6)
+
+**ML Bet Tiers:**
+
+| Condition | Tier | Action |
+|-----------|------|--------|
+| `ml_edge = "no-edge"` (47–53%) | Pass | No ML bet |
+| win% ≥ **65%** AND conf ≥ 65 | Strong | Bet |
+| win% 58–65% AND conf ≥ 58 | Moderate | Bet |
+| win% 54–58% AND conf ≥ 50 | Slight | Small bet |
+| else | Pass | No bet |
+
+> **ML threshold raised to 65% (v2.6):** Prior 62% threshold was too low — implied probability must exceed 65% for a meaningful single-game edge. Below 65%, variance dominates.
+
+**O/U Bet Gate (v2.6):**
+- Calculate `Projected Total` per §3.9
+- If `|Projected Total − O/U Line| < 2.0 runs` → O/U bet = **Pass (insufficient gap)**, regardless of confidence tier
+- If gap ≥ 2.0 runs AND DH G2 flag active AND direction = UNDER → **Pass** (DH G2 never bet UNDER)
+- Otherwise: apply normal confidence tier
+
+**Slate Discipline Cap (v2.6):**
+> **Maximum 2 bets per daily slate.** When analyzing multiple games in a single day, rank all eligible bets by confidence score. Select the top 2 only. A third bet on the same slate requires the user to explicitly override this cap. Rationale: the skip discipline is working — the problem is over-betting marginal picks, not under-analyzing games.
 
 ### 8.2 Export String Format
 
@@ -495,6 +602,9 @@ Dodgers @ Yankees,Cole (NYY),Yamamoto (LAD),54%,46%,7.5,61% (Over)
 | v2.1 | **Expanded to Regular Season + Postseason.** Season Type field added to Match ID. PMS split into Regular Season vs Postseason bonus tables. Added regular season flags: Division Race, Wild Card Race, Late Season, Must-Win, Series Momentum. GVI +5 high-stakes bonus. EGV replaced by HSGV (covers both seasons). §8 JSON schema adds season_type field. Export string examples for both seasons. |
 | v2.2 | **Accuracy revision from 10-game empirical analysis (ML 30%, 7 structural flaws identified).** (1) Minimum Starts Gate on RED — prevents knowledge-fill from creating false Surging/Slumping flags when pitcher has <3 real starts. (2) §3.8 Early Season Calibration Flag (April 1–14): reduced home base +1%, raised Home Fortress threshold .700, GVI −5/−10 for high lines, TMS 50% weight for <5-game teams. (3) Away Momentum Amplifier: away team TMS lead of 5+ points awards extra +2% on top of Driver 1. (4) TMF win probability effect: now reduces favored team's win probability (−3% away TMF / −5% home TMF) in addition to confidence deduction. (5) OU-A Condition 3 — Both Slumping rule: both pitchers RED > +1.5 → Lean OVER + WP equalization −8%. (6) High-GVI/High-Line Dampener: GVI > 75 AND line > 8.0 caps OU-E at Moderate confidence. (7) Three new confidence deductions: VMF (−10), ESDU (−10), BSS (−10). |
 | v2.3 | **Accuracy revision from 20-game empirical results (ML 40%, OVER 40%, UNDER 70%, away teams won 55%). 7 structural fixes.** (1) April OVER Confidence Cap: all OVER predictions in April capped at Moderate regardless of GVI/wind — empirical OVER accuracy was 40%. (2) Wind-Cold Interaction: wind OUT bonus cancelled when temp <60°F — cold air kills ball carry, all 4 wind-OVER misses were in cold weather. (3) §3.8 expanded to two tiers — April 1–14 removes home field bonus entirely (0%), April 15–30 keeps +1%; both apply OVER cap and wind-cold gate. (4) TMS early season soft cap extended from <5 games to <10 games — 3–5 game streaks are random variance in April. (5) OU-F April UNDER Default: when no OU-B/C fires in April, default to UNDER (empirical: UNDER 70% vs OVER 40%). (6) Two new confidence deductions: AOP −10 (April OVER pick), KHA −15 (April game + 3+ knowledge-estimated pitcher stats). (7) GVI gets additional −5 in April when OVER signal is active. |
+| v2.4 | **Accuracy revision from 26-game empirical results (ML 46%, OVER 46%, UNDER 62%, away teams won 58%). 7 structural fixes.** (1) April Away Baseline: Tier A sets 48/52 (home/away) baseline with −2% home penalty; Tier B sets 49/51 — prior neutral 0% was not correcting enough for empirical 58% away win rate. (2) Home TMS Dampener: in April, home TMS advantage capped at +1% (not +4%) — home TMS-favored teams won only 38% empirically vs 50% for away TMS-favored. (3) TMS ultra-early tiered cap: <5 games = 0% weight, 5–9 games = 25%, ≥10 games = 100% — first 2–4 game streaks are pure noise. (4) April O/U Confidence Hard Cap: ALL O/U capped at Moderate in April (both OVER and UNDER) — High O/U in April was 46% correct vs Moderate at 62%, inverting the accuracy hierarchy. (5) High-Line April UNDER Default: O/U line ≥9.0 + temp <68°F in April → UNDER (Low) regardless of wind or GVI — OVER on 9.0+ lines in April was 43% correct. (6) Single-Ace UNDER April Cap: single-ace UNDER in April capped at Moderate; High requires 3+ stacked suppression signals — 3 of 4 single-ace High UNDER calls failed (actuals: 8, 11, 12 on 7.5 lines). (7) New AHP confidence deduction: −8 when home team predicted winner in April — empirical home pick accuracy was 42%; April confidence ceiling set at 70. |
+| v2.6 | **Post-slate structural tweaks (2026-04-06).** (1) O/U Bet Gap Minimum: only recommend O/U bet when |Projected Total − line| ≥ 2.0 runs — 1.2–1.9 run gaps are only 0.25–0.4 SD and statistically invisible in single-game samples. (2) Doubleheader G2 Flag: DH G2 always leans OVER, never recommend UNDER — tired bullpens give up more runs, not fewer; +8 GVI for DH G2. (3) Wind-Ace Interaction: wind OUT cancelled as OVER signal when either SP xFIP ≤ 3.25; both aces cancel entirely — empirical: TOR@CWS 17mph wind OUT, total = 3 runs. (4) ML threshold raised to 65%: implied probability must exceed 65% for a meaningful single-game edge; prior 62% threshold was too low. (5) Slate Discipline Cap: maximum 2 bets per daily slate — skip discipline is working, over-betting marginal picks is the problem. |
+| v2.5 | **Accuracy revision from 32-game empirical results (ML 47%, OVER 50%, UNDER 50%, away teams won 53%). 6 structural fixes.** (1) Mandatory April O/U Gate: explicit gate forces Moderate cap AFTER direction is set — rule existed in v2.4 but was never enforced, all 16 April predictions violated it; High O/U was 47.1% vs Moderate 61.5%. (2) xFIP Estimation Gate: knowledge-estimated xFIP cannot drive High O/U confidence — cap at Moderate; combined estimation cap (2+ estimated key inputs) also forces Moderate; empirical: all 5 UNDER High misses had estimated xFIP as primary GVI suppressor. (3) Home Bonus Accumulation Cap: in April, total home bonuses from §4 Step 3 capped at +8% above baseline — model was picking HOME 68.8% vs 46.9% actual home wins due to stacked bonuses. (4) No-Edge Pass Threshold: final win probability 47–53% → ML betting recommendation = Pass; close games went 1-for-8 (12.5%). (5) Low-Line UNDER Floor: O/U line ≤7.5 in April → UNDER capped at Low confidence; every UNDER on a 7.5 April line missed high (actuals: 8, 8, 12, 16). (6) OU-F empirical recalibration: 32-game dataset shows 50/50 OVER/UNDER actual split with lines running +0.52 below actuals — UNDER default retained as precautionary lean but confidence defaulted to Low (not Moderate); new KXF deduction −10 when UNDER driven by estimated xFIP. |
 
 ---
 
@@ -521,4 +631,4 @@ All design screenshots are stored in the `/screenshot` folder at the project roo
 
 ---
 
-*MLB Game Predictor — CLAUDE.md v2.1*
+*MLB Game Predictor — CLAUDE.md v2.6*

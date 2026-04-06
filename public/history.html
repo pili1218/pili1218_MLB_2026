@@ -107,6 +107,7 @@
       <div class="hist-header-row">
         <h2 class="hist-title">All Predictions</h2>
         <div style="display:flex;gap:8px">
+          <button class="btn-manual-entry" onclick="openManualEntry()">+ Add Manually</button>
           <button class="btn-clear" onclick="loadHistory()">Refresh</button>
         </div>
       </div>
@@ -155,6 +156,69 @@
       <div class="modal-footer">
         <button class="btn-clear" onclick="document.getElementById('modal').classList.add('hidden')">Cancel</button>
         <button class="btn-analyze" onclick="submitResult()">Save Result</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MANUAL ENTRY MODAL -->
+  <div id="manualModal" class="modal-overlay hidden" onclick="closeManualModal(event)">
+    <div class="modal-box manual-modal-box">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">Add Prediction Manually</div>
+          <div class="modal-sub">Paste an export string or full JSON from any model</div>
+        </div>
+        <button class="modal-close" onclick="document.getElementById('manualModal').classList.add('hidden')">✕</button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- Input type tabs -->
+        <div class="manual-tabs">
+          <button class="manual-tab manual-tab--active" id="tabExport" onclick="switchManualTab('export')">Export String</button>
+          <button class="manual-tab" id="tabJson" onclick="switchManualTab('json')">Full JSON</button>
+        </div>
+
+        <!-- Export String panel -->
+        <div id="panelExport" class="manual-panel">
+          <div class="manual-hint">
+            Format: <code>Away @ Home, Home SP (ABR), Away SP (ABR), 56%, 44%, 8.5, 61% (Over)</code>
+          </div>
+          <textarea class="manual-textarea" id="exportStringInput" placeholder="Red Sox @ Yankees,Cole (NYY),Sale (BOS),56%,44%,8.5,61% (Over)" rows="3" oninput="previewExportString()"></textarea>
+          <div id="exportPreview" class="manual-preview hidden"></div>
+        </div>
+
+        <!-- JSON panel -->
+        <div id="panelJson" class="manual-panel hidden">
+          <div class="manual-hint">Paste the full JSON output from any model (Claude, GPT, etc.)</div>
+          <textarea class="manual-textarea" id="jsonInput" placeholder='{"home_team":"Yankees","away_team":"Red Sox","home_win_pct":56,...}' rows="8"></textarea>
+        </div>
+
+        <!-- Common fields -->
+        <div class="manual-common">
+          <div class="form-group">
+            <label class="form-label">Game Date <span style="color:var(--accent)">*</span></label>
+            <input class="form-input" type="date" id="manualDate" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Season Type</label>
+            <select class="form-input" id="manualSeasonType">
+              <option value="Regular Season">Regular Season</option>
+              <option value="Postseason">Postseason</option>
+            </select>
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label class="form-label">Notes (optional)</label>
+            <input class="form-input" type="text" id="manualNotes" placeholder="e.g. GPT-4 prediction, alternate model test…" />
+          </div>
+        </div>
+
+        <div id="manualError" class="modal-error hidden"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-clear" onclick="document.getElementById('manualModal').classList.add('hidden')">Cancel</button>
+        <button class="btn-analyze" onclick="submitManualEntry()">Save Prediction</button>
       </div>
     </div>
   </div>
