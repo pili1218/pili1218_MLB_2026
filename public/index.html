@@ -49,7 +49,7 @@
         <div class="globe-stats">
           <div class="globe-stat"><span class="globe-stat-num">3</span><span class="globe-stat-label">AI Models</span></div>
           <div class="globe-stat-divider"></div>
-          <div class="globe-stat"><span class="globe-stat-num">v2.6</span><span class="globe-stat-label">Framework</span></div>
+          <div class="globe-stat"><span class="globe-stat-num">v2.7</span><span class="globe-stat-label">Framework</span></div>
           <div class="globe-stat-divider"></div>
           <div class="globe-stat"><span class="globe-stat-num">MLB</span><span class="globe-stat-label">All Season</span></div>
         </div>
@@ -392,11 +392,23 @@
   <section class="changelog-section">
     <div class="changelog-header" id="changelogToggle">
       <span class="changelog-title">Framework Changelog</span>
-      <span class="changelog-badge">v2.6</span>
+      <span class="changelog-badge">v2.7</span>
       <span class="changelog-chevron" id="changelogChevron">▼</span>
     </div>
     <div class="changelog-body hidden" id="changelogBody">
       <div class="changelog-entry changelog-entry--current">
+        <div class="changelog-version">v2.7 <span class="changelog-date">2026-04-10</span></div>
+        <div class="changelog-desc">Pattern policy overhaul from 56-game empirical dataset (ML 39%, Modified O/U 58.5%). ML bets permanently banned. 10 betting patterns codified with flags and mandatory Pattern Match Report.</div>
+        <ul class="changelog-items">
+          <li><strong>ML Bets Permanently Banned (P6_BAN)</strong> — 39% hit rate (-13.7% ROI) across 34 tracked games; O/U only from this point forward</li>
+          <li><strong>High Confidence Cap (P9_BAN)</strong> — bets with confidence ≥65 hit at 25% (-27.7% ROI); cap effective betting confidence at 64 max</li>
+          <li><strong>10 Pattern Flags (P1–P10)</strong> — empirically-derived patterns: Dome+dual ace (67%), Home ace vs mid-tier (63%), Cold natural grass (60%), Road ace veto (ban), Confidence zone 50–64 (58.5%), ML ban, Hot batting skip (14%), Venue cold UNDER ban (20%), High conf cap, Projected total ≤6.5 (100%)</li>
+          <li><strong>Pattern Match Report</strong> — mandatory output table showing all 10 patterns evaluated on every prediction</li>
+          <li><strong>O/U target zone: 50–64 only</strong> — 42 games at 58.5% hit rate; outside this zone = Pass regardless of direction</li>
+          <li><strong>P10 strong signal</strong> — projected total ≤6.5 + UNDER was 100% correct across 27 games; escalate confidence to Moderate</li>
+        </ul>
+      </div>
+      <div class="changelog-entry">
         <div class="changelog-version">v2.6 <span class="changelog-date">2026-04-06</span></div>
         <div class="changelog-desc">Post-slate structural tweaks. 5 rules addressing variance realism, wind-ace interaction, doubleheader logic, O/U gap minimum, and slate discipline.</div>
         <ul class="changelog-items">
