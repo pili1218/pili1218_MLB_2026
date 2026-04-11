@@ -4,7 +4,8 @@
   "description": "MLB match image analyzer - extracts stats into structured JSON",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "sync-railway": "node sync-from-railway.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

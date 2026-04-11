@@ -102,7 +102,8 @@ db.exec(`
       for (const r of records) seedStmt.run(r);
     });
     seedAll(rows);
-    console.log(`[DB] Seeded ${rows.length} records from predictions-export.json`);
+    const newest = rows.reduce((a, b) => (a.saved_at > b.saved_at ? a : b), rows[0]);
+    console.log(`[DB] Seeded ${rows.length} records from predictions-export.json (newest: id=${newest?.id} saved_at=${newest?.saved_at})`);
   } catch (e) {
     console.warn("[DB] Auto-seed skipped:", e.message);
   }
@@ -956,6 +957,16 @@ app.get("/api/predictions", (req, res) => {
     const total = db.prepare("SELECT COUNT(*) as cnt FROM predictions").get().cnt;
 
     res.json({ success: true, data: rows, total, page, limit });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Export all predictions (used by sync-from-railway.js pre-commit) ─────────
+app.get("/api/export-all", (_req, res) => {
+  try {
+    const rows = db.prepare("SELECT * FROM predictions ORDER BY id ASC").all();
+    res.json({ success: true, count: rows.length, data: rows });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

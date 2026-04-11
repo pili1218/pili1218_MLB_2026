@@ -770,3 +770,46 @@ All design screenshots are stored in the `/screenshot` folder at the project roo
 ---
 
 *MLB Game Predictor — CLAUDE.md v2.7*
+
+---
+
+## 11. Git Push Workflow Policy
+
+### 11.1 Why This Exists
+`predictions-export.json` is committed to git and seeds Railway's DB on volume reset.
+If committed with stale LOCAL data, any Railway volume reset permanently overwrites
+newer Railway predictions. **This happened on 2026-04-06 (loss of ~10 records, Apr 6–9).**
+
+The root cause: `syncExportFile()` writes `predictions-export.json` from the **local** DB after every local save. The local DB is always behind Railway (users add predictions via the web app). Committing that file without first pulling Railway's current state is inherently dangerous.
+
+### 11.2 Mandatory Pre-Commit Sync
+**Before every `git add` / `git commit` involving ANY file changes:**
+
+1. Run `npm run sync-railway` (or `node sync-from-railway.js`)
+2. Confirm output shows `SUCCESS` and a row count matching Railway's current total
+3. Confirm the newest `saved_at` in the output is a recent Railway date (not a stale local date)
+4. Only then proceed with staging and committing
+
+> **Never commit `predictions-export.json` from a local `syncExportFile()` write** — that function writes from the local DB which is always behind Railway.
+
+### 11.3 No Push Without User Confirmation
+Claude must **NEVER run `git push`** without explicitly telling the user:
+- What branch is being pushed
+- What commits are included
+- That `npm run sync-railway` succeeded, with the row count shown
+
+Then ask: **"Ready to push to Railway? (yes/no)"**
+Only push after the user responds with explicit approval.
+
+### 11.4 Pre-Push Checklist (follow in order every time)
+- [ ] 1. `npm run sync-railway` → confirm `SUCCESS` + row count
+- [ ] 2. `git diff predictions-export.json` → confirm newest rows have recent Railway dates
+- [ ] 3. Stage files: `git add <changed code files> predictions-export.json`
+- [ ] 4. Show user the commit message and file list
+- [ ] 5. Ask user: **"Ready to push? (yes/no)"**
+- [ ] 6. Push only after explicit yes
+
+### 11.5 After Railway Deploys
+On the very first push after this Section was added, `/api/export-all` did not yet exist on Railway.
+The bootstrap was done manually with the paginated endpoint. From now on, `npm run sync-railway`
+calls `/api/export-all` directly and is the only sync method needed.
