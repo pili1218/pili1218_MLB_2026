@@ -49,7 +49,7 @@
         <div class="globe-stats">
           <div class="globe-stat"><span class="globe-stat-num">3</span><span class="globe-stat-label">AI Models</span></div>
           <div class="globe-stat-divider"></div>
-          <div class="globe-stat"><span class="globe-stat-num">v2.7</span><span class="globe-stat-label">Framework</span></div>
+          <div class="globe-stat"><span class="globe-stat-num">v2.8</span><span class="globe-stat-label">Framework</span></div>
           <div class="globe-stat-divider"></div>
           <div class="globe-stat"><span class="globe-stat-num">MLB</span><span class="globe-stat-label">All Season</span></div>
         </div>
@@ -392,20 +392,30 @@
   <section class="changelog-section">
     <div class="changelog-header" id="changelogToggle">
       <span class="changelog-title">Framework Changelog</span>
-      <span class="changelog-badge">v2.7</span>
+      <span class="changelog-badge">v2.8</span>
       <span class="changelog-chevron" id="changelogChevron">▼</span>
     </div>
     <div class="changelog-body hidden" id="changelogBody">
       <div class="changelog-entry changelog-entry--current">
+        <div class="changelog-version">v2.8 <span class="changelog-date">2026-04-14</span></div>
+        <div class="changelog-desc">Dual-strategy overhaul from 77-game empirical dataset (ML 55.8% / Moderate ML 60% / last 5 ML 80%). ML bets reinstated. Under 5-gate system added. April +3.0 bias correction. 10 Betting Decision Flags.</div>
+        <ul class="changelog-items">
+          <li><strong>ML Bets Reinstated (P6_ML_MOD)</strong> — 55.8% overall (43-34); moderate conf ML 60% (40 games); last 5 ML = 80%; $75/bet at confidence 50–64; do not bet ML outside this zone</li>
+          <li><strong>Under 5-Gate System</strong> — ALL gates must pass: Gate A (prev-day avg ≤10), Gate B (both teams no ≥5-run win last 2 days), Gate C (home SP sub-2.50 ERA + 6+ starts), Gate D (April: visitor must be ATH/WAS), Gate E (corrected est ≤6.5)</li>
+          <li><strong>April Bias Correction +3.0</strong> — April games avg 11–14 runs/game vs baseline 8–9; add +3.0 to projected totals in April (was +2.0)</li>
+          <li><strong>P2 Narrowed</strong> — valid only vs ATH or WAS visiting in April (~67% hit rate); all other April visitors = skip Under</li>
+          <li><strong>P3 Suspended</strong> — cold natural grass Under = 33% hit rate; suspended until May retest</li>
+          <li><strong>Rain Policy Revised</strong> — skip at ≥85% (was 40%), halve stake at 65–84%</li>
+          <li><strong>10 Betting Decision Flags</strong> — new mandatory output: FLAG 1 (ML conf zone) through FLAG 10 (conf cap); replaces Pattern Match Report</li>
+        </ul>
+      </div>
+      <div class="changelog-entry">
         <div class="changelog-version">v2.7 <span class="changelog-date">2026-04-10</span></div>
         <div class="changelog-desc">Pattern policy overhaul from 56-game empirical dataset (ML 39%, Modified O/U 58.5%). ML bets permanently banned. 10 betting patterns codified with flags and mandatory Pattern Match Report.</div>
         <ul class="changelog-items">
           <li><strong>ML Bets Permanently Banned (P6_BAN)</strong> — 39% hit rate (-13.7% ROI) across 34 tracked games; O/U only from this point forward</li>
           <li><strong>High Confidence Cap (P9_BAN)</strong> — bets with confidence ≥65 hit at 25% (-27.7% ROI); cap effective betting confidence at 64 max</li>
-          <li><strong>10 Pattern Flags (P1–P10)</strong> — empirically-derived patterns: Dome+dual ace (67%), Home ace vs mid-tier (63%), Cold natural grass (60%), Road ace veto (ban), Confidence zone 50–64 (58.5%), ML ban, Hot batting skip (14%), Venue cold UNDER ban (20%), High conf cap, Projected total ≤6.5 (100%)</li>
-          <li><strong>Pattern Match Report</strong> — mandatory output table showing all 10 patterns evaluated on every prediction</li>
-          <li><strong>O/U target zone: 50–64 only</strong> — 42 games at 58.5% hit rate; outside this zone = Pass regardless of direction</li>
-          <li><strong>P10 strong signal</strong> — projected total ≤6.5 + UNDER was 100% correct across 27 games; escalate confidence to Moderate</li>
+          <li><strong>10 Pattern Flags (P1–P10)</strong> — empirically-derived patterns with Pattern Match Report in every output</li>
         </ul>
       </div>
       <div class="changelog-entry">
