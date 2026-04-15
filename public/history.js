@@ -352,6 +352,20 @@ function renderTable(rows) {
 
   wrap.innerHTML = `
     <table class="hist-table">
+      <colgroup>
+        <col class="col-id">
+        <col class="col-date">
+        <col class="col-matchup">
+        <col class="col-type">
+        <col class="col-pred">
+        <col class="col-ou">
+        <col class="col-conf">
+        <col class="col-actual">
+        <col class="col-ml">
+        <col class="col-ouR">
+        <col class="col-flags">
+        <col class="col-actions">
+      </colgroup>
       <thead>
         <tr>
           <th>#</th>
@@ -364,7 +378,7 @@ function renderTable(rows) {
           <th>Actual</th>
           <th>ML</th>
           <th>O/U</th>
-          <th class="th-inv">Investigation</th>
+          <th>Flags</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -424,6 +438,129 @@ function buildInvestigation(r) {
   return parts.join("");
 }
 
+function buildFlags(r) {
+  const flags = [];
+
+  // Pull from active_flags — map to short codes only
+  const FLAG_MAP = [
+    [/PDCF|Primary Driver Conflict/i,     'PDCF'],
+    [/MCF|Model Contradiction/i,           'MCF'],
+    [/HFCF|Heavy Favorite Caution/i,       'HFCF'],
+    [/TMF|Team Meltdown/i,                 'TMF'],
+    [/HVIF|High Volatility Index/i,        'HVIF'],
+    [/HSGV|High.Stakes Game/i,             'HSGV'],
+    [/KHA/i,                               'KHA'],
+    [/VMF|Volatile Moderate/i,             'VMF'],
+    [/ESDU|Early Season Data/i,            'ESDU'],
+    [/BSS|Both SP Slumping/i,              'BSS'],
+    [/AOP|April OVER Pick/i,               'AOP'],
+    [/SWR|Weather Risk|rain/i,             'SWR'],
+    [/AHP|April Home Pick/i,               'AHP'],
+    [/KXF/i,                               'KXF'],
+    [/HBTF|Hot Batting Team/i,             'HBTF'],
+    [/RAF|Road Ace Ban/i,                  'RAF'],
+    [/HCB|High Confidence Cap/i,           'HCB'],
+    [/VCB|Venue Cold UNDER/i,              'VCB'],
+    [/ENV_BLOCK|Environmental Block/i,     'ENV_BLOCK'],
+    [/EST_HIGH|Estimate Too High/i,        'EST_HIGH'],
+    [/WP.Override A/i,                     'WPOvr-A'],
+    [/WP.Override B/i,                     'WPOvr-B'],
+    [/Surging.*Home SP|Home SP.*Surging/i, 'SURGE-H'],
+    [/Surging.*Away SP|Away SP.*Surging/i, 'SURGE-A'],
+    [/Slumping.*Home SP|Home SP.*Slumping/i,'SLUMP-H'],
+    [/Slumping.*Away SP|Away SP.*Slumping/i,'SLUMP-A'],
+    [/High Volatility.*Home|Home.*PVS/i,   'HVOL-H'],
+    [/High Volatility.*Away|Away.*PVS/i,   'HVOL-A'],
+    [/DH G2|Doubleheader/i,                'DH-G2'],
+    [/Wind.*Ace Veto/i,                    'W-ACE✗'],
+    [/Home Fortress/i,                     'FORTRESS'],
+    [/Division Race/i,                     'DIV-RACE'],
+    [/Wild Card Race/i,                    'WC-RACE'],
+    [/Elimination Game/i,                  'ELIM'],
+    [/Regression Risk/i,                   'RCF'],
+    [/P4_VETO|Road Ace.*BAN/i,             'P4_VETO'],
+    [/P7_SKIP|Hot Batting.*SKIP/i,         'P7_SKIP'],
+    [/P8_BAN|venue.*cold.*UNDER.*ban/i,    'P8_BAN'],
+    [/P1_MATCH|Dome.*dual/i,               'P1'],
+    [/P2_MATCH/i,                          'P2'],
+    [/P10_MATCH|projected.*≤6\.5/i,        'P10'],
+    [/Early Season Calibration.*April 1.14/i, 'CAL-A'],
+    [/April Calibration.*April 15/i,       'CAL-B'],
+  ];
+
+  if (r.active_flags) {
+    try {
+      const af = typeof r.active_flags === 'string' ? JSON.parse(r.active_flags) : r.active_flags;
+      const list = Array.isArray(af) ? af : [af];
+      list.forEach(f => {
+        const fStr = String(f);
+        for (const [re, code] of FLAG_MAP) {
+          if (re.test(fStr)) { flags.push(code); break; }
+        }
+      });
+    } catch (_) {}
+  }
+
+  // Pull betting/pattern flags from full_prediction JSON
+  if (r.full_prediction) {
+    try {
+      const fp = typeof r.full_prediction === 'string' ? JSON.parse(r.full_prediction) : r.full_prediction;
+
+      // v2.8 betting_flags
+      const bf = fp.betting_flags;
+      if (bf) {
+        if (bf.ml_bet_result && !/pass/i.test(bf.ml_bet_result)) flags.push('ML✓');
+        if (/BLOCKED|FAIL/i.test(bf.flag2_gate_a || '')) flags.push('GATE-A✗');
+        if (/BLOCKED|FAIL/i.test(bf.flag3_gate_b || '')) flags.push('GATE-B✗');
+        if (/FAIL/i.test(bf.flag4_gate_c || ''))         flags.push('GATE-C✗');
+        if (/FAIL/i.test(bf.flag5_gate_d || ''))         flags.push('GATE-D✗');
+        if (/FAIL/i.test(bf.flag6_gate_e || ''))         flags.push('GATE-E✗');
+        if (/ACTIVE/i.test(bf.flag9_venue_ban || ''))    flags.push('P8_BAN');
+        if (/P4_VETO/i.test(bf.flag10_conf_cap || ''))   flags.push('P4_VETO');
+        if (/P9_BAN/i.test(bf.flag10_conf_cap || ''))    flags.push('P9_BAN');
+        if (bf.pattern_tier && bf.pattern_tier !== 'null') flags.push(bf.pattern_tier.replace(' ','_'));
+      }
+
+      // v2.7 pattern_matches fallback
+      const pm = fp.pattern_matches;
+      if (pm && !bf) {
+        if (pm.P1_dome_dual_ace)       flags.push('P1');
+        if (pm.P2_home_ace_mid_offence)flags.push('P2');
+        if (pm.P3_cold_natural_grass)  flags.push('P3');
+        if (pm.P4_road_ace_veto)       flags.push('P4_VETO');
+        if (pm.P7_hot_batting_skip)    flags.push('P7_SKIP');
+        if (pm.P8_venue_cold_under_ban)flags.push('P8_BAN');
+        if (pm.P9_high_confidence_cap) flags.push('P9_BAN');
+        if (pm.P10_projected_total_lte65) flags.push('P10');
+        if (pm.pattern_tier && pm.pattern_tier !== 'null') flags.push(pm.pattern_tier.replace(' ','_'));
+      }
+
+      // Confidence deductions — extract short code before the colon
+      const KNOWN = new Set(['PDCF','MCF','HFCF','TMF','HVIF','HSGV','KHA','VMF','ESDU','BSS','AOP','SWR','AHP','KXF','HBTF','RAF','HCB','VCB','ENV_BLOCK','EST_HIGH']);
+      const cd = fp.confidence_deductions;
+      if (Array.isArray(cd)) cd.forEach(d => {
+        const code = String(d).split(':')[0].trim().replace(/\(.*\)/,'').trim();
+        if (KNOWN.has(code)) flags.push(code);
+      });
+    } catch (_) {}
+  }
+
+  // Deduplicate
+  const seen = new Set();
+  const unique = flags.filter(f => { if (!f || seen.has(f)) return false; seen.add(f); return true; });
+
+  if (!unique.length) return `<span style="color:var(--text3);font-size:0.7rem">—</span>`;
+
+  // Color-code: ban flags red, warning flags amber, positive flags green
+  const BAN_FLAGS  = new Set(['P4_VETO','P7_SKIP','P8_BAN','P9_BAN','GATE-A✗','GATE-B✗','GATE-C✗','GATE-D✗','GATE-E✗','PDCF','MCF','HFCF','TMF','RAF','HCB','VCB','ENV_BLOCK','EST_HIGH']);
+  const GOOD_FLAGS = new Set(['ML✓','P1','P2','P10','Pattern_A','Pattern_B','Strong_Under']);
+
+  return unique.map(f => {
+    const cls = BAN_FLAGS.has(f) ? 'flag-chip flag-ban' : GOOD_FLAGS.has(f) ? 'flag-chip flag-ok' : 'flag-chip';
+    return `<span class="${cls}">${esc(f)}</span>`;
+  }).join('');
+}
+
 function renderRow(r) {
   const predWinner = r.home_win_pct >= r.away_win_pct ? r.home_team : r.away_team;
   const predWinPct = Math.max(r.home_win_pct || 0, r.away_win_pct || 0);
@@ -481,7 +618,7 @@ function renderRow(r) {
       <td class="td-actual">${actualStr}</td>
       <td>${mlBadge}</td>
       <td>${ouBadge}</td>
-      <td class="td-investigation">${buildInvestigation(r)}</td>
+      <td class="td-flags">${buildFlags(r)}</td>
       <td class="td-actions">
         ${r.ml_correct === null
           ? `<button class="btn-enter-result" onclick="openModalById(${r.id})">Enter Result</button>`
