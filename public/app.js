@@ -202,6 +202,8 @@ async function loadJsonText() {
   let parsed;
   try {
     parsed = JSON.parse(val);
+    // Unwrap single-element arrays (e.g. pasted JSON wrapped in [...])
+    if (Array.isArray(parsed) && parsed.length === 1) parsed = parsed[0];
     // Valid JSON — skip analyze, use directly
     lastResult = parsed;
     showResult(parsed);
