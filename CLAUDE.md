@@ -1,10 +1,10 @@
-# MLB Game Predictor — Analytical Framework v2.8
+# MLB Game Predictor — Analytical Framework v2.9
 
 > **Operational protocol for Claude Code.**
 > Do not make any changes until you have 95% confidence in what you need to build. Ask me follow-up questions until you reach that confidence.
 > When analyzing an MLB matchup, follow every section in order. Do not skip steps.
 > Applies to **Regular Season and Postseason**. Season-specific rules are clearly labeled.
-> v2.8 — Dual-strategy overhaul from 77-game empirical dataset (2026-04-14): ML bets reinstated at moderate confidence (55.8% overall / 60% moderate conf / last 5 = 80%); Under 5-gate system added; April +3.0 bias correction; rain policy revised (≥85% skip, 65–84% halve); P6_BAN lifted; P2 narrowed to ATH/WAS visiting; P3 suspended; 10 Betting Decision Flags replace Pattern Match Report in all outputs.
+> v2.9 — 104-game empirical refinements (2026-04-16): FORTRESS+TMF combo Under signal added (73%, 6/8 games); ML updated to 57.4% across 54 moderate-conf games; W-ACE✗ Gate C hard stop confirmed (0/4 games); P8_BAN re-confirmed at 22% Under; Gate F ESDU stake-halver added; LAD Ace Pattern C added (80% Under, 4/5 games); 12 Betting Decision Flags; combo bet rule added.
 
 ---
 
@@ -207,6 +207,10 @@ Composite score from 1–100. Start at **50**, apply all applicable adjustments.
 
 **High-Stakes Game Volatility (HSGV):** Active when the game is either a postseason elimination game OR a regular season game where at least one team is in a division/wild card race within 1 game of a cutoff. Replaces the postseason-only EGV from v1.0.
 
+**FORTRESS + TMF Combo Flag (FTMF — v2.9):** The home team has an active **Home Fortress Flag** (home win% ≥ .650) AND the opposing (away) team has an active **Team Meltdown Flag** (5+ consecutive losses).
+> **Effect:** Strong secondary Under confirmation signal. 73% Under hit rate across 8 qualifying games in 104-game dataset (6W/2L). When FTMF fires AND an Under is already directionally indicated, escalate Under confidence to Moderate if currently Low. Does **not** substitute for Gate C — the home SP must still meet sub-2.50 ERA + 6+ starts.
+> **Flag:** `"FORTRESS+TMF active — secondary Under signal (73% hit rate, 104-game data)"`. Tag as `FTMF_MATCH` in betting flags output.
+
 ---
 
 ### 3.8 Early Season Calibration Flag (v2.3 expanded)
@@ -269,19 +273,20 @@ Apply this correction before all gate checks. Empirical basis: 77-game dataset s
 
 > Empirical basis: 1.2–1.9 run gaps produce only ~53–56% theoretical edge — statistically indistinguishable from noise in single-game samples. A 2.0-run minimum represents ~0.44 standard deviations, giving a more meaningful theoretical win rate of ~57–59%.
 
-#### Under 5-Gate System (v2.8)
+#### Under 6-Gate System (v2.9)
 
-Before recommending any UNDER bet, **ALL 5 gates must pass**. Any single gate failure = Pass (skip Under). No exceptions.
+Before recommending any UNDER bet, **ALL 6 gates must pass**. Any single gate failure = Pass (skip Under) except Gate F which halves stake rather than blocks. No exceptions on Gates A–E.
 
 | Gate | Check | Pass Condition | Failure Action |
 |------|-------|---------------|----------------|
 | **Gate A — Environmental** | Previous day's MLB slate avg total | ≤ 10 runs/game | Skip **all** Unders today |
 | **Gate B — Both Teams Momentum** | Did either home OR visiting team score ≥5 runs in a WIN in the last 2 days? | Neither team did | Skip Under (or $50 max if home SP ERA < 2.50) |
-| **Gate C — Home SP Quality** | Home SP 2026 ERA and starts | Sub-2.50 ERA + **6+ verified 2026 starts** | Skip — ERA labels before 6 starts are unreliable in April |
+| **Gate C — Home SP Quality** | Home SP 2026 ERA and starts | Sub-2.50 ERA + **6+ verified 2026 starts** | Skip — ERA labels before 6 starts are unreliable in April. **W-ACE✗ flag raised: 0% Under hit rate in 4 games when this gate fails (104-game data). Hard stop.** |
 | **Gate D — April Visiting Filter** | *(April 1–30 only)* Is visiting team ATH or WAS? | Yes (Oakland or Washington) | Skip Under against all other visitors in April |
 | **Gate E — Estimate Gate** | Bias-corrected projected total | +3.0 (April) or +2.0 (May+) added to raw est ≤ **6.5** | Skip — estimate too high; likely lands in 12-run loss category |
+| **Gate F — ESDU Stake Reducer** | *(April only)* Is ESDU flag active (2+ knowledge-estimated fields)? | ESDU not active = full stake | **Halve stake** (do not skip) — 65% Over rate when ESDU active in April. If P1/P2/P11 pattern active: reduce to $50/$37.50/$50 respectively. Does not block the Under. |
 
-> **Bimodal Under Distribution (v2.8):** Under wins avg 5.2 total runs. Under losses avg 12.1 runs. There is almost no middle ground — it either wins comfortably or loses catastrophically. A corrected estimate above 5.5 is more likely to land in the 12-run category. Only bet Under when corrected est ≤ 5.5 (high conviction) or ≤ 6.5 (moderate — Gates A–E all pass).
+> **Bimodal Under Distribution (v2.8/v2.9):** Under wins avg 5.2 total runs. Under losses avg 12.1 runs. There is almost no middle ground — it either wins comfortably or loses catastrophically. A corrected estimate above 5.5 is more likely to land in the 12-run category. Only bet Under when corrected est ≤ 5.5 (high conviction) or ≤ 6.5 (moderate — Gates A–F evaluated).
 
 #### Rain Policy (v2.8 — Revised)
 
@@ -321,11 +326,11 @@ Wind blowing **OUT** > 8 mph activates OU-B OVER signal **only when the starting
 
 ---
 
-### 3.10 Pattern Betting Policies (v2.8)
+### 3.10 Pattern Betting Policies (v2.9)
 
-Derived from **77-game empirical dataset** (ML record 43–34 = 55.8%, O/U record 31–43 = 41.9%, Moderate conf ML 60%, Moderate conf O/U 53.8%, break-even needed 52.7%).
+Derived from **104-game empirical dataset** (ML moderate-conf record: 57.4% across 54 games; O/U record 31–43 = 41.9% overall, Modified O/U 58.5%; break-even needed 52.7%).
 
-> **⚠️ MANDATORY:** Before issuing any betting recommendation in §8, evaluate ALL 10 patterns below. Output the **Betting Decision Flags** report (10 flags) so the user can see which gates passed/failed and make their own decision.
+> **⚠️ MANDATORY:** Before issuing any betting recommendation in §8, evaluate ALL 11 patterns below. Output the **Betting Decision Flags** report (12 flags) so the user can see which gates passed/failed and make their own decision.
 
 #### Pattern Table
 
@@ -336,11 +341,12 @@ Derived from **77-game empirical dataset** (ML record 43–34 = 55.8%, O/U recor
 | 3 | Temperature < 45°F + natural grass field + no wind OUT | 8 | **33%** | **SUSPENDED (v2.8)** — 33% hit rate; do not use until May retest | `P3_SUSPENDED` |
 | 4 | Road ace pitcher (xFIP ≤ 3.25) vs home offence | 10 | 50% | **BANNED** — do not include in any bet recommendation | `P4_VETO` |
 | 5 | O/U confidence score in 50–64 range | 42 | 58.5% | **TARGET ZONE ONLY** — all O/U bets must fall here | `P5_ZONE` |
-| 6 | **Moderate confidence ML bet (50–64 conf)** | 40 | **60%** | **REINSTATED (v2.8)** — bet ML at $75 when confidence 50–64 | `P6_ML_MOD` |
+| 6 | **Moderate confidence ML bet (50–64 conf)** | 54 | **57.4%** | **ACTIVE (v2.9 updated)** — bet ML at $75 when confidence 50–64; 104-game data confirms positive EV | `P6_ML_MOD` |
 | 7 | Hot batting team (team avg_runs ≥ 5.0 AND on a win streak of 3+) | 7 | 14% | **HARD SKIP** — output warning, require user confirmation | `P7_SKIP` |
-| 8 | Target Field (MIN) or Progressive Field (CLE) cold UNDER | 5 | 20% | **PERMANENTLY BANNED** — venue + cold UNDER is a known trap | `P8_BAN` |
+| 8 | Target Field (MIN) or Progressive Field (CLE) cold UNDER | 5 | **22%** | **PERMANENTLY BANNED** — re-confirmed at 22% in 104-game data; venue + cold UNDER is a known trap | `P8_BAN` |
 | 9 | High confidence label (confidence score ≥ 65) | 8 | 25% | **BANNED** — cap effective bet confidence at 64 max | `P9_BAN` |
-| 10 | UNDER when projected total ≤ 6.5 runs | 27 | 100% | **NEW — Strong signal** — require projected total ≤ 6.5 to activate | `P10_MATCH` |
+| 10 | UNDER when projected total ≤ 6.5 runs | 27 | 100% | **Strong signal** — require projected total ≤ 6.5 to activate | `P10_MATCH` |
+| 11 | LAD home ace SP (Ohtani, Yamamoto, or Sasaki; ERA < 2.50 + 6+ verified 2026 starts) | 5 | **80%** | **ACTIVE — Pattern C (v2.9)** — LAD home ace = highest-priority Under target; Ohtani qualifies ~May 4–6 | `P11_LAD_ACE` |
 
 #### Pattern Flag Definitions & Effects
 
@@ -370,11 +376,12 @@ Derived from **77-game empirical dataset** (ML record 43–34 = 55.8%, O/U recor
 - Effect: This is the **only valid zone for active O/U bets**. Confidence < 50 → Pass. Confidence ≥ 65 → P9_BAN applies.
 - Output: `"P5_ZONE: Confidence score [X] in target zone (50–64) — eligible for standard O/U bet"`
 
-**`P6_ML_MOD` — Moderate Confidence ML Bet (REINSTATED v2.8):**
+**`P6_ML_MOD` — Moderate Confidence ML Bet (v2.9 updated stats):**
 - Trigger: Model confidence is in the **50–64 range**.
-- Effect: **ML bet is eligible.** 77-game data: ML 55.8% overall (43-34), Moderate conf ML 60% (40 games), last 5 ML = 80%. Real positive expected value. Bet ML at **$75/bet** when confidence 50–64.
-- Do NOT bet ML at confidence < 50 (marginal edge, 54.5%) or ≥ 65 (25% hit rate — overconfident).
-- Output: `"P6_ML_MOD: Moderate confidence ML eligible — $75 bet (60% historical hit rate at 50–64 conf)"`
+- Effect: **ML bet is eligible.** 104-game data: Moderate conf ML **57.4% across 54 games** — real positive expected value above the ~52.4% breakeven. Bet ML at **$75/bet** when confidence 50–64.
+- Do NOT bet ML at confidence < 50 (marginal edge) or ≥ 65 (25% hit rate — overconfident).
+- **Combo Bet (v2.9):** When the ML pick AND Under direction both point the same team (e.g. LAD home with Ohtani = Under + LAD ML), add a **$25–30 combo or same-direction side bet** on top of standard sizing. Only valid when Under passes all gates AND Under direction aligns with the ML predicted winner.
+- Output: `"P6_ML_MOD: Moderate confidence ML eligible — $75 bet (57.4% hit rate at 50–64 conf, 104-game data)"`
 - If confidence < 50 or ≥ 65: `"P6_ML_MOD: Outside 50–64 zone — no ML bet"`
 
 **`P7_SKIP` — Hot Batting Team Hard Skip:**
@@ -397,25 +404,36 @@ Derived from **77-game empirical dataset** (ML record 43–34 = 55.8%, O/U recor
 - Effect: **Strong UNDER signal** — 100% hit rate across 27 games when projected total is ≤ 6.5. Escalate UNDER confidence to Moderate if currently Low (still subject to April caps).
 - Output: `"P10_MATCH: Projected total ≤ 6.5 — Strong UNDER signal (100% historical). Confidence escalated."`
 
-#### Betting Decision Evaluation Order (v2.8 — §8 checklist)
+**`P11_LAD_ACE` — LAD Home Ace Start (NEW v2.9):**
+- Trigger: Game at Dodger Stadium (LAD home) AND home SP is **Shohei Ohtani, Yoshinobu Yamamoto, or Roki Sasaki** AND SP meets Gate C requirements (ERA < 2.50 + 6+ verified 2026 starts).
+- Effect: **Pattern C tier Under bet.** 80% Under hit rate across 5 qualifying games (4W/1L) in 104-game dataset. One loss: Ohtani Apr 15 vs NYM (10 runs allowed — outlier start). When Gate C is met for any LAD ace, this is the **highest-conviction Under signal** in the system.
+- **Start count tracking:** Ohtani qualifies approximately May 4–6 (monitor starts 4–5–6 closely). Yamamoto and Sasaki qualifying depends on their individual start counts — verify 6+ verified 2026 starts before triggering.
+- **Sizing:** Pattern C Under = **$100 unit** (above Pattern B $75, below Pattern A $150). Apply Gate F stake halve if ESDU active ($50).
+- Output: `"P11_LAD_ACE: LAD home [SP name] — Pattern C eligible (UNDER, 80% hit rate, 104-game data)"`
+- If SP hasn't reached 6 starts: `"P11_LAD_ACE: [SP name] has [n] verified 2026 starts — Gate C not met, pattern inactive"`
+
+#### Betting Decision Evaluation Order (v2.9 — §8 checklist)
 
 Before finalizing any betting recommendation, evaluate in this order:
 
 **For ML bet:**
 1. **CONF_ZONE** — Is confidence 50–64? → ML bet $75 (P6_ML_MOD). Outside this zone → no ML bet.
+   - If ML and Under point same direction → also evaluate **Combo Bet** (+$25–30).
 
-**For Under bet (all 5 gates + bans):**
+**For Under bet (all 6 gates + bans):**
 2. **P8_BAN** — venue+cold UNDER (Target/Progressive Field) → ban
 3. **P4_VETO** — road ace (away SP xFIP ≤ 3.25) → ban all bets on game
 4. **GATE_A** — Environmental: prev-day slate avg > 10 runs → skip all Unders
 5. **GATE_B** — Both teams momentum: either team ≥5 runs in win last 2 days → skip/reduce
-6. **GATE_C** — Home SP quality: sub-2.50 ERA + 6+ verified starts → must pass
+6. **GATE_C** — Home SP quality: sub-2.50 ERA + 6+ verified starts → must pass (W-ACE✗ = 0/4, hard stop)
 7. **GATE_D** — April visiting filter: must be ATH or WAS in April → else skip
 8. **GATE_E** — Estimate gate: corrected est (raw + 3.0) ≤ 6.5 → must pass
-9. **P9_BAN** — cap confidence at 64 if score ≥ 65
-10. **P1/P2 MATCH** — check positive patterns; P3 suspended
+9. **GATE_F** — ESDU stake reducer: if ESDU active in April → halve stake (does not block bet)
+10. **P9_BAN** — cap confidence at 64 if score ≥ 65
+11. **P1/P2/P11 MATCH** — check positive patterns; P3 suspended
+12. **FTMF_MATCH** — check FORTRESS+TMF combo; if active → escalate Under confidence to Moderate if currently Low
 
-> **Sizing tiers (v2.8):** ML bet = $75 flat (moderate conf). Pattern A Under ($150) = P1_MATCH only. Pattern B Under ($75) = P2_MATCH (home ace vs ATH/WAS). Standard Under ($50) = all gates pass, no pattern match. Rain halve = apply to whichever unit size is active. Adjust to actual bankroll units.
+> **Sizing tiers (v2.9):** ML bet = $75 flat (moderate conf). Combo bet = +$25–30 when ML+Under align. Pattern A Under ($150) = P1_MATCH only. Pattern B Under ($75) = P2_MATCH (home ace vs ATH/WAS). Pattern C Under ($100) = P11_LAD_ACE (LAD home Ohtani/Yamamoto/Sasaki when Gate C met). Standard Under ($50) = all gates pass, no pattern match. Gate F halve = reduce whichever unit is active by 50%. Rain halve = apply on top of Gate F if both active. Adjust to actual bankroll units.
 
 ---
 
@@ -648,52 +666,59 @@ All outputs must include a `data_sources` record indicating which fields came fr
 5. **O/U Prediction** — call, confidence level, Over %
 6. **Confidence Score** — final score out of 100, all deductions itemized
 7. **Key Driver Narrative** — 2–3 sentences plain English
-8. **Betting Strategy** — tier (Pattern A / Pattern B / Standard / Pass) with specific O/U recommendation only; ML bets suppressed (P6_BAN)
+8. **Betting Strategy** — tier (Pattern A / Pattern B / Pattern C / Standard / Pass) with O/U and ML recommendations; Combo Bet note when applicable
 9. **Export String**
-10. **Betting Decision Flags** *(v2.8 — mandatory)* — Output 10 flags covering ML and Under eligibility. Every flag must be evaluated and shown. Format:
+10. **Betting Decision Flags** *(v2.9 — mandatory)* — Output 12 flags covering ML and Under eligibility. Every flag must be evaluated and shown. Format:
 
 ```
-BETTING DECISION FLAGS (v2.8)
+BETTING DECISION FLAGS (v2.9)
 ════════════════════════════════════════════════════════════
 ── ML BET ──────────────────────────────────────────────────
 FLAG 1  CONF_ZONE:    [50–64 ✓ ELIGIBLE / <50 ✗ / ≥65 ✗]  → ML bet $75 / Pass
-── UNDER GATES (all 5 must pass) ───────────────────────────
+── UNDER GATES (A–E must pass; F halves stake) ─────────────
 FLAG 2  GATE_A:       [CLEAR ✓ / BLOCKED ✗ prev-day avg >10]  → Under eligible / blocked
 FLAG 3  GATE_B:       [CLEAR ✓ / BLOCKED ✗ [team] ≥5 in win]  → Under eligible / reduced
-FLAG 4  GATE_C:       [PASS ✓ / FAIL ✗ — ERA [x] / [n] starts]  → SP gate pass/fail
+FLAG 4  GATE_C:       [PASS ✓ / FAIL ✗ W-ACE✗ — ERA [x] / [n] starts]  → SP gate pass/fail (0% when fail)
 FLAG 5  GATE_D:       [PASS ✓ (ATH/WAS) / FAIL ✗ ([visitor]) / N/A May+]  → April filter
 FLAG 6  GATE_E:       [PASS ✓ est [x]+3.0=[y] ≤6.5 / FAIL ✗ est [y] >6.5]  → Estimate gate
+FLAG 7  GATE_F:       [N/A (no ESDU) / HALVE ⚠️ ESDU active → half stake]  → Stake reducer
 ── MODIFIERS ───────────────────────────────────────────────
-FLAG 7  APRIL_BIAS:   [+3.0 applied (April) / +2.0 applied (May+) / N/A]  → Bias correction
-FLAG 8  RAIN_GATE:    [clear ✓ <65% / halve stake ⚠️ 65–84% / skip ✗ ≥85%]  → Stake adj
-FLAG 9  VENUE_BAN:    [ACTIVE ✗ Target/Progressive+cold / clear ✓]  → Under ban/clear
-FLAG 10 CONF_CAP:     [P9_BAN ✗ conf≥65 capped / clear ✓ / P4_VETO ✗ road ace]  → Cap/ban
+FLAG 8  APRIL_BIAS:   [+3.0 applied (April) / +2.0 applied (May+) / N/A]  → Bias correction
+FLAG 9  RAIN_GATE:    [clear ✓ <65% / halve stake ⚠️ 65–84% / skip ✗ ≥85%]  → Stake adj
+FLAG 10 VENUE_BAN:    [ACTIVE ✗ Target/Progressive+cold / clear ✓]  → Under ban/clear
+FLAG 11 CONF_CAP:     [P9_BAN ✗ conf≥65 capped / clear ✓ / P4_VETO ✗ road ace]  → Cap/ban
+FLAG 12 FTMF_MATCH:   [ACTIVE ✓ FORTRESS+TMF → Under confidence escalated / inactive]  → Combo confirm
 ════════════════════════════════════════════════════════════
-ML BET:    [Bet $75 — conf [x] in zone ✓ / Pass — conf outside 50–64 / Pass — conf ≥65 (25% hit rate)]
-UNDER BET: [All 5 gates pass → Bet $[size] [OVER/UNDER] [line] / Pass — Gate [X] failed: [reason]]
-FINAL RECOMMENDATION: [Combined ML + Under summary, or Pass with reason]
+ML BET:    [Bet $75 — conf [x] in zone ✓ / Pass — conf outside 50–64 / Pass — conf ≥65]
+COMBO BET: [+$25 available — ML and Under align ✓ / N/A — directions differ]
+UNDER BET: [All gates pass → Bet $[size] [pattern tier] UNDER [line] / Pass — Gate [X] failed: [reason]]
+FINAL RECOMMENDATION: [Combined ML + Under + Combo summary, or Pass with reason]
 ```
 
 > **Purpose:** Betting Decision Flags give the user a transparent checklist of every empirically-derived gate. The user makes the final call — the model shows exactly where edge exists and where it doesn't.
 
-### 8.1b Betting Strategy Thresholds (v2.8)
+### 8.1b Betting Strategy Thresholds (v2.9)
 
-> **ML BETS REINSTATED (v2.8):** 77-game data: ML 55.8% overall (43-34), Moderate confidence ML **60%** (40 games), last 5 ML = **80%**. This is genuine positive EV. Bet ML at **$75/bet** when confidence 50–64. Do NOT bet ML outside 50–64 zone. High conf (≥65) ML was 25% historically; Low conf (<50) ML at 54.5% is marginal. Only moderate confidence generates real edge.
+> **ML BETS (v2.9 updated):** 104-game data: Moderate confidence ML **57.4% across 54 games** — confirmed positive EV above 52.4% breakeven. Bet ML at **$75/bet** when confidence 50–64. Do NOT bet ML outside 50–64 zone. High conf (≥65) historically 25%; Low conf (<50) marginal. Only moderate confidence generates real edge.
 
-**Dual Strategy Tiers (v2.8):**
+> **Combo Bet (v2.9):** When both the ML pick AND the Under direction point to the same team winning in a low-scoring game (e.g., LAD home with Ohtani = UNDER + LAD ML), add **+$25–30 as a same-direction combo** on top of standard sizing. Requires: Under passes all 6 gates AND Under direction = ML predicted winner. This is optional but validated by the LAD ace pattern.
+
+**Dual Strategy Tiers (v2.9):**
 
 | Condition | Bet Type | Size | Action |
 |-----------|----------|------|--------|
 | P4_VETO or P8_BAN active | **Pass** | — | No bet — hard ban |
 | P7_SKIP active | **⚠️ Hard Skip** | — | Output warning, no auto-bet |
 | Confidence 50–64 | **ML Bet** | **$75** | Bet the model's win probability pick |
-| P1_MATCH (Dome + dual elite SP) AND all 5 Under gates pass AND conf 50–64 | **Pattern A Under** | $150 unit | UNDER |
-| P2_MATCH (home ace vs ATH/WAS) AND all 5 Under gates pass AND conf 50–64 | **Pattern B Under** | $75 unit | UNDER |
-| P10_MATCH (corrected projected total ≤ 6.5) AND all 5 Under gates pass AND conf 50–64 | **Strong UNDER** | $75 unit | UNDER |
-| All 5 Under gates pass AND conf 50–64 only, no pattern match | **Standard Under** | $50 unit | UNDER per model |
+| ML + Under align same direction | **Combo add-on** | +**$25–30** | Add on top of ML bet when Under passes all gates |
+| P1_MATCH (Dome + dual elite SP) AND all 6 Under gates pass AND conf 50–64 | **Pattern A Under** | $150 unit | UNDER |
+| P2_MATCH (home ace vs ATH/WAS) AND all 6 Under gates pass AND conf 50–64 | **Pattern B Under** | $75 unit | UNDER |
+| P11_LAD_ACE (LAD home Ohtani/Yamamoto/Sasaki, Gate C met) AND all 6 Under gates pass AND conf 50–64 | **Pattern C Under** | **$100 unit** | UNDER |
+| P10_MATCH (corrected projected total ≤ 6.5) AND all 6 Under gates pass AND conf 50–64 | **Strong UNDER** | $75 unit | UNDER |
+| All 6 Under gates pass AND conf 50–64 only, no pattern match | **Standard Under** | $50 unit | UNDER per model |
 | Confidence < 50 OR confidence ≥ 65 (P9_BAN) | **Pass** | — | Outside target zone — no O/U bet |
 | Corrected projected total gap < 2.0 runs vs line (§3.9) | **Pass** | — | Insufficient edge |
-| Any Under gate fails | **Pass (Under)** | — | ML still eligible if conf 50–64 |
+| Any Under gate A–E fails | **Pass (Under)** | — | ML still eligible if conf 50–64 |
 
 > **Confidence zone (v2.7):** The ONLY valid O/U betting zone is confidence score 50–64. Below 50 = too uncertain. Confidence ≥ 65 = historically counter-productive (25% hit rate). P9_BAN always caps at 64 for betting purposes. The model may still show a higher calculated confidence for informational tracking — the bet is still capped.
 
@@ -760,20 +785,23 @@ Dodgers @ Yankees,Cole (NYY),Yamamoto (LAD),54%,46%,7.5,61% (Over)
     "flag4_gate_c_sp_quality": "PASS — ERA 2.31, 8 starts",
     "flag5_gate_d_april_visitor": "FAIL — visitor is PHI, not ATH/WAS",
     "flag6_gate_e_estimate": "FAIL — corrected est 7.8 > 6.5",
-    "flag7_april_bias": "+3.0 applied (April)",
-    "flag8_rain_gate": "clear — 22% precip",
-    "flag9_venue_ban": "clear",
-    "flag10_conf_cap": "clear — conf 58 below 65",
+    "flag7_gate_f_esdu": "N/A — ESDU not active",
+    "flag8_april_bias": "+3.0 applied (April)",
+    "flag9_rain_gate": "clear — 22% precip",
+    "flag10_venue_ban": "clear",
+    "flag11_conf_cap": "clear — conf 58 below 65",
+    "flag12_ftmf_match": "INACTIVE — no Fortress+TMF combo",
     "ml_bet": "Bet $75 — conf in zone",
+    "combo_bet": "N/A — Under failed gates",
     "under_bet": "Pass — Gate B failed (visitor momentum) + Gate D failed (not ATH/WAS)"
   },
-  "ml_recommendation": "ML $75 — conf 58 in zone (60% historical hit rate) OR Pass — conf outside 50–64",
-  "betting_recommendation": "Pattern B Under: UNDER 7.5 $75 (Moderate confidence, all 5 gates pass) + ML $75",
+  "ml_recommendation": "ML $75 — conf 58 in zone (57.4% historical hit rate, 104-game data) OR Pass — conf outside 50–64",
+  "betting_recommendation": "Pattern B Under: UNDER 7.5 $75 (Moderate confidence, all 6 gates pass) + ML $75",
   "export_string": "Away @ Home,Home SP (HOME),Away SP (AWAY),52%,48%,7.5,61% (Over)"
 }
 ```
 
-> **Critical:** Return only valid JSON. No markdown fences, no preamble. Use `"Data Notice: [field] not found"` for unavailable fields. The `ml_recommendation` field must always read `"BANNED — P6_BAN active"` — never output a moneyline recommendation.
+> **Critical:** Return only valid JSON. No markdown fences, no preamble. Use `"Data Notice: [field] not found"` for unavailable fields. The `ml_recommendation` field must output either `"ML $75 — conf [x] in zone"` or `"Pass — conf outside 50–64"` — never output a banned/suppressed message (P6_BAN was lifted in v2.8).
 
 ---
 
@@ -791,6 +819,7 @@ Dodgers @ Yankees,Cole (NYY),Yamamoto (LAD),54%,46%,7.5,61% (Over)
 | v2.7 | **Pattern policy overhaul from 56-game empirical dataset (2026-04-10). ML 22–34 (39%), O/U 27–28 (49%), Modified O/U 58.5%.** (1) ML bets PERMANENTLY BANNED — 34 tracked ML bets hit at 39%, -13.7% ROI; P6_BAN always active; betting_recommendation and JSON ml_recommendation now suppress moneyline entirely. (2) High confidence cap (P9_BAN) — bets with confidence ≥ 65 historically hit at 25%, -27.7%; cap effective betting confidence at 64 max. (3) §3.10 Pattern Betting Policies added — 10 empirically-derived patterns (P1–P10) with MATCH/VETO/SKIP/BAN flags, pattern tier sizing (A=$150, B=$75, Standard), and Pattern Match Report output. (4) O/U target zone set to confidence 50–64 exclusively — 42 games at 58.5% hit rate; outside this zone = Pass. (5) P7_SKIP (Hot Batting Team) — 14% hit rate, hard skip warning. (6) P8_BAN (Venue Cold UNDER) — Target Field/Progressive Field cold UNDER permanently banned, 20% hit rate. (7) P4_VETO (Road Ace vs Home Offence) — 50% hit rate, -2.7% ROI, banned from bet recommendations. (8) P10_MATCH — projected total ≤ 6.5 + UNDER was 100% correct across 27 games; strong signal added. (9) Pattern Match Report mandatory in every analysis output. (10) §8.1b overhauled to pattern-based O/U tier system replacing ML tiers. |
 | v2.8 | **Dual-strategy overhaul from 77-game empirical dataset (2026-04-14). ML 43–34 (55.8%), Moderate conf ML 60% (40 games), last 5 ML = 80%. O/U 31–43 (41.9%), last 10 O/U = 10%.** (1) **ML BETS REINSTATED** — P6_BAN lifted; ML 55.8% overall with moderate conf at 60%; $75/bet at 50–64 confidence; do not bet ML outside this zone. (2) **April bias correction +3.0** (was +2.0) added to all projected totals in April — slate averages 11–14 runs vs model baseline of 8–9; Under losses avg 12.1 runs = systematic underestimation. (3) **Under 5-Gate System** — all 5 gates must pass: Gate A (prev-day avg ≤10), Gate B (both teams no ≥5-run win last 2 days), Gate C (home SP sub-2.50 ERA + 6+ verified starts), Gate D (April: visiting team ATH/WAS only), Gate E (corrected est ≤ 6.5). Any gate failure = skip Under. (4) **P2 narrowed** — valid only when visiting team is ATH or WAS in April (~67% hit rate). All other visitors in April = skip Under. (5) **P3 suspended** — 33% hit rate vs originally claimed 60%; suspended until May retest. (6) **Rain policy revised** — skip at ≥85% (was 40%), halve stake at 65–84%. (7) **10 Betting Decision Flags** replace Pattern Match Report in all outputs — FL1 CONF_ZONE through FL10 CONF_CAP, covering both ML and Under eligibility. (8) ENV_BLOCK and EST_HIGH confidence deductions added. (9) Bimodal Under distribution confirmed: wins avg 5.2 runs, losses avg 12.1 — no middle ground; corrected est ≤5.5 for high conviction. (10) Low conf O/U (< 50) = 29% hit rate = never bet O/U below 50. |
 | v2.5 | **Accuracy revision from 32-game empirical results (ML 47%, OVER 50%, UNDER 50%, away teams won 53%). 6 structural fixes.** (1) Mandatory April O/U Gate: explicit gate forces Moderate cap AFTER direction is set — rule existed in v2.4 but was never enforced, all 16 April predictions violated it; High O/U was 47.1% vs Moderate 61.5%. (2) xFIP Estimation Gate: knowledge-estimated xFIP cannot drive High O/U confidence — cap at Moderate; combined estimation cap (2+ estimated key inputs) also forces Moderate; empirical: all 5 UNDER High misses had estimated xFIP as primary GVI suppressor. (3) Home Bonus Accumulation Cap: in April, total home bonuses from §4 Step 3 capped at +8% above baseline — model was picking HOME 68.8% vs 46.9% actual home wins due to stacked bonuses. (4) No-Edge Pass Threshold: final win probability 47–53% → ML betting recommendation = Pass; close games went 1-for-8 (12.5%). (5) Low-Line UNDER Floor: O/U line ≤7.5 in April → UNDER capped at Low confidence; every UNDER on a 7.5 April line missed high (actuals: 8, 8, 12, 16). (6) OU-F empirical recalibration: 32-game dataset shows 50/50 OVER/UNDER actual split with lines running +0.52 below actuals — UNDER default retained as precautionary lean but confidence defaulted to Low (not Moderate); new KXF deduction −10 when UNDER driven by estimated xFIP. |
+| v2.9 | **104-game empirical refinements (2026-04-16). ML moderate-conf 57.4% across 54 games. 6 validated rules incorporated.** (1) **FORTRESS+TMF Combo Flag (FTMF)** — new §3.7 flag: Home Fortress + away TMF = 73% Under hit rate (6/8 games); escalates Under confidence to Moderate if currently Low. (2) **ML stats updated** — 57.4% at 54 moderate-conf games (was 60% at 40 games); Combo Bet added (+$25–30 when ML and Under align same direction). (3) **Gate C W-ACE✗ hard stop confirmed** — 0% Under hit rate in 4 games when Gate C fails; explicit warning added to Gate C and Flag 4. (4) **P8_BAN re-confirmed** — 22% Under at Target/Progressive Field cold; permanent ban reaffirmed from 104-game data. (5) **Gate F (ESDU Stake Reducer)** added — ESDU active in April correlates with 65% Over rate; halve stake rather than skip. Under 5-gate system becomes **6-gate system**. (6) **P11_LAD_ACE Pattern C** added — LAD home Ohtani/Yamamoto/Sasaki with Gate C met = 80% Under hit rate (4/5 games); $100 unit; highest-conviction Under signal in system; Ohtani qualifies ~May 4–6. (7) Betting Decision Flags expanded from 10 to **12 flags** (Gate F + FTMF_MATCH added). (8) Tier table updated with Pattern C ($100) and Combo Bet row. (9) JSON schema updated with new flag fields. |
 
 ---
 
@@ -817,7 +846,7 @@ All design screenshots are stored in the `/screenshot` folder at the project roo
 
 ---
 
-*MLB Game Predictor — CLAUDE.md v2.8*
+*MLB Game Predictor — CLAUDE.md v2.9*
 
 ---
 
@@ -861,3 +890,47 @@ Only push after the user responds with explicit approval.
 On the very first push after this Section was added, `/api/export-all` did not yet exist on Railway.
 The bootstrap was done manually with the paginated endpoint. From now on, `npm run sync-railway`
 calls `/api/export-all` directly and is the only sync method needed.
+
+---
+
+## 12. Code Modification Principles
+
+*Adapted from general LLM coding guidelines. Applies to all code changes in this project.*
+
+### 12.1 Think Before Coding
+- State assumptions explicitly before implementing. If uncertain, ask.
+- If multiple interpretations exist, present them — don't pick one silently.
+- If a simpler approach exists, say so and push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask before proceeding.
+
+### 12.2 Simplicity First
+- Write the minimum code that solves the problem. Nothing speculative.
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If 200 lines could be 50, rewrite it.
+
+> Ask: *"Would a senior engineer say this is overcomplicated?"* If yes, simplify.
+
+### 12.3 Surgical Changes
+- Touch only what is directly required by the request.
+- Do not "improve" adjacent code, comments, or formatting uninvited.
+- Do not refactor things that aren't broken.
+- Match existing code style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it — don't delete it.
+- If your changes create unused imports/variables/functions, remove those. Do not remove pre-existing dead code unless asked.
+
+> Every changed line should trace directly to the user's request.
+
+### 12.4 Goal-Driven Execution
+- Transform tasks into verifiable goals before starting:
+  - "Add validation" → "Write tests for invalid inputs, then make them pass"
+  - "Fix the bug" → "Reproduce it first, then fix it"
+- For multi-step tasks, state a brief plan with verification checks:
+  ```
+  1. [Step] → verify: [check]
+  2. [Step] → verify: [check]
+  3. [Step] → verify: [check]
+  ```
+- Don't begin implementation on weak criteria like "make it work" — clarify first.

@@ -19,6 +19,38 @@
   --radius-sm:  8px;
 }
 
+/* ─── Light mode overrides ──────────────────────────────────────────────── */
+body.light {
+  --bg:         #f4f5f8;
+  --bg2:        #ffffff;
+  --bg3:        #eceef3;
+  --border:     #d0d4e0;
+  --text:       #1a1d2e;
+  --text2:      #4a4f68;
+  --text3:      #8a8fa8;
+  --green:      #16a34a;
+  --red:        #dc2626;
+  --gold:       #b45309;
+  --blue:       #1a6fc4;
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text2);
+  cursor: pointer;
+  padding: 5px 10px;
+  font-size: 1rem;
+  line-height: 1;
+  transition: border-color 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
 html { scroll-behavior: smooth; }
 
 body {
@@ -1668,18 +1700,18 @@ body {
 }
 
 /* Column widths — fixed layout, fits page without horizontal scroll */
-.col-id      { width: 36px; }
-.col-date    { width: 72px; }
-.col-matchup { width: 18%; }
-.col-type    { width: 36px; }
+.col-id      { width: 32px; }
+.col-date    { width: 82px; }
+.col-matchup { width: 17%; }
+.col-type    { width: 40px; }
 .col-pred    { width: 10%; }
-.col-ou      { width: 64px; }
-.col-conf    { width: 44px; }
-.col-actual  { width: 14%; }
-.col-ml      { width: 48px; }
-.col-ouR     { width: 48px; }
-.col-flags   { width: 16%; }
-.col-actions { width: 90px; }
+.col-ou      { width: 62px; }
+.col-conf    { width: 42px; }
+.col-actual  { width: 13%; }
+.col-ml      { width: 46px; }
+.col-ouR     { width: 46px; }
+.col-flags   { width: 15%; }
+.col-actions { width: 82px; }
 
 .hist-table thead tr {
   background: var(--bg3);
@@ -1709,8 +1741,8 @@ body {
 
 .hist-table td { padding: 7px 6px; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; }
 
-.td-id    { color: var(--text3); font-size: 0.75rem; }
-.td-date  { color: var(--text2); white-space: nowrap; }
+.td-id    { color: var(--text3); font-size: 0.72rem; }
+.td-date  { color: var(--text2); white-space: nowrap; font-size: 0.75rem; }
 
 .matchup-cell { display: flex; align-items: center; gap: 3px; font-weight: 600; flex-wrap: wrap; }
 .home-name    { color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
@@ -1752,16 +1784,28 @@ body {
 .td-flags { overflow: hidden; }
 .flag-chip {
   display: inline-block;
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 4px;
+  padding: 1px 4px;
+  border-radius: 3px;
   background: rgba(96,165,250,0.12);
   color: #60a5fa;
   border: 1px solid rgba(96,165,250,0.25);
-  margin: 1px 2px 1px 0;
+  margin: 1px 1px 1px 0;
   white-space: nowrap;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
+}
+.flag-more {
+  display: inline-block;
+  font-size: 0.58rem;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(156,163,175,0.12);
+  color: var(--text3);
+  border: 1px solid rgba(156,163,175,0.2);
+  margin: 1px 0;
+  cursor: default;
 }
 .flag-chip.flag-ban  { background: rgba(239,68,68,0.12); color: #f87171; border-color: rgba(239,68,68,0.25); }
 .flag-chip.flag-warn { background: rgba(245,158,11,0.12); color: #fbbf24; border-color: rgba(245,158,11,0.25); }

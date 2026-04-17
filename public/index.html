@@ -28,6 +28,7 @@
           </svg>
           Analyzer
         </a>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
         <a href="/history" class="nav-tab" id="historyNavTab">
           <svg viewBox="0 0 20 20" fill="currentColor" class="nav-icon">
             <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
@@ -49,7 +50,7 @@
         <div class="globe-stats">
           <div class="globe-stat"><span class="globe-stat-num">3</span><span class="globe-stat-label">AI Models</span></div>
           <div class="globe-stat-divider"></div>
-          <div class="globe-stat"><span class="globe-stat-num">v2.8</span><span class="globe-stat-label">Framework</span></div>
+          <div class="globe-stat"><span class="globe-stat-num">v2.9</span><span class="globe-stat-label">Framework</span></div>
           <div class="globe-stat-divider"></div>
           <div class="globe-stat"><span class="globe-stat-num">MLB</span><span class="globe-stat-label">All Season</span></div>
         </div>
@@ -392,11 +393,24 @@
   <section class="changelog-section">
     <div class="changelog-header" id="changelogToggle">
       <span class="changelog-title">Framework Changelog</span>
-      <span class="changelog-badge">v2.8</span>
+      <span class="changelog-badge">v2.9</span>
       <span class="changelog-chevron" id="changelogChevron">▼</span>
     </div>
     <div class="changelog-body hidden" id="changelogBody">
       <div class="changelog-entry changelog-entry--current">
+        <div class="changelog-version">v2.9 <span class="changelog-date">2026-04-16</span></div>
+        <div class="changelog-desc">104-game empirical refinements. 6 validated rules incorporated: FORTRESS+TMF Under signal, ML updated to 57.4%/54 games, Gate C W-ACE✗ hard stop confirmed, Gate F ESDU stake-halver, LAD Ace Pattern C. 12 Betting Decision Flags.</div>
+        <ul class="changelog-items">
+          <li><strong>FORTRESS+TMF Combo Flag (FTMF)</strong> — Home Fortress + away TMF = 73% Under hit rate (6/8 games); escalates Under confidence to Moderate if currently Low; FLAG 12 added</li>
+          <li><strong>ML Updated to 57.4%</strong> — 54 moderate-conf games confirm positive EV; Combo Bet added (+$25–30 when ML and Under align same direction)</li>
+          <li><strong>Gate C W-ACE✗ Hard Stop</strong> — 0% Under hit rate in 4 games when Gate C fails; explicit hard stop warning added</li>
+          <li><strong>Gate F (ESDU Stake Reducer)</strong> — ESDU active in April = 65% Over rate; halve stake (not skip); Under 5-gate system → 6-gate system</li>
+          <li><strong>P11_LAD_ACE Pattern C</strong> — LAD home Ohtani/Yamamoto/Sasaki (Gate C met) = 80% Under (4/5 games); $100 unit; highest-conviction Under signal; Ohtani qualifies ~May 4–6</li>
+          <li><strong>P8_BAN Re-confirmed</strong> — Target/Progressive Field cold Under = 22% in 104-game data; permanent ban reaffirmed</li>
+          <li><strong>12 Betting Decision Flags</strong> — expanded from 10; FLAG 7 (Gate F) + FLAG 12 (FTMF_MATCH) added</li>
+        </ul>
+      </div>
+      <div class="changelog-entry">
         <div class="changelog-version">v2.8 <span class="changelog-date">2026-04-14</span></div>
         <div class="changelog-desc">Dual-strategy overhaul from 77-game empirical dataset (ML 55.8% / Moderate ML 60% / last 5 ML 80%). ML bets reinstated. Under 5-gate system added. April +3.0 bias correction. 10 Betting Decision Flags.</div>
         <ul class="changelog-items">
@@ -496,5 +510,19 @@
   <script src="app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   <script src="globe.js"></script>
+  <script>
+    function toggleTheme() {
+      const isLight = document.body.classList.toggle('light');
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+      document.getElementById('themeToggle').textContent = isLight ? '☀️' : '🌙';
+    }
+    (function() {
+      if (localStorage.getItem('theme') === 'light') {
+        document.body.classList.add('light');
+        const btn = document.getElementById('themeToggle');
+        if (btn) btn.textContent = '☀️';
+      }
+    })();
+  </script>
 </body>
 </html>

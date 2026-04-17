@@ -551,14 +551,23 @@ function buildFlags(r) {
 
   if (!unique.length) return `<span style="color:var(--text3);font-size:0.7rem">—</span>`;
 
-  // Color-code: ban flags red, warning flags amber, positive flags green
+  // Color-code: ban flags red, positive flags green, default blue
   const BAN_FLAGS  = new Set(['P4_VETO','P7_SKIP','P8_BAN','P9_BAN','GATE-A✗','GATE-B✗','GATE-C✗','GATE-D✗','GATE-E✗','PDCF','MCF','HFCF','TMF','RAF','HCB','VCB','ENV_BLOCK','EST_HIGH']);
-  const GOOD_FLAGS = new Set(['ML✓','P1','P2','P10','Pattern_A','Pattern_B','Strong_Under']);
+  const GOOD_FLAGS = new Set(['ML✓','P1','P2','P10','Pattern_A','Pattern_B','Strong_Under','WPOvr-A','WPOvr-B','SURGE-H','SURGE-A','FORTRESS']);
 
-  return unique.map(f => {
+  const MAX = 5;
+  const visible = unique.slice(0, MAX);
+  const overflow = unique.length - MAX;
+  const tooltip = unique.join(' | ');
+
+  const chips = visible.map(f => {
     const cls = BAN_FLAGS.has(f) ? 'flag-chip flag-ban' : GOOD_FLAGS.has(f) ? 'flag-chip flag-ok' : 'flag-chip';
-    return `<span class="${cls}">${esc(f)}</span>`;
+    return `<span class="${cls}" title="${esc(tooltip)}">${esc(f)}</span>`;
   }).join('');
+
+  const more = overflow > 0 ? `<span class="flag-more" title="${esc(tooltip)}">+${overflow}</span>` : '';
+
+  return chips + more;
 }
 
 function renderRow(r) {
