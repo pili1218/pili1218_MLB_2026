@@ -986,6 +986,46 @@ app.get("/api/predictions", (req, res) => {
   }
 });
 
+// ─── TEMPORARY: Force-reseed from predictions-export.json (remove after use) ──
+app.post("/api/force-reseed", (req, res) => {
+  try {
+    const rows = JSON.parse(fs.readFileSync(path.join(__dirname, "predictions-export.json"), "utf8"));
+    const insertRow = db.prepare(`
+      INSERT OR IGNORE INTO predictions (
+        id, saved_at, game_date, season_type, home_team, away_team,
+        home_starter, away_starter, home_win_pct, away_win_pct,
+        ou_line, ou_prediction, ou_confidence, ou_over_pct, confidence_score,
+        gvi, home_tms, away_tms, home_pms, away_pms,
+        home_pvs, away_pvs, home_red, away_red, pdcf_active,
+        active_flags, active_overrides, betting_recommendation,
+        key_driver, reasoning, export_string, full_prediction,
+        actual_winner, actual_home_score, actual_away_score, actual_total,
+        ml_result, ou_result, ml_correct, ou_correct, notes
+      ) VALUES (
+        @id, @saved_at, @game_date, @season_type, @home_team, @away_team,
+        @home_starter, @away_starter, @home_win_pct, @away_win_pct,
+        @ou_line, @ou_prediction, @ou_confidence, @ou_over_pct, @confidence_score,
+        @gvi, @home_tms, @away_tms, @home_pms, @away_pms,
+        @home_pvs, @away_pvs, @home_red, @away_red, @pdcf_active,
+        @active_flags, @active_overrides, @betting_recommendation,
+        @key_driver, @reasoning, @export_string, @full_prediction,
+        @actual_winner, @actual_home_score, @actual_away_score, @actual_total,
+        @ml_result, @ou_result, @ml_correct, @ou_correct, @notes
+      )
+    `);
+    const runAll = db.transaction((rows) => {
+      let inserted = 0;
+      for (const row of rows) insertRow.run(row) && inserted++;
+      return inserted;
+    });
+    const inserted = runAll(rows);
+    const total = db.prepare("SELECT COUNT(*) as n FROM predictions").get().n;
+    res.json({ success: true, inserted, total, source_rows: rows.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Export all predictions (used by sync-from-railway.js pre-commit) ─────────
 app.get("/api/export-all", (_req, res) => {
   try {
