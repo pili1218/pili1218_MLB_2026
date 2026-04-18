@@ -1,0 +1,286 @@
+================================================================================
+  MLB GAME ANALYZER — PATTERN ANALYSIS & ACCURACY REPORT
+  Dataset: 128 games | Through: April 18, 2026 | Framework: v3.1
+================================================================================
+
+GENERATED: 2026-04-18
+BASIS: Full predictions-export.json database read (128 records, 2025-03-30 → 2026-04-18)
+
+--------------------------------------------------------------------------------
+SECTION 1 — OVERALL ACCURACY SNAPSHOT
+--------------------------------------------------------------------------------
+
+  ML (Moneyline)
+  ---------------
+  Overall:              69 / 128  =  53.9%
+  Breakeven needed:              ~52.4%
+  Status:               PROFITABLE (marginal edge)
+
+  O/U (Over/Under)
+  ----------------
+  Overall (all games):  50 / 118  =  42.4%   ← MISLEADING — see Section 2
+  Real bet zone only:   27 /  49  =  55.1%   ← PROFITABLE (conf 50–64 only)
+  Pushes excluded:       6 games
+  Status:               Profitable in valid zone; polluted by floor games
+
+  Today (April 18, 2026)
+  ----------------------
+  ML:   6 / 13  =  46.2%   (below target — cold ML day)
+  O/U:  7 / 12  =  58.3%   (above breakeven — good O/U day)
+  Push: 1 game (TOR @ ARI, 9–0 on 9.0 line)
+
+--------------------------------------------------------------------------------
+SECTION 2 — WHY THE OVERALL O/U LOOKS WORSE THAN IT IS
+--------------------------------------------------------------------------------
+
+  25 records have NULL confidence scores (entered without full analysis).
+  10 records hit the confidence floor (conf = 25, structural passes).
+  Combined O/U hit rate on these 35 "floor/null" games:  3 / 29  =  10.3%
+
+  These games drag the overall O/U from 55.1% → 42.4%.
+  They should NEVER generate active O/U bet recommendations.
+
+  RULE ADDED (v3.1): Games with null confidence or conf = 25 → output directional
+  O/U prediction for tracking only, with "(NO BET — pass tier)" note. No active bet.
+
+--------------------------------------------------------------------------------
+SECTION 3 — ML ACCURACY BY CONFIDENCE TIER
+--------------------------------------------------------------------------------
+
+  Tier          Games    Hit Rate    Status
+  ---------     -----    --------    ------
+  < 50          57       52.6%       Marginal — Pass
+  50 – 54       26       57.7%       Profitable ✓
+  55 – 59       20       60.0%       Profitable ✓
+  60 – 64        6       16.7%       Weak (small sample, 6 games — caution)
+  65 – 69       15       66.7%       STRONGEST ZONE ✓  ← Now unlocked in v3.1
+  70 +           4       25.0%       Trap — avoid
+
+  KEY FINDING: ML at conf 65–69 is the single best ML tier (66.7%).
+  Prior framework (v2.7–v3.0) had P9_BAN blocking ALL bets at conf ≥ 65.
+  This was leaving 66.7% winning ML bets off the table.
+
+  v3.1 FIX: P9_BAN now applies to O/U bets ONLY.
+  ML bets at conf 65–69 = eligible at $75. Do not bet ML at conf ≥ 70.
+
+  April home picks:   31 / 52  =  59.6%
+  April away picks:   26 / 52  =  50.0%
+
+--------------------------------------------------------------------------------
+SECTION 4 — O/U ACCURACY BY DIRECTION
+--------------------------------------------------------------------------------
+
+  Direction    Games    Hit Rate    Status
+  ---------    -----    --------    ------
+  OVER         42       54.8%       Profitable ✓
+  UNDER        61       44.3%       Losing ✗
+
+  April specifically:
+  April OVER   32       59.4%       Strong ✓
+  April UNDER  48       39.6%       Losing ✗
+
+  CRITICAL: The model has been calling too many UNDER bets in April.
+  The April UNDER hit rate (39.6%) is well below breakeven.
+  The April OVER hit rate (59.4%) is well above breakeven.
+
+  Root cause: Multiple stale rules were biased toward UNDER in April
+  (April UNDER Default, High-Line UNDER Default, AOP deduction).
+  All three have been corrected in v3.1.
+
+--------------------------------------------------------------------------------
+SECTION 5 — O/U ACCURACY BY LINE BUCKET (April, all confidence)
+--------------------------------------------------------------------------------
+
+  Line Range    UNDER Hit    Avg Actual    Status
+  ----------    ----------   -----------   ------
+  ≤ 7.4         3/5  = 60%   5.8 runs      OK — valid UNDER range
+  7.5 – 7.9     3/11 = 27%   10.3 runs     BANNED in v3.1 ✗
+  8.0 – 8.4     5/14 = 36%   9.7 runs      Weak — cap at Moderate only
+  8.5 – 8.9     6/11 = 55%   9.6 runs      Sweet spot ✓
+  9.0 +         2/7  = 29%   11.1 runs     BANNED UNDER — now OVER lean ✗/✓
+
+  Line Range    OVER Hit     Status
+  ----------    ----------   ------
+  7.5 – 7.9     4/5  = 80%   Strong OVER signal on these lines
+  9.0 – 9.4     6/12 = 50%   Neutral
+  9.5 +         6/8  = 75%   Strong OVER signal ✓
+
+  KEY FINDING: UNDER on 7.5–7.9 lines in April (27.3%) is a LOSING bet.
+  These games average 10.3 actual runs on a 7.5 line — systematic OVER.
+  v3.1 FIX: UNDER on 7.5–7.9 in April = PASS (banned).
+
+  KEY FINDING: OVER on 9.0+ lines in April (64.3%) vs UNDER (28.6%).
+  The prior "High-Line April UNDER Default" rule was completely inverted.
+  v3.1 FIX: Lines ≥ 9.0 in April = lean OVER (Low confidence).
+
+--------------------------------------------------------------------------------
+SECTION 6 — O/U IN THE REAL BET ZONE (conf 50–64)
+--------------------------------------------------------------------------------
+
+  Overall conf 50–64:          27 / 49  =  55.1%   Profitable ✓
+  OVER conf 50–64:             11 / 19  =  57.9%   Profitable ✓
+  UNDER conf 50–64:            16 / 30  =  53.3%   Marginally profitable ✓
+
+  By line bucket (conf 50–64):
+  Line 6.0 – 7.4:    1/2  UNDER 1/2  = 50%
+  Line 7.5 – 7.9:    6/10  OVER 2/2=100%  UNDER 4/8=50%
+  Line 8.0 – 8.4:    6/11  OVER 2/3=67%   UNDER 4/8=50%
+  Line 8.5 – 8.9:    6/10  OVER 1/3=33%   UNDER 5/7=71%   ← Sweet spot
+  Line 9.0 +:        8/16  OVER 6/11=55%  UNDER 2/5=40%
+
+  UNDER on 8.5–8.9 in the conf 50–64 zone = 71% (5/7) — emerging sweet spot.
+
+--------------------------------------------------------------------------------
+SECTION 7 — GVI (GAME VOLATILITY INDEX) PERFORMANCE
+--------------------------------------------------------------------------------
+
+  GVI Zone    Games    Hit Rate    Framework Claim    Status
+  --------    -----    --------    ---------------    ------
+  < 35        36       50.0%       69% (UNDER bias)   Weaker than claimed
+  35 – 65     40       45.0%       51% (dead zone)    Dead zone confirmed
+  > 65        23       60.9%       67% (OVER bias)    Confirmed ✓
+
+  Note: GVI < 35 is underperforming the 69% claim. Only 50% hit rate in 36
+  games. Use as a contributing signal, not a primary trigger.
+
+--------------------------------------------------------------------------------
+SECTION 8 — TREND ANALYSIS (LAST 5 / LAST 10 / LAST 15)
+--------------------------------------------------------------------------------
+
+  Period      ML          O/U
+  ------      --          ---
+  Last 5      3/5 = 60%   2/5  = 40%
+  Last 10     5/10 = 50%  3/10 = 30%   ← Active cold streak
+  Last 15     6/15 = 40%  6/14 = 43%   (excl 1 push)
+
+  The last 10 O/U at 30% reflects a run of:
+  - Floor/null confidence games being counted as active bets
+  - UNDER bets on 7.5–7.9 lines hitting OVER (avg actual 10.3 runs)
+  - High-line UNDER calls that went OVER (9.0+ lines)
+  All three causes are addressed by v3.1 rule corrections.
+
+  April 18 specifically (today, 12 O/U graded + 1 push):
+  Wins:  TEX@OAK (OVER 9.0 → 15), TEX@SEA (UNDER 6.5 → 5),
+         CIN@MIN (UNDER 7.5 → 3), NYM@CHC (OVER 10.5 → 16),
+         BAL@CLE (OVER 8.0 → 10), KC@NYY (UNDER 8.5 → 6),
+         SD@LAA (UNDER 8.5 → 8)
+  Losses: TB@PIT (OVER 8.5 → 6), SF@WAS (UNDER 8.0 → 15),
+          DET@BOS (OVER 8.0 → 1), MIL@MIA (UNDER 8.0 → 12),
+          LAD@COL (OVER 9.5 → 8)
+  Push:  TOR@ARI (UNDER 9.0 → 9)
+
+--------------------------------------------------------------------------------
+SECTION 9 — PATTERN-SPECIFIC HIT RATES
+--------------------------------------------------------------------------------
+
+  Pattern                          Hit Rate      Dataset     Status
+  -------                          --------      -------     ------
+  RCF + Slumping OVER signal       17/28 = 60.7%  28 games   Active ✓ (claimed 65%)
+  O/U conf 50–64 (target zone)     27/49 = 55.1%  49 games   Profitable ✓
+  ML conf 65–69 (best ML zone)     10/15 = 66.7%  15 games   NEW — now unlocked ✓
+  April OVER (all lines)           19/32 = 59.4%  32 games   Strong ✓
+  UNDER 8.5–8.9 conf 50–64         5/7  = 71.4%   7 games    Emerging sweet spot
+  April OVER conf 50–64 on 9.0+    4/7  = 57.1%   7 games    Confirmed OVER lean ✓
+  UNDER 7.5–7.9 April              3/11 = 27.3%   11 games   BANNED ✗
+  UNDER 9.0+ April                 2/7  = 28.6%   7 games    BANNED → OVER lean ✗
+  Null/floor conf games (O/U)      3/29 = 10.3%   29 games   Never bet ✗
+
+--------------------------------------------------------------------------------
+SECTION 10 — FRAMEWORK CHANGES MADE (v3.0 → v3.1, April 18, 2026)
+--------------------------------------------------------------------------------
+
+  6 critical inversions corrected based on 128-game dataset:
+
+  Change 1: HIGH-LINE APRIL OVER SIGNAL (replaces UNDER default)
+    OLD: O/U line ≥ 9.0 + April → UNDER (Low confidence)
+    NEW: O/U line ≥ 9.0 + April → OVER (Low confidence)
+    Data: OVER on 9.0+ April lines = 64.3% (9/14). UNDER = 28.6% (2/7).
+
+  Change 2: APRIL O/U DEFAULT RULE (OU-F) REMOVED
+    OLD: "Default to UNDER when no OU-A/B/C signal fires in April"
+    NEW: "Default to PASS — no directional bet without a signal"
+    Data: April OVER = 59.4%, April UNDER = 39.6%. UNDER default was inverted.
+
+  Change 3: UNDER ON 7.5–7.9 LINES IN APRIL — BANNED
+    OLD: Allowed at Low confidence
+    NEW: PASS (banned)
+    Data: 3/11 = 27.3% hit, avg actual total = 10.3 runs on a 7.5 line.
+
+  Change 4: P9_BAN CLARIFIED AS O/U-ONLY
+    OLD: No bets of any kind at conf ≥ 65
+    NEW: O/U bets capped at 64; ML bets at conf 65–69 eligible at $75
+    Data: ML conf 65–69 = 66.7% (10/15). Prior ban was leaving winners off table.
+
+  Change 5: AOP CONFIDENCE DEDUCTION REMOVED
+    OLD: −10 confidence for any OVER prediction in April
+    NEW: Deduction removed
+    Data: April OVER = 59.4% (not 40% as original 20-game sample showed).
+
+  Change 6: NULL/FLOOR GAME O/U RULE ADDED
+    OLD: O/U directional output counted for all games regardless of confidence
+    NEW: conf = null or conf = 25 → no active O/U bet; tracking output only
+    Data: These 35 games hit 10.3% O/U, polluting all accuracy stats.
+
+--------------------------------------------------------------------------------
+SECTION 11 — CURRENT FRAMEWORK STATUS DASHBOARD
+--------------------------------------------------------------------------------
+
+  UNDER GATES (7-gate system — all must pass):
+  Gate 0  Home Offensive Surge (avg_runs ≥ 6.0 last 3G)   — Veto all Under
+  Gate A  Prev-day slate avg ≥ 10.0 runs                   — Block all Under
+  Gate B  Either team ≥ 5 runs in win last 2 days          — Skip/reduce
+  Gate C  Home SP ERA < 2.50 + 6+ verified 2026 starts     — Hard stop if fail
+  Gate D  April: visitor must be ATH or WAS                 — Skip if not
+  Gate E  Corrected projected total ≤ 6.5 (raw + 3.0 Apr) — Skip if too high
+  Gate F  ESDU active → halve stake (does not block)
+
+  ACTIVE PATTERN SIGNALS:
+  P1  Dome + dual elite SP (both xFIP ≤ 3.25)             — $150 Pattern A
+  P2  Home ace vs ATH/WAS April only                       — $75 Pattern B
+  P6  ML conf 50–69 (expanded from 50–64 in v3.1)         — $75 ML bet
+  P10 Projected total ≤ 6.5 → Strong UNDER                — $50 (74%, 23 games)
+  P11 LAD home Ohtani/Yamamoto/Sasaki Gate C met           — $100 Pattern C
+
+  BANNED/SUSPENDED:
+  P3  Cold natural grass UNDER                             — SUSPENDED (33%)
+  P4  Road ace xFIP ≤ 3.25                                 — BANNED (50%)
+  P7  Hot batting team (avg ≥ 5.0 + 3-win streak)         — HARD SKIP (14%)
+  P8  Target/Progressive Field cold UNDER                  — BANNED (22%)
+  P8  Yankee Stadium April UNDER                           — BANNED (17%)
+  P9  O/U bets at conf ≥ 65                               — BANNED (47% O/U)
+      ML bets at conf ≥ 70                                 — AVOID (25%, 4 games)
+      UNDER 7.5–7.9 April lines                            — BANNED (27%)
+      UNDER 9.0+ April lines                               — BANNED (29%)
+
+  O/U CONFIDENCE + PROBABILITY (display format going forward):
+  OVER  (High     — 72%)   UNDER (High     — 28%)
+  OVER  (Moderate — 61%)   UNDER (Moderate — 39%)
+  OVER  (Low      — 54%)   UNDER (Low      — 46%)
+
+--------------------------------------------------------------------------------
+SECTION 12 — RECOMMENDATIONS FOR NEXT SLATE
+--------------------------------------------------------------------------------
+
+  1. Bet ML when confidence is 50–59 or 65–69. Skip 60–64 (weak small sample).
+     Skip ML entirely at conf < 50 or ≥ 70.
+
+  2. For OVER: High-line games (9.0+) in April are the strongest signal.
+     OVER on 9.5+ lines = 75% overall. These are the primary OVER targets.
+
+  3. For UNDER: Only pursue when Gate E clears (corrected est ≤ 6.5).
+     Sweet spot is lines 8.5–8.9 (71% conf 50–64 zone). Avoid 7.5–7.9 entirely.
+
+  4. Check Gate 0 first: if home team averaged ≥ 6.0 runs over last 3 games,
+     veto ALL Under bets regardless of anything else.
+
+  5. Do not enter games without full analysis — null-confidence entries
+     inflate the miss count and distort pattern tracking.
+
+  6. April ends in ~12 days. May brings +2.0 bias correction (was +3.0),
+     relaxed UNDER gates, and potentially more reliable pattern signals.
+
+--------------------------------------------------------------------------------
+END OF REPORT
+Framework v3.1 | 128-game dataset | Generated 2026-04-18
+MLB Game Analyzer — http://localhost:3000
+================================================================================

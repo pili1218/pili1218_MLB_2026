@@ -50,7 +50,7 @@
         <div class="globe-stats">
           <div class="globe-stat"><span class="globe-stat-num">3</span><span class="globe-stat-label">AI Models</span></div>
           <div class="globe-stat-divider"></div>
-          <div class="globe-stat"><span class="globe-stat-num">v2.9</span><span class="globe-stat-label">Framework</span></div>
+          <div class="globe-stat"><span class="globe-stat-num">v3.1</span><span class="globe-stat-label">Framework</span></div>
           <div class="globe-stat-divider"></div>
           <div class="globe-stat"><span class="globe-stat-num">MLB</span><span class="globe-stat-label">All Season</span></div>
         </div>
@@ -393,11 +393,40 @@
   <section class="changelog-section">
     <div class="changelog-header" id="changelogToggle">
       <span class="changelog-title">Framework Changelog</span>
-      <span class="changelog-badge">v2.9</span>
+      <span class="changelog-badge">v3.1</span>
       <span class="changelog-chevron" id="changelogChevron">▼</span>
     </div>
     <div class="changelog-body hidden" id="changelogBody">
       <div class="changelog-entry changelog-entry--current">
+        <div class="changelog-version">v3.1 <span class="changelog-date">2026-04-18</span></div>
+        <div class="changelog-desc">128-game empirical refinements. 6 critical inversions corrected: April OVER base rate confirmed 59.4% vs UNDER 39.6% — UNDER default rules reversed. High-line OVER signal replaces UNDER default. 7.5–7.9 Under ban added. ML conf 65–69 unlocked (66.7%). AOP deduction removed. Null/floor game rule added.</div>
+        <ul class="changelog-items">
+          <li><strong>High-Line April OVER Signal</strong> — O/U line ≥9.0 in April now leans OVER (Low conf). Prior UNDER default was inverted: OVER = 64.3% (9/14), UNDER = 28.6% (2/7)</li>
+          <li><strong>April UNDER Default (OU-F) Removed</strong> — April OVER = 59.4%, UNDER = 39.6% in 128-game dataset. Default changed from UNDER to PASS when no signal fires</li>
+          <li><strong>UNDER 7.5–7.9 Lines Banned</strong> — 27.3% hit rate (3/11), avg actual total 10.3 runs. These bets lose 73% of the time in April. Now PASS</li>
+          <li><strong>P9_BAN Clarified as O/U-Only</strong> — ML at conf 65–69 = 66.7% (10/15), the strongest ML zone. ML bets at 65–69 are now eligible at $75. Avoid ML at conf ≥70</li>
+          <li><strong>AOP Deduction Removed</strong> — April OVER is now the winning direction (59.4%). The −10 penalty for OVER predictions in April has been removed</li>
+          <li><strong>Null/Floor Game Rule</strong> — Games with null confidence or conf=25 must not generate active O/U bets. These 35 games had 10.3% O/U hit rate and were suppressing overall stats. Real bet zone (conf 50–64) = 55.1% (27/49)</li>
+          <li><strong>O/U Confidence Display Updated</strong> — All O/U outputs now show direction + confidence + probability together: e.g. UNDER (Moderate — 39%)</li>
+        </ul>
+      </div>
+      <div class="changelog-entry changelog-entry--prev">
+        <div class="changelog-version">v3.0 <span class="changelog-date">2026-04-17</span></div>
+        <div class="changelog-desc">113-game empirical refinements. 9 structural updates from deep pattern analysis: Gate 0 added, GVI dead zone, wind tiers split, P10 corrected, RCF+Slumping OVER signal, NYY ban, Both-RED ban, Dual-PVS skip. 15 Betting Decision Flags.</div>
+        <ul class="changelog-items">
+          <li><strong>Gate 0 — Home Offensive Surge Veto</strong> — home avg_runs ≥6.0 last 3 games = veto ALL Under bets; 0% Under hit rate (4/4 cases); hard stop before all other gates</li>
+          <li><strong>Gate A Fixed (≥10.0 inclusive)</strong> — prev-day slate avg ≥10.0 now blocks Unders (was strictly >10); Apr 16 borderline case confirmed the gap</li>
+          <li><strong>Both RED Unavailable Ban</strong> — both SPs <3 starts = pass all O/U (38%, 22 games); exception: P10 ≤6.5 still valid</li>
+          <li><strong>P10 Corrected to 74%</strong> — updated from 100%/27 games to 74%/23 games; stake hard-capped at $50 (mechanical signal)</li>
+          <li><strong>RCF + Slumping = OVER Signal</strong> — when RCF fires + that SP is Slumping (RED >+1.5) = 65% OVER hit rate (17 games); new named OU-A signal</li>
+          <li><strong>GVI Dead Zone Skip (35–65)</strong> — GVI in 35–65 range = 51% hit rate, no edge; skip O/U unless primary signal (P10/RCF+Slump/Wind >15mph)</li>
+          <li><strong>Wind OUT Tiers Split</strong> — >15mph + >60°F = 78% OVER (primary signal); 8–15mph = 57% (weaker, needs secondary). Wind IN >10mph+cold = 71% Under</li>
+          <li><strong>Dual PVS >15 Skip</strong> — both SPs PVS >15 = 41% O/U, skip unless primary signal (14 games)</li>
+          <li><strong>NYY Home April Under Ban</strong> — Yankee Stadium + April + Under = 17% hit rate (1/6); added to P8_BAN</li>
+          <li><strong>15 Betting Decision Flags</strong> — expanded from 12; FLAG 2 (BOTH_RED) + FLAG 3 (DUAL_PVS) + FLAG 4 (GATE_0) added</li>
+        </ul>
+      </div>
+      <div class="changelog-entry changelog-entry--prev">
         <div class="changelog-version">v2.9 <span class="changelog-date">2026-04-16</span></div>
         <div class="changelog-desc">104-game empirical refinements. 6 validated rules incorporated: FORTRESS+TMF Under signal, ML updated to 57.4%/54 games, Gate C W-ACE✗ hard stop confirmed, Gate F ESDU stake-halver, LAD Ace Pattern C. 12 Betting Decision Flags.</div>
         <ul class="changelog-items">
