@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "sync-railway": "node sync-from-railway.js"
+    "sync-railway": "node sync-from-railway.js",
+    "sync-scores": "node sync-scores-to-local.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

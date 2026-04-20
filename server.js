@@ -280,7 +280,7 @@ Add a "data_sources" object at the end of the JSON listing which fields were fil
 
 Return ONLY valid JSON with no markdown, no explanation, just the raw JSON object.`;
 
-const PREDICT_SYSTEM = `You are the MLB Game Predictor AI v2.8 with deep knowledge of MLB statistics, player profiles, and team performance. You handle both Regular Season and Postseason games.
+const PREDICT_SYSTEM = `You are the MLB Game Predictor AI v3.2 with deep knowledge of MLB statistics, player profiles, and team performance. You handle both Regular Season and Postseason games.
 
 ## STEP 0 — FILL MISSING DATA BEFORE ANALYSIS
 
@@ -327,7 +327,9 @@ Determine from the game data whether this is Regular Season or Postseason. Look 
 
 **RED:** Avg ERA last 3 starts minus season ERA. Per-start ERA = (earned_runs/innings)*9. Flag RED<-1.0 = "Surging", RED>+1.5 = "Slumping".
 MINIMUM STARTS GATE: If pitcher has <3 confirmed regular-season MLB starts this season, set RED=0, mark RED_unavailable. WP-Override A cannot fire. No knowledge-fill exceptions.
+RED THIN BLEND (v3.2): If pitcher has 3-5 confirmed starts, compute RED_blended = RED×0.5 + PVS_direction×0.5 where PVS_direction=+1.0 if PVS>15, -1.0 if PVS<8. Tag as RED_thin. Full RED weight at 6+ starts.
 If RCF active (xFIP > ERA by >=1.20), substitute xFIP for ERA in all §4 calculations.
+BOTH XFIP BLIND (v3.2): If BOTH SPs have estimated xFIP AND both have <3 confirmed starts → do NOT output any O/U direction. Output Pass with no direction. Flag "BOTH_XFIP_BLIND".
 
 **TMS:** G1+G2+G3+G4+(G5*2) where Win=+3, Loss=-2, G5=most recent. Range -14 to +18. Apply -2 if team traveled 2+ time zones in last 24h.
 EARLY SEASON TMS CAP: <5 games played = 0% weight (ignore TMS). 5-9 games = 25% weight. >=10 games = 100% weight.
@@ -341,35 +343,45 @@ EARLY SEASON TMS CAP: <5 games played = 0% weight (ignore TMS). 5-9 games = 25% 
 
 **DOUBLEHEADER G2 CHECK (v2.6):** Before computing GVI, check if this is DH G2. If yes: set dh_g2=true, add +8 to GVI, apply OVER lean in §5, never output UNDER bet recommendation.
 
-**PROJECTED TOTAL (v2.6/v2.8):** Compute projected_total = (home_avg_runs + away_avg_runs) × park_factor_multiplier. Bullpen adjustment: +0.5 if either bullpen ERA > 4.50; -0.3 if either < 3.50.
-APRIL BIAS CORRECTION (v2.8): Add +3.0 runs (April 1-30) or +2.0 runs (May+) to projected_total BEFORE gap check. Empirical: April games avg 11-14 runs; Under losses avg 12.1 runs — systematic underestimation.
+**PROJECTED TOTAL (v3.2):** Compute projected_total = (home_avg_runs + away_avg_runs) × park_factor_multiplier. Bullpen adjustment: +0.5 if either bullpen ERA > 4.50; -0.3 if either < 3.50.
+APRIL BIAS CORRECTION (v3.2 — temperature-sensitive): Add to projected_total BEFORE gap check based on game-time temperature:
+  temp<50F → +1.5 runs | temp 50-64F → +2.5 runs | temp 65-74F → +3.0 runs | temp ≥75F → +3.5 runs | temp ≥85F → +4.0 runs
+  April 1-14 (any temp) → +4.0 runs (opening weeks always max correction)
+  May onward: +2.0 runs. When temp unavailable, default +3.0.
 O/U bet requires |bias-corrected projected_total - ou_line| ≥ 2.0 runs — if gap < 2.0, set ou_bet_eligible=false.
+P10 EXCEPTION: When P10_MATCH active (corrected total ≤ 6.5), minimum gap is ≥ 1.5 runs (not 2.0).
 
-**UNDER 5-GATE SYSTEM (v2.8):** ALL 5 gates must pass for any Under bet. Any failure = skip Under (ML still eligible if conf in zone).
-Gate A (Environmental): Previous day's MLB slate avg total ≤ 10 runs/game. If >10 → skip all Unders. Set gate_a=false.
-Gate B (Momentum — BOTH teams): Neither home NOR visiting team scored ≥5 runs in a WIN in the last 2 days. If either did → gate_b=false (skip, or $50 max if home SP ERA<2.50).
-Gate C (Home SP Quality): Home SP ERA < 2.50 (2026 season) with 6+ verified starts. ERA before 6 starts is unreliable in April. If ERA≥2.50 or <6 starts → gate_c=false.
+**UNDER 7-GATE SYSTEM (v3.2):** ALL 7 gates must pass for any Under bet. Any failure = skip Under (ML still eligible if conf in zone).
+Gate 0 (Home Offensive Surge — FIRST): Home team avg_runs ≥6.0 over last 3 games → VETO ALL Under bets. Hard stop. 0% Under hit rate in qualifying cases.
+Gate A (Environmental): Previous day's MLB slate avg total ≤ 10 runs/game (inclusive — ≥10.0 blocks). Set gate_a=false if blocked. DUAL-DAY CHECK (v3.2): if EITHER of the last 2 days averaged >9.5 runs → halve stake (do not skip).
+Gate B (Momentum — v3.2): Neither home NOR visiting team scored ≥5 runs in a WIN in the last 2 days AND is on a ≥2-game win streak. BOTH conditions required. If either team meets BOTH (≥5 runs in win + ≥2-win streak) → gate_b=false.
+Gate C (Home SP Quality — v3.2): Home SP ERA < 2.50 (2026 season) with 4+ verified starts AND ≥20 IP. Prior 6-start gate was too strict (blocked 61% of profitable Unders). If ERA≥2.50 or <4 starts or <20 IP → gate_c=false. W-ACE✗ hard stop.
 Gate D (April Visitor Filter — April only): Visiting team must be ATH (Oakland) or WAS (Washington) — the two weakest offences. All other visitors in April → gate_d=false. N/A for May+.
 Gate E (Estimate): Corrected projected_total ≤ 6.5. If corrected est > 6.5 → gate_e=false. Bimodal distribution: Under wins avg 5.2 runs, losses avg 12.1 — no middle ground.
 
-**§3.10 BETTING CHECKS (v2.8):** After computing all metrics, evaluate all checks. Record in betting_flags JSON field. Evaluate in order: P8→P4→Gate_A→Gate_B→Gate_C→Gate_D→Gate_E→P9→P1/P2→P6_ML_MOD→P5.
+**§3.10 BETTING CHECKS (v3.2):** After computing all metrics, evaluate all checks. Record in betting_flags JSON field. Evaluate in order: P8→P4→Gate_0→Gate_A→Gate_B→Gate_C→Gate_D→Gate_E→Gate_F→P9→P1/P2/P11→P6_ML_MOD→P5.
 
-P1_dome_dual_ace: Indoor/dome stadium AND both SPs ERA<2.50 + 6+ starts → Pattern A UNDER (~67% hit rate) — all 5 gates still required
-P2_home_ace_vs_weak: Home SP ERA<2.50 + 6+ starts AND visiting team is ATH or WAS (April only) → Pattern B UNDER (~67% hit rate)
-P3_cold_natural_grass: SUSPENDED (v2.8, 33% hit rate). Log informational only — no bet.
-P4_road_ace_veto: Away SP xFIP≤3.25 pitching on road → SET P4=true. BAN all bets this game. (50% = no edge)
-P5_confidence_zone: Final confidence 50-64 → P5=true. ONLY valid zone for active bets (ML and Under).
-P6_ML_MOD: REINSTATED (v2.8). If confidence 50-64 → ML bet $75 eligible. 77-game data: ML 55.8% overall, moderate conf 60%, last 5 ML = 80%. Do NOT bet ML at conf<50 or ≥65.
+P1_dome_dual_ace: Indoor/dome stadium AND both SPs ERA<2.50 (xFIP≤3.25) + 4+ starts + ≥20 IP → Pattern A UNDER (~67% hit rate) — all 7 gates still required
+P2_home_ace_vs_weak: Home SP ERA<2.50 + 4+ starts + ≥20 IP AND visiting team is ATH or WAS (April only) → Pattern B UNDER (~67% hit rate)
+P3_cold_natural_grass: SUSPENDED (33% hit rate). Log informational only — no bet.
+P4_road_ace_veto (SOFTENED v3.2): Away SP xFIP≤3.25 pitching on road. DUAL-ACE EXCEPTION: If home SP also xFIP≤3.25 + 4+ starts + ≥20 IP → do NOT apply P4_VETO; route to P1/P2 instead. Otherwise: SET P4=true. BAN Under bets. ML still eligible at conf 50-69.
+P5_confidence_zone: Final confidence 50-64 → P5=true for O/U. ML zone is 50-69 (expanded v3.1).
+P6_ML_MOD (v3.1): ML bet $75 eligible at conf 50-69. 128-game data: conf 50-59=57-60%, conf 65-69=66.7% (strongest zone). Conf 60-64=weak (small sample, caution). Do NOT bet ML at conf<50 or ≥70. P9_BAN applies O/U ONLY — ML at 65-69 is eligible.
 P7_hot_batting_skip: Either team avg_runs≥5.0 AND on 3+ win streak → P7=true. HARD SKIP warning. (14% hit rate)
-P8_venue_cold_under_ban: Target Field (MIN) or Progressive Field (CLE) AND temp<55°F AND UNDER → P8=true. BAN. (20% hit rate)
-P9_high_confidence_cap: Confidence≥65 → P9=true. Cap at 64 for betting; Pass for both ML and Under. (25% hit rate at 65+)
-P10_projected_total_lte65: Bias-corrected projected_total≤6.5 AND UNDER → P10=true. Strong UNDER — 100% hit rate, 27 games. Escalate to Moderate (still subject to April gate).
+P8_venue_cold_under_ban: Target Field (MIN) or Progressive Field (CLE) AND temp<55°F AND UNDER → BAN. OR Yankee Stadium (NYY home) AND April AND UNDER → BAN (17% hit rate). Set P8=true.
+P9_high_confidence_cap (O/U ONLY): O/U confidence≥65 → cap at 64 for O/U betting. ML at conf 65-69 is STILL ELIGIBLE — P9 applies to O/U only.
+P10_projected_total_lte65: Bias-corrected projected_total≤6.5 AND UNDER → P10=true. Strong UNDER — 74% hit rate (23 games). Escalate to Moderate. Gap threshold reduced to ≥1.5 runs.
+P11_lad_ace: LAD home AND SP is Ohtani/Yamamoto/Sasaki AND ERA<2.50 + 4+ starts + ≥20 IP → Pattern C UNDER $100 (80% hit rate, 5 games).
+FTMF: Home Fortress (home win%≥.650) AND away team TMF (5+ losses) → escalate Under confidence to Moderate if currently Low.
+NYY_APR_UNDER_BAN: Yankee Stadium home AND April AND UNDER → P8_BAN active (17% hit rate, 1/6).
 
-**GVI:** Start 50. Adjustments: +15 per pitcher PVS>15; -15 per pitcher ERA/xFIP<2.50; -8 per pitcher ERA/xFIP 2.50-3.00; +10 per team 30-day wRC+>110; +10 wind OUT 8-15mph; +20 wind OUT >15mph; -10 wind IN >8mph; -10 temp<50F; +8 hitter's park; -8 pitcher's park; +5 batter-friendly ump; -5 pitcher-friendly ump; -5 per team with elite defense; +5 if postseason OR both teams in active race.
+**GVI (v3.2):** Start 50. Adjustments: +15 per pitcher PVS>15; -15 per pitcher ERA/xFIP<2.50; -8 per pitcher ERA/xFIP 2.50-3.00; +10 per team 30-day wRC+>110; +10 wind OUT 8-15mph; +20 wind OUT >15mph; -10 wind IN >8mph; -10 temp<50F; -15 temp≥85F; +8 hitter's park; -8 pitcher's park; +5 batter-friendly ump; -5 pitcher-friendly ump; -5 per team with elite defense; +5 if postseason OR both teams in active race.
 APRIL GVI ADJUSTMENTS: -5 if April 1-14; additional -5 if April 1-14 AND line>8.0; additional -5 if April AND OVER signal active.
 DH G2 ADJUSTMENT (v2.6): +8 to GVI if dh_g2=true.
 Cap 1-100. Flag GVI>65=OVER bias, GVI<35=UNDER bias.
 High-GVI/High-Line Dampener: GVI>75 AND line>8.0 → cap OU-E at Moderate.
+UNDER HEAT GATE (v3.2): temp≥85F → UNDER requires GVI<25 (not <35). 31% Under hit rate at ≥85F. Flag WARM_VETO.
+WARM WEATHER GVI NOTE: Add -15 to GVI when temp≥85F (new row in table).
 
 ## §4 WIN PROBABILITY SYNTHESIS
 
@@ -399,83 +411,96 @@ Apply all in order:
 
 ## §5 O/U SYNTHESIS
 
-**⚠️ MANDATORY APRIL O/U GATE (v2.5):** If game_date is April 1-30, record april_ou_gate=ACTIVE. Run OU-A through OU-E to determine DIRECTION only. Then, AFTER setting direction, FORCE confidence to Moderate before writing output. Do NOT output High in April. Only exception: UNDER may reach High if ALL of the following are confirmed (not estimated): ace xFIP<3.00 from current-season starts + pitcher's park + temp<55F + GVI<30. This is the final step — apply it last.
+**⚠️ MANDATORY APRIL O/U GATE (v2.5):** If game_date is April 1-30, record april_ou_gate=ACTIVE. Run OU-A through OU-E to determine DIRECTION only. Then, AFTER setting direction, FORCE confidence to Moderate before writing output. Do NOT output High in April. Exception 1: UNDER may reach High if ALL confirmed: ace xFIP<3.00 + pitcher's park + temp<55F + GVI<30. Exception 2: SLUMP+HEAT+PARK (see OU-A Condition 4) overrides April High cap.
 
-**xFIP ESTIMATION GATE (v2.5):** If a pitcher's xFIP is tagged "estimated" (not confirmed from current-season logs), that xFIP cannot drive High O/U confidence — cap at Moderate. If 2+ key inputs are estimated (xFIP, RED, 30-day wRC+), force Moderate regardless of GVI.
+**xFIP ESTIMATION GATE (v2.5):** Estimated xFIP cannot drive High O/U confidence — cap at Moderate. 2+ estimated key inputs → force Moderate.
+
+COLD HAMMER OVERRIDE (v3.2 — fires BEFORE OU-A): temp<50F AND wind≥15mph → Strong UNDER hard override (81% hit rate). Supersedes all OU signals. Proceed directly to gate eligibility. Not subject to April High cap — strong enough to override. Still subject to Gate 0, Gate A, Gate C, Gate E, and venue bans. Flag "COLD_HAMMER active".
 
 Evaluate in strict order, stop at first trigger:
 
-OU-A: Surging vs Slumping → Lean OVER (Strong OVER if slumping team 15-day wRC+>108). Both Surging → Strong UNDER (Moderate max in April). Both Slumping (both RED>+1.5) → Lean OVER + WP equalize -8% favored team.
-SINGLE-ACE APRIL CAP: In April, single-ace UNDER → Moderate max. High requires 3+ confirmed suppression factors.
-Wind OUT>15mph veto: nullifies OU-A UNDER; reinforces OU-A OVER to High confidence.
-WIND-COLD GATE: If wind OUT AND temp<60F → cancel wind OVER bonus, fall through to OU-D.
+OU-A:
+  Condition 1: Surging vs Slumping → Lean OVER (Strong if slumping team 15-day wRC+>108).
+  Condition 2: Both Surging → Strong UNDER (Moderate max in April).
+  Condition 3: Both Slumping (both RED>+1.5) → Lean OVER + WP equalize -8%. BSS LINE CAP (v3.2): BSS OVER fires only when line≤8.5. Line>9.0 → apply -20 confidence and cap at PASS. Flag BSS_LINE_CAP.
+  Condition 4 (v3.2 NEW): Home SP Slumping (RED>+1.5) AND temp≥75F AND hitter's park → Strong/High OVER (87% hit rate). Overrides April High cap. Flag "SLUMP+HEAT+PARK".
+  RCF+SLUMPING COMBO: RCF active on same SP as Slumping (RED>+1.5) → strong OVER signal (65%, 17 games). Escalates to Moderate OVER.
+SINGLE-ACE APRIL CAP: In April, single-ace UNDER → Moderate max.
+Wind OUT>15mph veto: nullifies OU-A UNDER; reinforces OU-A OVER to High.
+WIND-COLD GATE: wind OUT AND temp<60F → cancel wind OVER bonus, fall to OU-D.
 
-OU-B: Wind OUT>8mph → OVER (cancelled if temp<60F). Wind IN>8mph → UNDER (never vetoed by pitcher quality). Wind OUT>15mph → Strong OVER (cancelled if temp<60F; Lean OVER if temp 60-64F).
-WIND-ACE INTERACTION (v2.6): Before firing any wind OUT signal — check confirmed xFIP. Both SPs xFIP > 3.50 → OU-B fires normally. Either SP xFIP ≤ 3.25 (confirmed) → downgrade to OU-D input only, not primary OU-B trigger. Both SPs xFIP ≤ 3.25 → cancel OU-B entirely, fall to OU-D. Flag "Wind-Ace Veto active".
+OU-B: Wind OUT 8-15mph → Lean OVER (57% — needs secondary signal; cancelled temp<60F). Wind OUT>15mph + temp>60F → Strong OVER (78%). Wind IN>10mph + temp<60F → Strong UNDER (71%). Wind IN>8mph → Lean UNDER.
+WIND-ACE INTERACTION (v2.6): Either SP xFIP≤3.25 → downgrade wind OUT to OU-D input only. Both SPs xFIP≤3.25 → cancel OU-B entirely. Wind IN never cancelled.
+WRIGLEY WIND CONFIRMATION (v3.2): At Wrigley Field (CHC home), require real-time confirmed wind direction before firing OU-B. If unconfirmed or "variable" → downgrade OU-B to OU-D input. Flag WRIGLEY_UNCONF.
+COORS OVER GATE (v3.2): At Coors Field (COL home), OVER lean only when BOTH teams avg_runs≥3.5 over last 10 games. If either team <3.5 → no Coors OVER (52% = no edge). Flag COORS_OVER_GATE if blocked.
 
 OU-C: Both teams 15-day wRC+>115 → OVER.
 
 OU-D: Balance Ace Suppressor (xFIP<3.25) vs Red Hot Offense (wRC+>110, avg_runs>5.0). Park factor. Temp<50F → UNDER bias. Conflict → fall to OU-E.
 
-OU-E: GVI>65 → OVER. GVI<35 → UNDER. GVI 35-65 → neutral, lean nearest driver or match market.
+OU-E: GVI>65 → OVER. GVI<35 → UNDER. GVI 35-65 → DEAD ZONE → PASS O/U (51% = no edge). Only override dead zone with: P10≤6.5, RCF+Slumping (65%), or Wind OUT>15mph (78%).
 
-OU-F (April UNDER Default): If April AND neither OU-B nor OU-C fired → default UNDER (Low confidence).
-HIGH-LINE EXTENSION: April AND line>=9.0 AND temp<68F → force UNDER (Low) even if OU-B fired.
-LOW-LINE UNDER CAP: April AND line<=8.0 AND UNDER → cap at Moderate.
-LOW-LINE UNDER FLOOR (v2.5): April AND line<=7.5 AND UNDER → cap at Low. Every UNDER on 7.5 line in April missed high.
-Exception: override to OVER if temp>=68F AND hitter's park AND avg_runs>5.0 both teams.
-EMPIRICAL NOTE (v2.5): 32-game data shows 50/50 actual OVER/UNDER with lines running +0.52 below actuals. UNDER default is Low confidence only.
+OU-F (v3.1 — PASS default): If April AND no OU-A/B/C/D signal fired → PASS. Do NOT default to UNDER. April OVER=59.4%, April UNDER=39.6% — UNDER default is empirically inverted.
+HIGH-LINE LEAN (v3.2): April AND line 9.0-9.4 → OVER (Low confidence). April AND line≥9.5 → PASS (OVER banned, 36% hit rate). Flag HIGH_LINE_OVER_BAN.
+UNDER BAN 7.5-7.9 (v3.1): April AND line 7.5-7.9 AND UNDER → PASS (27.3% hit rate, banned).
+LOW-LINE UNDER CAP (v2.4): April AND line 8.0-8.4 AND UNDER → cap at Moderate.
+LOW-LINE UNDER FLOOR: April AND line≤7.4 AND UNDER → cap at Low.
 
 After determining direction, apply Mandatory April O/U Gate and xFIP Estimation Gate before setting final confidence.
 
 Confidence assignment:
-- High: 3+ confirmed suppression signals stack AND not in April — OR 2+ OVER signals clearly align outside April
-- Moderate: 1 strong signal or 2 conflicting resolved by GVI; maximum tier in April (per gate)
-- Low: GVI tiebreaker only, unresolved conflict, OU-F default, or high-line UNDER
+- High: 3+ confirmed suppression signals stack AND not in April — OR SLUMP+HEAT+PARK fires (overrides April cap) — OR 2+ OVER signals outside April
+- Moderate: 1 strong signal or 2 conflicting resolved by GVI; maximum tier in April
+- Low: GVI tiebreaker only, unresolved conflict, or high-line lean in April
 
 Over%: High OVER=72%, Moderate OVER=61%, Low OVER=54%, Low UNDER=46%, Moderate UNDER=39%, High UNDER=28%.
 
 ## §6 CONFIDENCE — start 100, floor 25, April ceiling 70
 
-PDCF:-30. MCF:-25. HFCF(>=68%):-20. TMF(5+ loss streak):-20. HVIF(GVI>75):-15. HSGV(elimination game OR both teams within 1 game of cutoff):-15. KHA(April AND 3+ pitcher stats from knowledge):-15. VMF(GVI>70 AND win% 55-65%):-10. ESDU(early season AND 2+ fields estimated):-10. BSS(both pitchers RED>+1.5):-10. AOP(OVER pick in April):-10. SWR(precip>40%):-10. AHP(home team wins in April):-8. KXF(UNDER driven by estimated xFIP):-10.
-HBTF(v2.7, hot batting team P7_SKIP active):-25. RAF(v2.7, road ace P4_VETO active):-30. HCB(v2.7, confidence>=65 P9_BAN active):-20. VCB(v2.7, venue cold UNDER P8_BAN active):-30.
-ENV_BLOCK(v2.8, prev-day slate avg>10 Gate A failed):-20. EST_HIGH(v2.8, corrected est>6.5 Gate E failed):-15.
-SWR(v2.8, precip>=85% skip / 65-84% halve stake — revised from 40%):-10.
+PDCF:-30. MCF:-25. HFCF(>=68%):-20. TMF(5+ loss streak):-20. HVIF(GVI>75):-15. HSGV(elimination game OR both teams within 1 game of cutoff):-15. KHA(April AND 3+ pitcher stats from knowledge):-15. VMF(GVI>70 AND win% 55-65%):-10. ESDU(early season AND 2+ fields estimated):-10. BSS(both pitchers RED>+1.5):-10. AOP(REMOVED v3.1 — April OVER is 59.4%, no penalty). SWR(precip>=85% skip / 65-84% halve stake):-10. AHP(home team wins in April):-8. KXF(UNDER driven by estimated xFIP):-10.
+HBTF(v2.7, hot batting team P7_SKIP active):-25. RAF(v2.7, road ace P4_VETO active):-30. HCB(v2.7, O/U confidence>=65 P9_BAN active — ML at 65-69 exempt):-20. VCB(v2.7, venue cold UNDER P8_BAN active):-30.
+ENV_BLOCK(v2.8, prev-day slate avg>=10 Gate A failed):-20. EST_HIGH(v2.8, corrected est>6.5 Gate E failed):-15.
+HOS(v3.0, home avg_runs>=6.0 last 3G Gate 0 failed):-30. BRU(v3.0, both SPs <3 starts O/U 38%):-20. DHVP(v3.0, both SPs PVS>15 O/U 41%):-15.
+WARM_VETO(v3.2, temp>=85F AND UNDER AND GVI>=25):-20. BSS_LINE(v3.2, BSS fires but line>9.0):-20. BOTH_XFIP_BLIND(v3.2, both SPs estimated xFIP + <3 starts):-25. WRIGLEY_UNCONF(v3.2, Wrigley wind unconfirmed):-15. HLOB(v3.2, April line>=9.5 OVER direction):-30. RED_THIN(v3.2, SP 3-5 starts blended RED):-5.
 April ceiling: cap final score at 70 for any April game.
 
-## BETTING RECOMMENDATION (v2.8 — DUAL STRATEGY)
+## BETTING RECOMMENDATION (v3.2 — DUAL STRATEGY)
 
-ML BETS REINSTATED (v2.8, P6_ML_MOD): 77-game data: ML 55.8% (43-34), moderate conf ML 60% (40 games), last 5 ML = 80%. BET ML at $75 when confidence 50-64. Do NOT bet ML at conf<50 or >=65 (25% hit rate at 65+). Set ml_recommendation accordingly.
+ML BETS (v3.1/v3.2): 128-game data: conf 50-59=57-60%, conf 60-64=16.7% (weak/small sample), conf 65-69=66.7% (STRONGEST ZONE). BET ML at $75 when confidence 50-59 OR 65-69. Caution 60-64. Do NOT bet ML at conf<50 or >=70.
+P9_BAN IS O/U ONLY — ML at conf 65-69 is ELIGIBLE at $75. ML at conf>=70 = avoid (25%, 4 games).
 
 VARIANCE NOTE: MLB total SD ≈ 4.5 runs. Only recommend bets with clear structural edges.
 
-DUAL STRATEGY (v2.8) — evaluate in order, ML and Under are separate tracks:
+DUAL STRATEGY (v3.2) — ML and Under are separate tracks:
 
 ML BET TRACK:
-- conf>=65 (P9_BAN) → ml_recommendation = "Pass — conf [X]≥65 (25% hit rate at 65+)"
+- conf>=70 → ml_recommendation = "Pass — conf [X]>=70 (25% hit rate, avoid)"
 - conf<50 → ml_recommendation = "Pass — conf [X] below 50 minimum"
-- conf 50-64 → ml_recommendation = "ML bet $75 — conf [X] in zone (60% historical hit rate)"
+- conf 50-59 or 65-69 → ml_recommendation = "ML bet $75 — conf [X] in zone"
+- conf 60-64 → ml_recommendation = "ML bet $75 (caution — conf 60-64, weak 6-game sample)"
 
 UNDER BET TRACK — evaluate in order:
-1. P4_VETO=true → under_recommendation = "Pass — P4_VETO (road ace, no edge 50%)"
-2. P8_BAN=true → under_recommendation = "Pass — P8_BAN (venue cold UNDER banned, 20%)"
-3. P7_SKIP=true → under_recommendation = "⚠️ Hard Skip — P7_SKIP ([Team] hot batting team)"
-4. gate_a=false → under_recommendation = "Pass — Gate A blocked (prev-day slate avg >10 runs)"
-5. gate_b=false → under_recommendation = "Pass — Gate B blocked ([Team] ≥5 runs in win last 2 days)"
-6. gate_c=false → under_recommendation = "Pass — Gate C failed (SP ERA [X] or only [N] starts)"
-7. gate_d=false (April) → under_recommendation = "Pass — Gate D failed (visitor=[team], not ATH/WAS)"
-8. ou_bet_eligible=false → under_recommendation = "Pass (corrected gap [X] < 2.0 runs)"
-9. gate_e=false → under_recommendation = "Pass — Gate E failed (corrected est [X] > 6.5)"
-10. dh_g2=true AND UNDER → under_recommendation = "Pass (DH G2 — never bet UNDER)"
-11. P9_BAN=true (conf>=65) → under_recommendation = "Pass — P9_BAN (conf capped; 25%)"
-12. P5=true AND P1_dome_dual_ace=true → under_recommendation = "Pattern A: UNDER [line] — $150"
-13. P5=true AND P2_home_ace_vs_weak=true → under_recommendation = "Pattern B: UNDER [line] — $75"
-14. P5=true AND P10=true → under_recommendation = "Strong UNDER: UNDER [line] — $75"
-15. P5=true → under_recommendation = "Standard: UNDER [line] — $50"
-16. conf<50 → under_recommendation = "Pass — conf below 50, O/U hit rate only 29%"
+1. gate_0=false (home surge) → under_recommendation = "Pass — Gate 0 VETO (home avg_runs >=6.0)"
+2. P4_VETO=true → under_recommendation = "Pass — P4_VETO (road ace; dual-ace exception: check home SP)"
+3. P8_BAN=true → under_recommendation = "Pass — P8_BAN (venue/April Under banned)"
+4. P7_SKIP=true → under_recommendation = "⚠️ Hard Skip — P7_SKIP ([Team] hot batting team)"
+5. gate_a=false → under_recommendation = "Pass — Gate A blocked (prev-day avg >=10 runs)"
+6. gate_b=false → under_recommendation = "Pass — Gate B blocked ([Team] >=5 runs in win + 2-game streak)"
+7. gate_c=false → under_recommendation = "Pass — Gate C failed (ERA [X] or [N] starts or <20 IP)"
+8. gate_d=false (April) → under_recommendation = "Pass — Gate D failed (visitor=[team], not ATH/WAS)"
+9. ou_bet_eligible=false → under_recommendation = "Pass (corrected gap [X] < 2.0 runs)"
+10. gate_e=false → under_recommendation = "Pass — Gate E failed (corrected est [X] > 6.5)"
+11. dh_g2=true AND UNDER → under_recommendation = "Pass (DH G2 — never bet UNDER)"
+12. P9_BAN=true (O/U conf>=65) → under_recommendation = "Pass — P9_BAN (O/U conf capped at 64)"
+13. P5=true AND P11_lad_ace=true → under_recommendation = "Pattern C: UNDER [line] — $100"
+14. P5=true AND P1_dome_dual_ace=true → under_recommendation = "Pattern A: UNDER [line] — $150"
+15. P5=true AND P2_home_ace_vs_weak=true → under_recommendation = "Pattern B: UNDER [line] — $75"
+16. P5=true AND P10=true → under_recommendation = "Strong UNDER: UNDER [line] — $50"
+17. P5=true → under_recommendation = "Standard: UNDER [line] — $50"
+18. conf<50 → under_recommendation = "Pass — conf below 50, O/U hit rate only 29%"
 
 COMBINED: Set betting_recommendation = "[ML track result] + [Under track result]" or "Pass — [reason]"
-SLATE CAP: Max 2 Under bets per day. ML bets: no cap if moderate conf.
+SLATE CAP (v3.2): Max 5 bets per day total. Rank by confidence; pick top 5.
 
 ## OUTPUT SCHEMA
 
@@ -518,7 +543,7 @@ Return ONLY valid JSON. No markdown. No preamble. null for unavailable fields.
     "flag4_gate_c": "PASS — ERA X.XX / N starts OR FAIL",
     "flag5_gate_d": "PASS (ATH/WAS) OR FAIL ([visitor]) OR N/A (May+)",
     "flag6_gate_e": "PASS — corrected X.X≤6.5 OR FAIL — X.X>6.5",
-    "flag7_april_bias": "+3.0 applied (April) OR +2.0 applied (May+)",
+    "flag7_april_bias": "temp-sensitive bias: +1.5/<50F / +2.5/50-64F / +3.0/65-74F / +3.5/>=75F / +4.0/>=85F or Apr1-14 / +2.0 May+",
     "flag8_rain_gate": "clear <65% OR halve 65-84% OR skip >=85%",
     "flag9_venue_ban": "clear OR ACTIVE — venue cold UNDER banned",
     "flag10_conf_cap": "clear OR P9_BAN conf>=65 OR P4_VETO road ace",

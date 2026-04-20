@@ -50,7 +50,7 @@
         <div class="globe-stats">
           <div class="globe-stat"><span class="globe-stat-num">3</span><span class="globe-stat-label">AI Models</span></div>
           <div class="globe-stat-divider"></div>
-          <div class="globe-stat"><span class="globe-stat-num">v3.1</span><span class="globe-stat-label">Framework</span></div>
+          <div class="globe-stat"><span class="globe-stat-num">v3.2</span><span class="globe-stat-label">Framework</span></div>
           <div class="globe-stat-divider"></div>
           <div class="globe-stat"><span class="globe-stat-num">MLB</span><span class="globe-stat-label">All Season</span></div>
         </div>
@@ -393,21 +393,40 @@
   <section class="changelog-section">
     <div class="changelog-header" id="changelogToggle">
       <span class="changelog-title">Framework Changelog</span>
-      <span class="changelog-badge">v3.1</span>
+      <span class="changelog-badge">v3.2</span>
       <span class="changelog-chevron" id="changelogChevron">▼</span>
     </div>
     <div class="changelog-body hidden" id="changelogBody">
       <div class="changelog-entry changelog-entry--current">
+        <div class="changelog-version">v3.2 <span class="changelog-date">2026-04-19</span></div>
+        <div class="changelog-desc">144-game empirical refinements. 12 structural tweaks + 8 new patterns from full audit: temperature-sensitive April bias, Gate C loosened to 4+ starts + ≥20 IP, Gate B win-streak requirement, P4_VETO dual-ace exception, Cold Hammer hard override, Warm Veto, BSS line cap, Coors OVER gate, Wrigley confirmation, April ≥9.5 OVER banned, Slumping+heat+park OVER signal, P10 gap ≥1.5.</div>
+        <ul class="changelog-items">
+          <li><strong>Temperature-Sensitive April Bias</strong> — replaces flat +3.0: &lt;50°F=+1.5, 50–64°F=+2.5, 65–74°F=+3.0, ≥75°F=+3.5, ≥85°F=+4.0. April 1–14 always +4.0</li>
+          <li><strong>Gate C: 4+ Starts + ≥20 IP</strong> — prior 6-start threshold blocked 11/18 profitable Unders (61%). Restored access to legitimate early-ace starts</li>
+          <li><strong>Gate B Win-Streak Requirement</strong> — now requires BOTH ≥5 runs AND ≥2-game win streak to block. Isolated high-scoring games no longer trigger gate</li>
+          <li><strong>P4_VETO Softened</strong> — dual-ace matchups (both SP xFIP ≤3.25 + Gate C) route to P1/P2 instead of full ban. Prior ban blocked 78% of profitable dual-ace Unders</li>
+          <li><strong>Cold Hammer Override</strong> — temp &lt;50°F + wind ≥15mph = 81% Under hard override (pre-OU-A, overrides all directional signals)</li>
+          <li><strong>Under Heat Gate</strong> — temp ≥85°F requires GVI &lt;25 for UNDER (not &lt;35). 31% Under hit rate at ≥85°F. GVI table adds −15 for warm weather</li>
+          <li><strong>April ≥9.5 OVER Banned</strong> — 36% hit rate. Lines 9.0–9.4 retain OVER lean (64.3%); ≥9.5 = PASS</li>
+          <li><strong>BSS Line Cap</strong> — Both-Slumping OVER signal only fires at line ≤8.5. Line >9.0 = market priced in, −20 conf cap</li>
+          <li><strong>Slumping+Heat+Hitter Park = High OVER</strong> — 87% OVER hit rate. Home SP slumping + ≥75°F + hitter park overrides April High cap</li>
+          <li><strong>Coors OVER Gate</strong> — both teams must avg ≥3.5 runs for Coors OVER. 52% when either &lt;3.5 = no edge</li>
+          <li><strong>Wrigley Wind Confirmation</strong> — mandatory real-time direction confirmation before any OU-B wind bet at Wrigley Field</li>
+          <li><strong>P10 Gap ≥1.5</strong> — when P10_MATCH active (projected ≤6.5), minimum gap reduced from ≥2.0 to ≥1.5 runs</li>
+          <li><strong>Max 5 Bets/Day</strong> — slate cap raised from 2 to 5 based on 144-game data</li>
+          <li><strong>RED Thin Blend</strong> — 3–5 starts: blend RED×0.5 + PVS_direction×0.5. Full RED weight at 6+ starts</li>
+        </ul>
+      </div>
+      <div class="changelog-entry changelog-entry--prev">
         <div class="changelog-version">v3.1 <span class="changelog-date">2026-04-18</span></div>
         <div class="changelog-desc">128-game empirical refinements. 6 critical inversions corrected: April OVER base rate confirmed 59.4% vs UNDER 39.6% — UNDER default rules reversed. High-line OVER signal replaces UNDER default. 7.5–7.9 Under ban added. ML conf 65–69 unlocked (66.7%). AOP deduction removed. Null/floor game rule added.</div>
         <ul class="changelog-items">
-          <li><strong>High-Line April OVER Signal</strong> — O/U line ≥9.0 in April now leans OVER (Low conf). Prior UNDER default was inverted: OVER = 64.3% (9/14), UNDER = 28.6% (2/7)</li>
-          <li><strong>April UNDER Default (OU-F) Removed</strong> — April OVER = 59.4%, UNDER = 39.6% in 128-game dataset. Default changed from UNDER to PASS when no signal fires</li>
-          <li><strong>UNDER 7.5–7.9 Lines Banned</strong> — 27.3% hit rate (3/11), avg actual total 10.3 runs. These bets lose 73% of the time in April. Now PASS</li>
-          <li><strong>P9_BAN Clarified as O/U-Only</strong> — ML at conf 65–69 = 66.7% (10/15), the strongest ML zone. ML bets at 65–69 are now eligible at $75. Avoid ML at conf ≥70</li>
-          <li><strong>AOP Deduction Removed</strong> — April OVER is now the winning direction (59.4%). The −10 penalty for OVER predictions in April has been removed</li>
-          <li><strong>Null/Floor Game Rule</strong> — Games with null confidence or conf=25 must not generate active O/U bets. These 35 games had 10.3% O/U hit rate and were suppressing overall stats. Real bet zone (conf 50–64) = 55.1% (27/49)</li>
-          <li><strong>O/U Confidence Display Updated</strong> — All O/U outputs now show direction + confidence + probability together: e.g. UNDER (Moderate — 39%)</li>
+          <li><strong>High-Line April OVER Signal</strong> — O/U line 9.0–9.4 in April leans OVER (Low conf). Prior UNDER default was inverted: OVER = 64.3%, UNDER = 28.6%</li>
+          <li><strong>April UNDER Default (OU-F) Removed</strong> — April OVER = 59.4%, UNDER = 39.6%. Default changed to PASS when no signal fires</li>
+          <li><strong>UNDER 7.5–7.9 Lines Banned</strong> — 27.3% hit rate, avg actual total 10.3 runs. PASS</li>
+          <li><strong>P9_BAN Clarified as O/U-Only</strong> — ML at conf 65–69 = 66.7% (10/15), strongest ML zone. ML bets at 65–69 eligible at $75</li>
+          <li><strong>AOP Deduction Removed</strong> — April OVER is the winning direction (59.4%)</li>
+          <li><strong>Null/Floor Game Rule</strong> — conf=null or conf=25 → no active O/U bet. Real bet zone (conf 50–64) = 55.1% (27/49)</li>
         </ul>
       </div>
       <div class="changelog-entry changelog-entry--prev">
