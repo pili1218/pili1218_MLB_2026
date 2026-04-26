@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "MLB Predictor",
+    "slug": "mlb-predictor",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "mlbpredictor",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.pili1218.mlbpredictor"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0d1117"
+      },
+      "package": "com.pili1218.mlbpredictor"
+    },
+    "plugins": []
+  }
+}
