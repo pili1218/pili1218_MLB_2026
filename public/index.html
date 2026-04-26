@@ -50,7 +50,7 @@
         <div class="globe-stats">
           <div class="globe-stat"><span class="globe-stat-num">3</span><span class="globe-stat-label">AI Models</span></div>
           <div class="globe-stat-divider"></div>
-          <div class="globe-stat"><span class="globe-stat-num">v3.2</span><span class="globe-stat-label">Framework</span></div>
+          <div class="globe-stat"><span class="globe-stat-num">v3.3</span><span class="globe-stat-label">Framework</span></div>
           <div class="globe-stat-divider"></div>
           <div class="globe-stat"><span class="globe-stat-num">MLB</span><span class="globe-stat-label">All Season</span></div>
         </div>
@@ -393,11 +393,26 @@
   <section class="changelog-section">
     <div class="changelog-header" id="changelogToggle">
       <span class="changelog-title">Framework Changelog</span>
-      <span class="changelog-badge">v3.2</span>
+      <span class="changelog-badge">v3.3</span>
       <span class="changelog-chevron" id="changelogChevron">▼</span>
     </div>
     <div class="changelog-body hidden" id="changelogBody">
       <div class="changelog-entry changelog-entry--current">
+        <div class="changelog-version">v3.3 <span class="changelog-date">2026-04-22</span></div>
+        <div class="changelog-desc">181-game deep analysis integration. 15 new empirical patterns (P12–P26), 10 action rules, and comprehensive ML/O/U confidence recalibration. OVER confirmed as primary edge (60.0%). Named-ace home Under (100%, n=10). Home WP ≥70% ML (85.7%). Venue-specific rules: WAS home 100% OVER, PIT home O/U banned (0%), HOU home ~75% OVER.</div>
+        <ul class="changelog-items">
+          <li><strong>15 New Patterns (P12–P26)</strong> — OVER at 9.0–10.0 (65.2%, Pattern D), OVER at 10.0–12.0 (80%, Pattern E), OVER at 7.0–8.0 (61.5%, Pattern F), UNDER at 8.0–9.0 sweet spot (57.5%), Home WP ≥70% ML (85.7%, P16), Home WP ≥65% ML (68.8%, P17)</li>
+          <li><strong>Venue Patterns</strong> — WAS home 100% OVER (avg 12.2 runs, Pattern G), PIT home O/U banned 0% (P19), HOU home ~75% OVER (avg 12.1 runs, P25), Dome OVER 67% (P20), Dome UNDER banned 37% (P21)</li>
+          <li><strong>Named Ace Home UNDER (Pattern H)</strong> — Ohtani/Yamamoto/Sale/Castillo/Woo/Kirby (Gate C required) = 100% UNDER hit rate across 10 games. Highest-conviction Under signal. $75 unit (P24)</li>
+          <li><strong>Both LHP Rule</strong> — Both LHP → UNDER 80% (P22, active). Both LHP → OVER 50% (P23, banned — coin flip)</li>
+          <li><strong>ML Confidence Zones Refined</strong> — 181-game: WP ≥70% = 85.7% (bet unconditionally), WP ≥65% = 68.8% (bet as primary), WP ≥60% = 62.7%. Overall ML = 54.7% (99/181)</li>
+          <li><strong>O/U Architecture</strong> — OVER 60.0% overall (39/65); UNDER 45.5% (35/77). Line-specific rates: OVER 9.0–10.0 = 65.2%, UNDER 8.0–9.0 = 57.5%, UNDER below 8.0 = 29.2% (banned)</li>
+          <li><strong>§3.11 Action Rules</strong> — 10 distilled rules ranked by evidence strength added to framework</li>
+          <li><strong>Inversion Day Detection (P26)</strong> — prev-day ML &lt;40% + O/U &gt;70% → shift to O/U totals, reduce ML to $37.50</li>
+          <li><strong>New OVER Bet Track</strong> — server now routes P12/P13/P14/P18/P20/P25 OVER signals as a separate betting track alongside ML and Under</li>
+        </ul>
+      </div>
+      <div class="changelog-entry changelog-entry--prev">
         <div class="changelog-version">v3.2 <span class="changelog-date">2026-04-19</span></div>
         <div class="changelog-desc">144-game empirical refinements. 12 structural tweaks + 8 new patterns from full audit: temperature-sensitive April bias, Gate C loosened to 4+ starts + ≥20 IP, Gate B win-streak requirement, P4_VETO dual-ace exception, Cold Hammer hard override, Warm Veto, BSS line cap, Coors OVER gate, Wrigley confirmation, April ≥9.5 OVER banned, Slumping+heat+park OVER signal, P10 gap ≥1.5.</div>
         <ul class="changelog-items">

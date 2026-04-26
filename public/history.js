@@ -622,6 +622,7 @@ function renderRow(r) {
       <td class="td-ou">
         <span class="ou-call ${r.ou_prediction === 'OVER' ? 'ou-over' : 'ou-under'}">${esc(r.ou_prediction || "—")}</span>
         <span class="ou-line-sm">${esc(r.ou_line || "")}</span>
+        ${r.ou_over_pct != null ? `<span class="ou-conf-pct" title="Confidence to be a low-scoring game">${r.ou_prediction === 'OVER' ? 100 - r.ou_over_pct : r.ou_over_pct}% low</span>` : ''}
       </td>
       <td style="color:${confColor};font-weight:700">${r.confidence_score ?? "—"}</td>
       <td class="td-actual">${actualStr}</td>

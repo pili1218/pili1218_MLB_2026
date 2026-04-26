@@ -280,7 +280,7 @@ Add a "data_sources" object at the end of the JSON listing which fields were fil
 
 Return ONLY valid JSON with no markdown, no explanation, just the raw JSON object.`;
 
-const PREDICT_SYSTEM = `You are the MLB Game Predictor AI v3.2 with deep knowledge of MLB statistics, player profiles, and team performance. You handle both Regular Season and Postseason games.
+const PREDICT_SYSTEM = `You are the MLB Game Predictor AI v3.3 with deep knowledge of MLB statistics, player profiles, and team performance. You handle both Regular Season and Postseason games.
 
 ## STEP 0 — FILL MISSING DATA BEFORE ANALYSIS
 
@@ -359,21 +359,48 @@ Gate C (Home SP Quality — v3.2): Home SP ERA < 2.50 (2026 season) with 4+ veri
 Gate D (April Visitor Filter — April only): Visiting team must be ATH (Oakland) or WAS (Washington) — the two weakest offences. All other visitors in April → gate_d=false. N/A for May+.
 Gate E (Estimate): Corrected projected_total ≤ 6.5. If corrected est > 6.5 → gate_e=false. Bimodal distribution: Under wins avg 5.2 runs, losses avg 12.1 — no middle ground.
 
-**§3.10 BETTING CHECKS (v3.2):** After computing all metrics, evaluate all checks. Record in betting_flags JSON field. Evaluate in order: P8→P4→Gate_0→Gate_A→Gate_B→Gate_C→Gate_D→Gate_E→Gate_F→P9→P1/P2/P11→P6_ML_MOD→P5.
+**§3.10 BETTING CHECKS (v3.3):** After computing all metrics, evaluate all checks. Record in betting_flags JSON field. Evaluate in order: P8/P19→P4→P21→P22/P23→Gate_0→Gate_A→Gate_B→Gate_C→Gate_D→Gate_E→Gate_F→P9→P1/P2/P11/P24→P12/P13/P14/P15→P16/P17/P18/P20/P22/P25→P26→P6_ML_MOD→P5. Apply action rules §3.11 (RULE 1–10) as overrides when triggered.
 
 P1_dome_dual_ace: Indoor/dome stadium AND both SPs ERA<2.50 (xFIP≤3.25) + 4+ starts + ≥20 IP → Pattern A UNDER (~67% hit rate) — all 7 gates still required
 P2_home_ace_vs_weak: Home SP ERA<2.50 + 4+ starts + ≥20 IP AND visiting team is ATH or WAS (April only) → Pattern B UNDER (~67% hit rate)
 P3_cold_natural_grass: SUSPENDED (33% hit rate). Log informational only — no bet.
 P4_road_ace_veto (SOFTENED v3.2): Away SP xFIP≤3.25 pitching on road. DUAL-ACE EXCEPTION: If home SP also xFIP≤3.25 + 4+ starts + ≥20 IP → do NOT apply P4_VETO; route to P1/P2 instead. Otherwise: SET P4=true. BAN Under bets. ML still eligible at conf 50-69.
 P5_confidence_zone: Final confidence 50-64 → P5=true for O/U. ML zone is 50-69 (expanded v3.1).
-P6_ML_MOD (v3.1): ML bet $75 eligible at conf 50-69. 128-game data: conf 50-59=57-60%, conf 65-69=66.7% (strongest zone). Conf 60-64=weak (small sample, caution). Do NOT bet ML at conf<50 or ≥70. P9_BAN applies O/U ONLY — ML at 65-69 is eligible.
+P6_ML_MOD (v3.3): ML bet $75 eligible at conf 50-69. 181-game data: overall ML=54.7% (99/181). WP ≥70% = 85.7% (6/7) — P16 bet unconditionally. WP ≥65% = 68.8% (11/16) — P17 bet as primary. WP ≥60% = 62.7% (32/51) — bet $75. Conf 50-59=57-60%, conf 65-69=66.7% (strongest zone). Conf 60-64=16.7% (WEAK — only 6 games, avoid if possible). Do NOT bet ML at conf<50 or ≥70 (25%, 4 games). P9_BAN applies O/U ONLY — ML at 65-69 is eligible. P26_INVERSION_DAY: if prev-day ML<40% + O/U>70% → reduce ML to $37.50 (half unit), prioritise O/U.
 P7_hot_batting_skip: Either team avg_runs≥5.0 AND on 3+ win streak → P7=true. HARD SKIP warning. (14% hit rate)
-P8_venue_cold_under_ban: Target Field (MIN) or Progressive Field (CLE) AND temp<55°F AND UNDER → BAN. OR Yankee Stadium (NYY home) AND April AND UNDER → BAN (17% hit rate). Set P8=true.
+P8_venue_cold_under_ban: Target Field (MIN) or Progressive Field (CLE) AND temp<55°F AND UNDER → BAN. OR Yankee Stadium (NYY home) AND April AND UNDER → BAN (17% hit rate). OR PNC Park (PIT home) AND any O/U direction → BANNED (0% hit rate, 0/4 — P19_PIT_HOME_SKIP). Set P8=true.
 P9_high_confidence_cap (O/U ONLY): O/U confidence≥65 → cap at 64 for O/U betting. ML at conf 65-69 is STILL ELIGIBLE — P9 applies to O/U only.
 P10_projected_total_lte65: Bias-corrected projected_total≤6.5 AND UNDER → P10=true. Strong UNDER — 74% hit rate (23 games). Escalate to Moderate. Gap threshold reduced to ≥1.5 runs.
 P11_lad_ace: LAD home AND SP is Ohtani/Yamamoto/Sasaki AND ERA<2.50 + 4+ starts + ≥20 IP → Pattern C UNDER $100 (80% hit rate, 5 games).
+P12_over_sweet (v3.3): O/U line 9.0-10.0 AND OVER AND ≥1 catalyst (wind OUT>12mph / slumping SP ERA>5.0 / both offences above-avg wRC+ / temp≥75F) → Pattern D OVER $75 (65.2% hit rate, 23 games). Cancel if BOTH confirmed SPs xFIP≤3.00.
+P13_over_high (v3.3): O/U line 10.0-12.0 AND OVER AND Moderate conf AND ≥1 primary signal → Pattern E OVER $50 (80% hit rate, n=5 small sample). Requires primary OU-A/B/C signal first.
+P14_over_low (v3.3): O/U line 7.0-8.0 AND OVER AND ≥1 catalyst (wind OUT / slumping SP / hot offence) → Pattern F OVER $50 (61.5% hit rate, 13 games). NEVER bet UNDER at this range (29.2%).
+P15_under_sweet (v3.3): O/U line 8.0-9.0 AND UNDER AND all 7 gates pass → valid UNDER sweet spot (57.5% hit rate, 40 games). Above 9.0 or below 8.0 = no UNDER edge. Moderate conf cap.
+P16_home_wp70 (v3.3): Home team final WP ≥70% → bet ML home unconditionally $75 (85.7% hit rate, 6/7 games). Most reliable ML signal in dataset.
+P17_home_wp65 (v3.3): Home team final WP 65-69% → bet ML home as primary $75 (68.8% hit rate, 11/16 games).
+P18_was_home_over (v3.3): WAS home (Nationals Park) AND OVER → Pattern G OVER $75 (100% hit rate, 4 games, avg 12.2 runs). Never UNDER at WAS home unless temp<45F + both confirmed aces.
+P19_pit_home_skip (v3.3): PIT home (PNC Park) AND any O/U bet → PERMANENTLY BANNED (0% hit rate, 0/4 games). Wind variance = totals 2 to 21. ML PIT home only. Incorporated in P8_BAN Trigger C.
+P20_dome_over (v3.3): Dome stadium AND OVER → valid signal (67% hit rate, 6/9 games). Dome removes weather suppression.
+P21_dome_under_ban (v3.3): Dome stadium AND UNDER AND NOT both SPs confirmed ≥4 starts + ERA<2.50 → BANNED (37% hit rate, 10/27 games). Exception: both confirmed aces → route to P1.
+P22_dual_lhp_under (v3.3): BOTH starting pitchers are LHP AND UNDER → strong signal (80% hit rate, 4/5 games). When both LHP, always weight UNDER 80:20. Discard OVER signal.
+P23_dual_lhp_over_ban (v3.3): BOTH starting pitchers are LHP AND OVER → BANNED (50% hit rate, 4/8 — coin flip, no edge). Route to UNDER or Pass.
+P24_ace_home_under (v3.3): Home SP is named ace (Ohtani/Yamamoto/Sale/Castillo/Woo/Kirby/Skubal/Fried/Gray/Gallen/Webb/Senga/Nola/Imanaga/Keller) AND Gate C met (4+ starts + ≥20 IP + ERA<2.50) → Pattern H UNDER $75 (100% hit rate, 10 games). Strongest confirmed Under signal.
+P25_hou_home_over (v3.3): HOU home (Minute Maid Park) AND OVER → active bias (~75% hit rate, n=8, avg 12.1 runs). Arrighetti/Burrows/Imai allowing many runs.
+P26_inversion_day (v3.3): Prev-day slate ML accuracy <40% AND O/U accuracy >70% (or prev-day avg total>10.5 with multiple upsets) → reduce ML stake to $37.50 (half unit), concentrate O/U at full unit.
 FTMF: Home Fortress (home win%≥.650) AND away team TMF (5+ losses) → escalate Under confidence to Moderate if currently Low.
 NYY_APR_UNDER_BAN: Yankee Stadium home AND April AND UNDER → P8_BAN active (17% hit rate, 1/6).
+
+**§3.11 ACTION RULES (v3.3 — override default logic when triggered):**
+RULE 1: OVER at line 9.0-10.0 is best O/U edge (65.2%, 23 games) — act on P12 when ≥1 catalyst + Moderate conf + both SPs not dual confirmed aces xFIP≤3.00.
+RULE 2: UNDER only at Moderate conf + line 8.0-9.0 + home SP ≥4 starts + ≥20 IP — all 3 required simultaneously (P15).
+RULE 3: Home WP ≥70% = bet ML every time (85.7%, P16). Home WP ≥65% = bet ML as primary (68.8%, P17).
+RULE 4: WAS home = always OVER (100%, 4/4, avg 12.2 runs). No UNDER at WAS home (P18).
+RULE 5: Both LHP → UNDER (80%), skip OVER (50% coin flip). Discard all OVER signals when both SPs are LHP (P22/P23).
+RULE 6: Dome OVER valid (67%). Dome UNDER banned unless dual confirmed ace (37% otherwise — P20/P21).
+RULE 7: Skip ALL O/U at PIT home (0%, 0/4). ML PIT home only (P19).
+RULE 8: Never bet UNDER below line 8.0 (29.2% hit rate). Line must be ≥8.0 for any Under bet.
+RULE 9: April 1-14 use +4.0 bias correction (avg 9.68 runs in that window).
+RULE 10: Inversion day (prev-day ML<40% + O/U>70%) → shift to O/U totals, reduce ML to $37.50 (P26).
 
 **GVI (v3.2):** Start 50. Adjustments: +15 per pitcher PVS>15; -15 per pitcher ERA/xFIP<2.50; -8 per pitcher ERA/xFIP 2.50-3.00; +10 per team 30-day wRC+>110; +10 wind OUT 8-15mph; +20 wind OUT >15mph; -10 wind IN >8mph; -10 temp<50F; -15 temp≥85F; +8 hitter's park; -8 pitcher's park; +5 batter-friendly ump; -5 pitcher-friendly ump; -5 per team with elite defense; +5 if postseason OR both teams in active race.
 APRIL GVI ADJUSTMENTS: -5 if April 1-14; additional -5 if April 1-14 AND line>8.0; additional -5 if April AND OVER signal active.
@@ -464,43 +491,63 @@ HOS(v3.0, home avg_runs>=6.0 last 3G Gate 0 failed):-30. BRU(v3.0, both SPs <3 s
 WARM_VETO(v3.2, temp>=85F AND UNDER AND GVI>=25):-20. BSS_LINE(v3.2, BSS fires but line>9.0):-20. BOTH_XFIP_BLIND(v3.2, both SPs estimated xFIP + <3 starts):-25. WRIGLEY_UNCONF(v3.2, Wrigley wind unconfirmed):-15. HLOB(v3.2, April line>=9.5 OVER direction):-30. RED_THIN(v3.2, SP 3-5 starts blended RED):-5.
 April ceiling: cap final score at 70 for any April game.
 
-## BETTING RECOMMENDATION (v3.2 — DUAL STRATEGY)
+## BETTING RECOMMENDATION (v3.3 — DUAL STRATEGY)
 
-ML BETS (v3.1/v3.2): 128-game data: conf 50-59=57-60%, conf 60-64=16.7% (weak/small sample), conf 65-69=66.7% (STRONGEST ZONE). BET ML at $75 when confidence 50-59 OR 65-69. Caution 60-64. Do NOT bet ML at conf<50 or >=70.
-P9_BAN IS O/U ONLY — ML at conf 65-69 is ELIGIBLE at $75. ML at conf>=70 = avoid (25%, 4 games).
+ML BETS (v3.3): 181-game data: overall ML=54.7% (99/181). Home WP ≥70% = 85.7% (6/7 — P16, bet unconditionally). Home WP ≥65% = 68.8% (11/16 — P17, bet as primary). Home WP ≥60% = 62.7% (32/51 — bet $75). Conf 50-59=57-60%, conf 65-69=66.7% (STRONGEST ZONE), conf 60-64=16.7% (WEAK — small sample, caution). Do NOT bet ML at conf<50 or >=70 (25%, 4 games). P9_BAN applies O/U ONLY — ML at 65-69 is ELIGIBLE at $75. P26_INVERSION: if triggered → $37.50 ML only.
 
 VARIANCE NOTE: MLB total SD ≈ 4.5 runs. Only recommend bets with clear structural edges.
 
-DUAL STRATEGY (v3.2) — ML and Under are separate tracks:
+DUAL STRATEGY (v3.3) — ML, OVER, and Under are separate tracks:
 
 ML BET TRACK:
+- P16_home_wp70=true (home WP ≥70%) → ml_recommendation = "ML bet $75 unconditional — P16 (85.7%, n=7)"
+- P17_home_wp65=true (home WP 65-69%) → ml_recommendation = "ML bet $75 — P17 (68.8%, n=16)"
+- P26_inversion_day=true → ml_recommendation = "ML bet $37.50 — P26 inversion day (half unit)"
 - conf>=70 → ml_recommendation = "Pass — conf [X]>=70 (25% hit rate, avoid)"
 - conf<50 → ml_recommendation = "Pass — conf [X] below 50 minimum"
 - conf 50-59 or 65-69 → ml_recommendation = "ML bet $75 — conf [X] in zone"
-- conf 60-64 → ml_recommendation = "ML bet $75 (caution — conf 60-64, weak 6-game sample)"
+- conf 60-64 → ml_recommendation = "ML bet $75 (caution — conf 60-64, 16.7% weak sample)"
+
+OVER BET TRACK — evaluate after ML, before Under:
+1. P23_dual_lhp_over_ban=true → over_recommendation = "Pass — P23 dual LHP OVER banned (50% coin flip)"
+2. P19_pit_home_skip=true → over_recommendation = "Pass — P19 PIT home O/U banned (0%)"
+3. P18_was_home_over=true AND P5=true → over_recommendation = "Pattern G: OVER [line] — $75 (P18, 100%, n=4)"
+4. P25_hou_home_over=true AND P5=true → over_recommendation = "Pattern OVER: OVER [line] — $75 (P25 HOU home, ~75%)"
+5. P13_over_high=true AND P5=true → over_recommendation = "Pattern E: OVER [line] — $50 (P13, 80%, n=5)"
+6. P12_over_sweet=true AND P5=true → over_recommendation = "Pattern D: OVER [line] — $75 (P12, 65.2%, n=23)"
+7. P14_over_low=true AND P5=true → over_recommendation = "Pattern F: OVER [line] — $50 (P14, 61.5%, n=13)"
+8. P20_dome_over=true AND P5=true → over_recommendation = "Dome OVER: OVER [line] — $50 (P20, 67%)"
+9. No OVER pattern → over_recommendation = "Pass — no OVER pattern active"
 
 UNDER BET TRACK — evaluate in order:
 1. gate_0=false (home surge) → under_recommendation = "Pass — Gate 0 VETO (home avg_runs >=6.0)"
 2. P4_VETO=true → under_recommendation = "Pass — P4_VETO (road ace; dual-ace exception: check home SP)"
-3. P8_BAN=true → under_recommendation = "Pass — P8_BAN (venue/April Under banned)"
+3. P8_BAN=true → under_recommendation = "Pass — P8_BAN (venue/April Under banned or PIT home O/U)"
 4. P7_SKIP=true → under_recommendation = "⚠️ Hard Skip — P7_SKIP ([Team] hot batting team)"
-5. gate_a=false → under_recommendation = "Pass — Gate A blocked (prev-day avg >=10 runs)"
-6. gate_b=false → under_recommendation = "Pass — Gate B blocked ([Team] >=5 runs in win + 2-game streak)"
-7. gate_c=false → under_recommendation = "Pass — Gate C failed (ERA [X] or [N] starts or <20 IP)"
-8. gate_d=false (April) → under_recommendation = "Pass — Gate D failed (visitor=[team], not ATH/WAS)"
-9. ou_bet_eligible=false → under_recommendation = "Pass (corrected gap [X] < 2.0 runs)"
-10. gate_e=false → under_recommendation = "Pass — Gate E failed (corrected est [X] > 6.5)"
-11. dh_g2=true AND UNDER → under_recommendation = "Pass (DH G2 — never bet UNDER)"
-12. P9_BAN=true (O/U conf>=65) → under_recommendation = "Pass — P9_BAN (O/U conf capped at 64)"
-13. P5=true AND P11_lad_ace=true → under_recommendation = "Pattern C: UNDER [line] — $100"
-14. P5=true AND P1_dome_dual_ace=true → under_recommendation = "Pattern A: UNDER [line] — $150"
-15. P5=true AND P2_home_ace_vs_weak=true → under_recommendation = "Pattern B: UNDER [line] — $75"
-16. P5=true AND P10=true → under_recommendation = "Strong UNDER: UNDER [line] — $50"
-17. P5=true → under_recommendation = "Standard: UNDER [line] — $50"
-18. conf<50 → under_recommendation = "Pass — conf below 50, O/U hit rate only 29%"
+5. P21_dome_under_ban=true → under_recommendation = "Pass — P21 dome UNDER banned (37%); exception: dual confirmed ace"
+6. P23_dual_lhp_over_ban logic: if both LHP AND OVER direction → route to UNDER instead
+7. gate_a=false → under_recommendation = "Pass — Gate A blocked (prev-day avg >=10 runs)"
+8. gate_b=false → under_recommendation = "Pass — Gate B blocked ([Team] >=5 runs in win + 2-game streak)"
+9. gate_c=false → under_recommendation = "Pass — Gate C failed (ERA [X] or [N] starts or <20 IP)"
+10. gate_d=false (April) → under_recommendation = "Pass — Gate D failed (visitor=[team], not ATH/WAS)"
+11. ou_bet_eligible=false → under_recommendation = "Pass (corrected gap [X] < 2.0 runs)"
+12. gate_e=false → under_recommendation = "Pass — Gate E failed (corrected est [X] > 6.5)"
+13. dh_g2=true AND UNDER → under_recommendation = "Pass (DH G2 — never bet UNDER)"
+14. P9_BAN=true (O/U conf>=65) → under_recommendation = "Pass — P9_BAN (O/U conf capped at 64)"
+15. P5=true AND P24_ace_home_under=true → under_recommendation = "Pattern H: UNDER [line] — $75 (P24, 100%, n=10)"
+16. P5=true AND P11_lad_ace=true → under_recommendation = "Pattern C: UNDER [line] — $100 (P11, 80%)"
+17. P5=true AND P1_dome_dual_ace=true → under_recommendation = "Pattern A: UNDER [line] — $150 (P1, 67%)"
+18. P5=true AND P2_home_ace_vs_weak=true → under_recommendation = "Pattern B: UNDER [line] — $75 (P2, ~67%)"
+19. P5=true AND P22_dual_lhp_under=true → under_recommendation = "Standard: UNDER [line] — $50 (P22, 80% both LHP)"
+20. P5=true AND P10=true → under_recommendation = "Strong UNDER: UNDER [line] — $50 (P10, 74%)"
+21. P5=true AND P15_under_sweet=true → under_recommendation = "Standard: UNDER [line] — $50 (P15, 57.5%)"
+22. P5=true → under_recommendation = "Standard: UNDER [line] — $50"
+23. conf<50 → under_recommendation = "Pass — conf below 50, O/U hit rate only 29%"
 
-COMBINED: Set betting_recommendation = "[ML track result] + [Under track result]" or "Pass — [reason]"
-SLATE CAP (v3.2): Max 5 bets per day total. Rank by confidence; pick top 5.
+COMBO BET: When ML predicted winner = Under direction (both point same team winning low-scoring game) AND Under passes all 7 gates → add +$25-30 on top of ML bet. Note in betting_recommendation.
+
+COMBINED: Set betting_recommendation = "[ML track] + [OVER track] + [Under track]" prioritising highest-conviction bet. If OVER and Under both active, output the higher-conviction one only.
+SLATE CAP (v3.3): Max 5 bets per day total. Rank by confidence; pick top 5.
 
 ## OUTPUT SCHEMA
 
@@ -1325,6 +1372,129 @@ app.delete("/api/predictions/:id", (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ─── Pattern Analysis API ─────────────────────────────────────────────────────
+app.get("/api/pattern-analysis", (_req, res) => {
+  try {
+    const overall = {
+      total:     db.prepare("SELECT COUNT(*) as n FROM predictions").get().n,
+      graded:    db.prepare("SELECT COUNT(*) as n FROM predictions WHERE ml_correct IS NOT NULL").get().n,
+      ml_wins:   db.prepare("SELECT COUNT(*) as n FROM predictions WHERE ml_correct = 1").get().n,
+      ou_graded: db.prepare("SELECT COUNT(*) as n FROM predictions WHERE ou_correct IS NOT NULL").get().n,
+      ou_wins:   db.prepare("SELECT COUNT(*) as n FROM predictions WHERE ou_correct = 1").get().n,
+    };
+
+    const byConfidence = db.prepare(`
+      SELECT
+        CASE
+          WHEN confidence_score < 50 THEN 'Below 50'
+          WHEN confidence_score < 55 THEN '50–54'
+          WHEN confidence_score < 60 THEN '55–59'
+          WHEN confidence_score < 65 THEN '60–64'
+          WHEN confidence_score < 70 THEN '65–69'
+          ELSE '70+'
+        END as bucket,
+        COUNT(*) as total,
+        COALESCE(SUM(ml_correct),0) as ml_wins,
+        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL THEN 1 ELSE 0 END),0) as ou_graded,
+        COALESCE(SUM(ou_correct),0) as ou_wins
+      FROM predictions WHERE ml_correct IS NOT NULL GROUP BY bucket
+    `).all();
+
+    const byLineRange = db.prepare(`
+      SELECT
+        CASE
+          WHEN CAST(ou_line AS REAL) < 7.0  THEN '<7.0'
+          WHEN CAST(ou_line AS REAL) < 8.0  THEN '7.0–7.9'
+          WHEN CAST(ou_line AS REAL) < 9.0  THEN '8.0–8.9'
+          WHEN CAST(ou_line AS REAL) < 10.0 THEN '9.0–9.9'
+          ELSE '10.0+'
+        END as line_range,
+        ou_prediction,
+        COUNT(*) as total,
+        COALESCE(SUM(ou_correct),0) as ou_wins,
+        MIN(CAST(ou_line AS REAL)) as min_line
+      FROM predictions
+      WHERE ou_correct IS NOT NULL AND ou_line IS NOT NULL AND ou_line != ''
+      GROUP BY line_range, ou_prediction ORDER BY min_line
+    `).all();
+
+    const byMonth = db.prepare(`
+      SELECT
+        strftime('%Y-%m', COALESCE(game_date, saved_at)) as month,
+        COUNT(*) as total,
+        COALESCE(SUM(ml_correct),0) as ml_wins,
+        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL THEN 1 ELSE 0 END),0) as ou_graded,
+        COALESCE(SUM(ou_correct),0) as ou_wins
+      FROM predictions WHERE ml_correct IS NOT NULL
+      GROUP BY month ORDER BY month
+    `).all();
+
+    const byWP = db.prepare(`
+      SELECT
+        CASE
+          WHEN MAX(COALESCE(home_win_pct,0), COALESCE(away_win_pct,0)) >= 70 THEN '≥70%'
+          WHEN MAX(COALESCE(home_win_pct,0), COALESCE(away_win_pct,0)) >= 65 THEN '65–69%'
+          WHEN MAX(COALESCE(home_win_pct,0), COALESCE(away_win_pct,0)) >= 60 THEN '60–64%'
+          WHEN MAX(COALESCE(home_win_pct,0), COALESCE(away_win_pct,0)) >= 55 THEN '55–59%'
+          ELSE '50–54%'
+        END as wp_bucket,
+        COUNT(*) as total,
+        COALESCE(SUM(ml_correct),0) as ml_wins
+      FROM predictions WHERE ml_correct IS NOT NULL GROUP BY wp_bucket
+    `).all();
+
+    const byDirection = db.prepare(`
+      SELECT ou_prediction, COUNT(*) as total, COALESCE(SUM(ou_correct),0) as ou_wins
+      FROM predictions WHERE ou_correct IS NOT NULL AND ou_prediction IS NOT NULL
+      GROUP BY ou_prediction
+    `).all();
+
+    const byOUTier = db.prepare(`
+      SELECT ou_confidence, COUNT(*) as total, COALESCE(SUM(ou_correct),0) as ou_wins
+      FROM predictions WHERE ou_correct IS NOT NULL AND ou_confidence IS NOT NULL
+      GROUP BY ou_confidence
+    `).all();
+
+    const totalDist = db.prepare(`
+      SELECT
+        CASE
+          WHEN actual_total <  5 THEN '0–4'
+          WHEN actual_total <  7 THEN '5–6'
+          WHEN actual_total <  9 THEN '7–8'
+          WHEN actual_total < 11 THEN '9–10'
+          WHEN actual_total < 13 THEN '11–12'
+          WHEN actual_total < 15 THEN '13–14'
+          ELSE '15+'
+        END as range,
+        COUNT(*) as cnt, MIN(actual_total) as min_val
+      FROM predictions WHERE actual_total IS NOT NULL
+      GROUP BY range ORDER BY min_val
+    `).all();
+
+    const trend = db.prepare(`
+      SELECT game_date, saved_at, ml_correct, ou_correct, confidence_score, home_win_pct, away_win_pct
+      FROM predictions WHERE ml_correct IS NOT NULL
+      ORDER BY COALESCE(game_date, saved_at) ASC
+    `).all();
+
+    const homeAway = db.prepare(`
+      SELECT
+        CASE WHEN COALESCE(home_win_pct,0) >= COALESCE(away_win_pct,0) THEN 'Home' ELSE 'Away' END as pick,
+        COUNT(*) as total,
+        COALESCE(SUM(ml_correct),0) as wins
+      FROM predictions WHERE ml_correct IS NOT NULL GROUP BY pick
+    `).all();
+
+    res.json({ overall, byConfidence, byLineRange, byMonth, byWP, byDirection, byOUTier, totalDist, trend, homeAway });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/patterns", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "patterns.html"));
 });
 
 app.get("/", (_req, res) => {
