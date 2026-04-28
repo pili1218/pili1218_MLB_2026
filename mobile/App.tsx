@@ -6,6 +6,7 @@ import type { RootStackParamList } from './src/navigation';
 import HomeScreen from './src/screens/HomeScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import DetailScreen from './src/screens/DetailScreen';
+import PatternsScreen from './src/screens/PatternsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -24,7 +25,8 @@ export default function App() {
       >
         <Stack.Screen name="Home"    component={HomeScreen}    options={{ title: '⚾ MLB Predictor' }} />
         <Stack.Screen name="History" component={HistoryScreen} options={{ title: 'Prediction History' }} />
-        <Stack.Screen name="Detail"  component={DetailScreen}  options={{ title: 'Prediction Detail' }} />
+        <Stack.Screen name="Detail"   component={DetailScreen}   options={{ title: 'Prediction Detail' }} />
+        <Stack.Screen name="Patterns" component={PatternsScreen} options={{ title: 'Pattern Analysis' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

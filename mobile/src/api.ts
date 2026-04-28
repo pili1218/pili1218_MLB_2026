@@ -1,4 +1,4 @@
-import type { Prediction, Stats } from './types';
+import type { Prediction, Stats, PatternData } from './types';
 
 const BASE = 'https://pili1218mlb2026-production.up.railway.app';
 
@@ -14,6 +14,12 @@ export async function getPredictions(
 ): Promise<{ data: Prediction[]; total: number }> {
   const r = await fetch(`${BASE}/api/predictions?page=${page}&limit=${limit}`);
   if (!r.ok) throw new Error(`Predictions fetch failed: ${r.status}`);
+  return r.json();
+}
+
+export async function getPatternAnalysis(): Promise<PatternData> {
+  const r = await fetch(`${BASE}/api/pattern-analysis`);
+  if (!r.ok) throw new Error(`Pattern analysis fetch failed: ${r.status}`);
   return r.json();
 }
 

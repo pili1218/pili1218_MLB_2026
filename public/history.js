@@ -379,6 +379,7 @@ function renderTable(rows) {
           <th>ML</th>
           <th>O/U</th>
           <th>Flags</th>
+          <th>Rules</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -570,6 +571,73 @@ function buildFlags(r) {
   return chips + more;
 }
 
+// ─── Rule detection (mirrors export_with_rules.js logic) ─────────────────────
+const RULE_SIGNAL_KWS = [
+  'surging','slumping','lean over','strong over','lean under','strong under',
+  'over bias','under bias','wind out','wind in','ou-a','ou-b','ou-c','ou-d','ou-e',
+  'rcf+slump','cold hammer','p10_match','dome over','was home',
+  'p12_','p13_','p14_','p15_','p18_','p20_','p22_','p24_','p25_'
+];
+
+const RULE_META = {
+  R1:  { label:'R1',  title:'No-Flag Skip — 0 O/U signals active (25.8% accuracy)', cls:'rule-skip'    },
+  R2:  { label:'R2',  title:'Line 9.0–10.0 + OVER elite zone (73.3%)',               cls:'rule-elite'   },
+  R3:  { label:'R3',  title:'Single O/U signal — clean alignment (55.7%)',            cls:'rule-ok'      },
+  R4:  { label:'R4',  title:'WP-Override A + UNDER (66.7% O/U, 84.6% ML)',           cls:'rule-elite'   },
+  R5:  { label:'R5',  title:'PVS > 15 + OVER (68.2%, n=44)',                         cls:'rule-ok'      },
+  R5W: { label:'R5⚠', title:'PVS > 15 + UNDER WARNING — only 38.1% hit rate',       cls:'rule-warn'    },
+  R6:  { label:'R6',  title:'UNDER sweet spot 8.0–9.0 (59.5%)',                      cls:'rule-ok'      },
+  R7:  { label:'R7',  title:'GVI 65+ OVER route (60.6–61.1%)',                       cls:'rule-ok'      },
+  R7W: { label:'R7⚠', title:'GVI 65+ UNDER WARNING — 0% hit rate at GVI ≥ 65',      cls:'rule-warn'    },
+  R8:  { label:'R8',  title:'MCF active — skip ML (42.1%), slight O/U edge (52.8%)', cls:'rule-warn'    },
+  R9:  { label:'R9',  title:'Wind OUT — skip ML (43.5%), bet OVER O/U (69.0%)',      cls:'rule-ok'      },
+  R10: { label:'R10', title:'Conf 60–64 O/U sweet spot (63.9%)',                     cls:'rule-ok'      },
+};
+
+function detectRules(r) {
+  const flags    = (() => { try { return JSON.parse(r.active_flags    || '[]'); } catch(_){ return []; } })();
+  const overrides= (() => { try { return JSON.parse(r.active_overrides|| '[]'); } catch(_){ return []; } })();
+  const allText  = [...flags, ...overrides].join('|').toLowerCase();
+  const ouLine   = parseFloat(r.ou_line) || 0;
+  const conf     = r.confidence_score || 0;
+  const gvi      = r.gvi || 0;
+  const ouPred   = (r.ou_prediction || '').toUpperCase();
+  const hPvs     = r.home_pvs || 0;
+  const aPvs     = r.away_pvs || 0;
+
+  const sigCount = RULE_SIGNAL_KWS.filter(kw => allText.includes(kw)).length;
+  const matched  = [];
+
+  if (sigCount === 0 && ouPred)                                           matched.push('R1');
+  if (ouLine >= 9.0 && ouLine < 10.0 && ouPred === 'OVER' && sigCount >= 1) matched.push('R2');
+  if (sigCount === 1)                                                     matched.push('R3');
+  const hasOvrA = allText.includes('override a') || allText.includes('wp-override a') || allText.includes('wpo-a');
+  if (hasOvrA && ouPred === 'UNDER')                                      matched.push('R4');
+  const hasPvs  = hPvs > 15 || aPvs > 15 || allText.includes('pvs > 15') || allText.includes('high volatility');
+  if (hasPvs && ouPred === 'OVER')                                        matched.push('R5');
+  if (hasPvs && ouPred === 'UNDER')                                       matched.push('R5W');
+  if (ouLine >= 8.0 && ouLine < 9.0 && ouPred === 'UNDER')               matched.push('R6');
+  if (gvi >= 65 && ouPred === 'OVER')                                     matched.push('R7');
+  if (gvi >= 65 && ouPred === 'UNDER')                                    matched.push('R7W');
+  const hasMcf  = allText.includes('mcf') || allText.includes('model contradiction');
+  if (hasMcf)                                                             matched.push('R8');
+  const hasWind = allText.includes('wind out') || allText.includes('wind blowing out') || allText.includes('ou-b over');
+  if (hasWind)                                                            matched.push('R9');
+  if (conf >= 60 && conf <= 64 && ouPred)                                 matched.push('R10');
+
+  return matched;
+}
+
+function buildRules(r) {
+  const rules = detectRules(r);
+  if (!rules.length) return '<span style="color:var(--text3);font-size:0.75rem">—</span>';
+  return rules.map(key => {
+    const m = RULE_META[key];
+    if (!m) return '';
+    return `<span class="rule-chip ${m.cls}" title="${esc(m.title)}">${m.label}</span>`;
+  }).join('');
+}
+
 function renderRow(r) {
   const predWinner = r.home_win_pct >= r.away_win_pct ? r.home_team : r.away_team;
   const predWinPct = Math.max(r.home_win_pct || 0, r.away_win_pct || 0);
@@ -629,6 +697,7 @@ function renderRow(r) {
       <td>${mlBadge}</td>
       <td>${ouBadge}</td>
       <td class="td-flags">${buildFlags(r)}</td>
+      <td class="td-rules">${buildRules(r)}</td>
       <td class="td-actions">
         ${r.ml_correct === null
           ? `<button class="btn-enter-result" onclick="openModalById(${r.id})">Enter Result</button>`

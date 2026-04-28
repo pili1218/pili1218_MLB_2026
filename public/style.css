@@ -2418,3 +2418,24 @@ body {
   border: 1px solid var(--border);
   border-radius: 14px;
 }
+
+/* ─── Rule indicator chips (history table) ────────────────────────────────── */
+.td-rules { white-space: nowrap; }
+.rule-chip {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 4px;
+  margin: 1px 1px;
+  cursor: default;
+  letter-spacing: 0.03em;
+}
+.rule-elite { background: rgba(34,197,94,0.18);  color: #22c55e; border: 1px solid rgba(34,197,94,0.4); }
+.rule-ok    { background: rgba(59,130,246,0.18);  color: #60a5fa; border: 1px solid rgba(59,130,246,0.4); }
+.rule-warn  { background: rgba(245,197,24,0.18);  color: #f5c518; border: 1px solid rgba(245,197,24,0.4); }
+.rule-skip  { background: rgba(239,68,68,0.18);   color: #ef4444; border: 1px solid rgba(239,68,68,0.4); }
+.light .rule-elite { background: rgba(34,197,94,0.12);  color: #15803d; }
+.light .rule-ok    { background: rgba(59,130,246,0.12);  color: #1d4ed8; }
+.light .rule-warn  { background: rgba(245,197,24,0.12);  color: #a16207; }
+.light .rule-skip  { background: rgba(239,68,68,0.12);   color: #b91c1c; }

@@ -115,6 +115,10 @@ export default function HomeScreen({ navigation }: Props) {
       <TouchableOpacity style={s.navBtn} onPress={() => navigation.navigate('History')}>
         <Text style={s.navBtnTxt}>View Prediction History →</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity style={[s.navBtn, s.navBtnAlt]} onPress={() => navigation.navigate('Patterns')}>
+        <Text style={s.navBtnTxt}>⬡ Pattern Analysis →</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -140,5 +144,6 @@ const s = StyleSheet.create({
   benchLbl:  { fontSize: 13, color: C.text2 },
   benchVal:  { fontSize: 13, fontWeight: '600' },
   navBtn:    { margin: 16, marginTop: 20, backgroundColor: C.accent, borderRadius: 12, padding: 16, alignItems: 'center' },
+  navBtnAlt: { marginTop: 0, backgroundColor: '#1a3a5c' },
   navBtnTxt: { color: '#fff', fontWeight: '700', fontSize: 15 },
 });

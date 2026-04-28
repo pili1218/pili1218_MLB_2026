@@ -33,6 +33,19 @@ export type Prediction = {
   notes: string | null;
 };
 
+export type PatternData = {
+  overall:      { total: number; graded: number; ml_wins: number; ou_graded: number; ou_wins: number };
+  byConfidence: { bucket: string; total: number; ml_wins: number }[];
+  byLineRange:  { line_range: string; ou_prediction: string; total: number; ou_wins: number }[];
+  byWP:         { wp_bucket: string; total: number; ml_wins: number }[];
+  byDirection:  { ou_prediction: string; total: number; ou_wins: number }[];
+  byOUTier:     { ou_confidence: string; total: number; ou_wins: number }[];
+  byMonth:      { month: string; total: number; ml_wins: number; ou_graded: number; ou_wins: number }[];
+  homeAway:     { pick: string; total: number; wins: number }[];
+  trend:        { ml_correct: number; ou_correct: number }[];
+  totalDist:    { range: string; cnt: number }[];
+};
+
 export type Stats = {
   total: number;
   graded: number;
