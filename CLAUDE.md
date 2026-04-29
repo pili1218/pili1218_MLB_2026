@@ -29,7 +29,7 @@ DB_PATH=/path/to/db        # optional; Railway sets this to a persistent volume 
 
 **`server.js`** — Single-file Express server (~1400 lines). Handles:
 - Image analysis: `POST /api/analyze` — receives uploaded screenshots, sends to Claude with an image-extraction system prompt, returns structured game data JSON
-- Framework prediction: `POST /api/predict` — takes extracted game data, applies the v3.3 analytical framework (PREDICT_SYSTEM prompt), returns prediction JSON; runs up to 3 verify/fix passes using `verifyPrediction()`
+- Framework prediction: `POST /api/predict` — takes extracted game data, applies the v3.4 analytical framework (PREDICT_SYSTEM prompt), returns prediction JSON; runs up to 3 verify/fix passes using `verifyPrediction()`
 - Persistence: `POST /api/save-prediction`, `POST /api/result/:id` (grades ML/OU accuracy), `GET /api/predictions`
 - Pattern analysis: `GET /api/pattern-analysis` — 10 aggregate SQLite queries for the dashboard
 - Page routes: `/`, `/history`, `/patterns`
@@ -51,12 +51,13 @@ DB_PATH=/path/to/db        # optional; Railway sets this to a persistent volume 
 
 ---
 
-# MLB Game Predictor — Analytical Framework v3.3
+# MLB Game Predictor — Analytical Framework v3.4
 
 > **Operational protocol for Claude Code.**
 > Do not make any changes until you have 95% confidence in what you need to build. Ask me follow-up questions until you reach that confidence.
 > When analyzing an MLB matchup, follow every section in order. Do not skip steps.
 > Applies to **Regular Season and Postseason**. Season-specific rules are clearly labeled.
+> v3.4 — 271-game empirical rule revision (2026-04-29): 12-rule framework updated — R3 reclassified (single signal = ML not O/U), R4 revised (WPA = ML + xFIP gate for UNDER), R7 narrowed (GVI65+ = O/U OVER only, skip ML, UNDER banned), R8 downgraded (MCF caution only), R9 revised (Wind OUT requires catalyst), R10 confirmed (conf 60–64 = O/U only, skip ML), R11 new (Slumping SP = +20% O/U both directions), R12 new (conf 55–60 = structural O/U pass zone 28.0%). Priority bet checklist added.
 > v3.3 — 181-game deep analysis integration (2026-04-22): 15 new empirical patterns added (P12–P26); ML confidence zones refined (54.7% overall, 85.7% at ≥70% WP, 68.8% at ≥65% WP); O/U confidence updated (OVER 60.0% overall, 65.2% at line 9.0–10.0, 80% at 10+; UNDER 45.5% overall, 57.5% at line 8.0–9.0); 10 action rules from deep analysis incorporated; specific hit rate percentages added to all confidence tiers; venue-specific patterns (WAS home 100% OVER, PIT home 0% O/U, dome OVER 67%/UNDER 37%); pitcher-specific patterns (Ohtani/Yamamoto/Sale/Castillo 100% UNDER); both-LHP matchup rule (80% UNDER when predicted); April 10–14 window +4.0 bias; inversion day detection (ML <40% + O/U >70% = shift to totals).
 
 ---
@@ -814,39 +815,83 @@ Balance the following signals:
 
 ---
 
-### 3.11 Action Rules from 181-Game Deep Analysis (NEW v3.3)
+### 3.11 Empirical Rule Framework v3.4 — 12 Rules from 271-Game Analysis (2026-04-29)
 
-Distilled rules from 181-game data analysis — ranked by evidence strength. These rules override default framework logic when triggered.
+> **⚠️ MANDATORY:** Evaluate ALL 12 rules below before issuing any betting recommendation. Rules marked **(revised)**, **(reclassified)**, or **(new)** supersede their v3.3 equivalents. Unchanged rules retain prior logic.
 
-**RULE 1 — OVER at line 9.0–10.0 is your best O/U edge (65.2%)**
-Always act on OVER when: (1) line is between 9.0–10.0, (2) model confidence is Moderate, (3) at least one scoring catalyst is present (wind out >12mph, slumping SP ERA>5.0, both offences above-average). Skip OVER at this line range when both SPs are quality. **This is the most reliable, repeatable O/U pattern in 181 games.** See P12_OVER_SWEET.
+---
 
-**RULE 2 — UNDER only at Moderate confidence, line 8.0–9.0, with ≥4-start SP**
-Under bets require all three conditions simultaneously: (1) Moderate confidence only — not High, not Low, (2) line must be 8.0–9.0 (not below 8.0), (3) home SP must have ≥4 confirmed 2026 starts with ≥20 IP. If any condition fails, skip Under. This filters out the 44% blowout rate to an estimated 25%. See P15_UNDER_SWEET.
+**R1 (unchanged) — No O/U signal flags at all = never bet O/U (16.3% accuracy, n=49)**
+Zero OU signal flags AND no Slumping/Surging flags active = O/U accuracy collapses to **16.3%**. Catastrophic — well below the 52.4% breakeven. **Never place an O/U bet when no signal flag is active.** This single rule eliminates the worst-performing game segment. Hard stop: no exceptions.
 
-**RULE 3 — ML home team ≥70% WP: bet every time (85.7%)**
-When home WP reaches 70%+, bet ML home unconditionally. The 85.7% hit rate at n=7 is small sample but consistent across the dataset. At ≥65%, still bet ML home (68.8%). The model's home WP ≥65% is its single most reliable signal. Note: avoid using O/U signal in these same games — the scoring is unpredictable even when the winner is clear. See P16_HOME_WP70 and P17_HOME_WP65.
+**R2 (confirmed) — Line 9.0–10.0 + OVER + ≥1 signal = elite zone (68.8%, n=32)**
+OVER predictions on lines 9.0–10.0 with at least one O/U signal active hit at **68.8%** — the strongest single bet type in the system. Always act on this combination. Condition: at least one active OU-A/B/C/D signal. Skip when both SPs have confirmed xFIP ≤ 3.00. See P12_OVER_SWEET.
 
-**RULE 4 — WAS home = always OVER (4/4 = 100% in dataset)**
-Washington Nationals home games average 12.2 total runs — highest of any team. Their pitching staff (Griffin, Irvin, Cavalli, Mikolas) consistently allows 5+ runs. No Under prediction should ever be placed in WAS home games unless extreme cold weather (sub-45°F) confirmed and both SPs are confirmed aces. See P18_WAS_HOME_OVER.
+**R3 (reclassified) — Single clean O/U signal = ML bet only; skip O/U (ML 75.0%, O/U 37.5%, n=8)**
+**Critical revision:** When exactly one O/U signal fires, ML accuracy = **75.0%** but O/U accuracy = only **37.5%**. R3 is now an **ML rule, not an O/U rule**. Single clean signal games: bet ML at full unit, skip O/U entirely. The clean signal implies directional clarity for winner — not scoring certainty.
+> **Flag:** `"R3_SINGLE_SIGNAL: one O/U signal active — bet ML only, skip O/U (37.5% O/U, 75.0% ML)"`
 
-**RULE 5 — Both LHP starters → bet UNDER (80%), skip OVER (50%)**
-Left-left pitching matchups produce genuine scoring suppression. When model detects both LHP and calls Under, it hits at 80%. When it calls Over in the same scenario, it hits at 50% — coin flip. Discard all OVER signals when both SPs are LHP. Route to Under automatically or pass. See P22_DUAL_LHP_UNDER and P23_DUAL_LHP_OVER_BAN.
+**R4 (revised) — WP-Override A = ML bet (63.0%); O/U UNDER requires confirmed xFIP gate**
+WP-Override A (surging ace vs slumping opponent) produces **63.0% ML accuracy**. However, O/U accuracy under WPA = only **46.8% overall**. **Revised rule:** WPA fires → always bet ML. For O/U UNDER in WPA games, add gate: **confirmed current-season xFIP required** (not estimated). Estimated xFIP → ML only, skip O/U. This corrects the prior over-reliance on WPA as an UNDER signal.
+> **Flag:** `"R4_WPA_REVISED: WPA fired → ML $75 confirmed. O/U UNDER requires confirmed xFIP or skip."`
 
-**RULE 6 — Dome OVER = valid (67%). Dome UNDER = skip unless dual confirmed ace**
-Dome stadiums favour OVER predictions (6/9 = 67%) because weather suppression is eliminated and April offensive conditions persist indoors. Dome UNDER at 37% is a systematic loser. Exception: when BOTH SPs in a dome game have ≥4 starts and sub-2.50 ERA confirmed — that is the P1 dual-ace signal which overrides dome environment. See P20_DOME_OVER and P21_DOME_UNDER_BAN.
+**R5 (confirmed) — PVS > 15 + OVER = reliable (61.3%, n=80); PVS > 15 + UNDER = trap (40.0%)**
+Direction asymmetry fully confirmed at 271 games. OVER with PVS > 15 = **61.3%** (n=80). UNDER with PVS > 15 = **40.0%** — a reliable loser. **Never call UNDER when either starting pitcher has PVS > 15.** High game-score variance means the pitcher is more likely to implode. When PVS > 15 fires: always route to OVER regardless of other signals. See P7_SKIP inverse.
+> **Flag:** `"R5_PVS_OVER: PVS>15 detected — OVER bias (61.3%); UNDER banned (40.0%)"`
 
-**RULE 7 — Skip ALL O/U at PIT home. Skip O/U at WAS away (vs PIT specifically)**
-PIT home O/U: 0/4 = 0%. The extreme variance from PNC Park wind + Skenes volatility + WAS weak pitching creates unpredictable totals ranging from 2 to 21 in the same series. No O/U bet is reliable here. ML PIT home only — they win home games at a high rate regardless of the scoring total. See P19_PIT_HOME_SKIP.
+**R6 (confirmed) — UNDER line 8.0–9.0 = the only viable UNDER window (60.5%, n=43)**
+UNDER at line 8.0–9.0 hits **60.5%** — both ML and O/U above 60% in this window. This remains the only line range where UNDER has a true edge. **Below 8.0 = market priced (34.5%); above 9.0 = scoring expected (sub-40%).** No change to logic — confirmed at scale. All 7 Under gates still required. See P15_UNDER_SWEET.
 
-**RULE 8 — Never bet Under on lines below 8.0 (only 29.2%)**
-At line 7.0–8.0: Under predictions hit only 29.2%. The book has already priced the defensive game. There is no remaining Under edge when the line is already conservative. The April mean of 8.68 means Sub-8.0 lines have roughly 44% natural Under rate, and the model adds no accuracy on top of that. Hard rule: line must be ≥8.0 for any Under bet.
+**R7 (narrowed) — GVI 65+ = O/U OVER only (58.9%, n=56); skip ML (50%); UNDER banned (0.0%, n=4)**
+Narrowed from prior rule. At GVI ≥ 65: O/U OVER hits **58.9%** (viable). ML = **50%** (coin flip — skip). UNDER = **0.0%** (n=4 — catastrophic). **New rule:** GVI ≥ 65 → place O/U OVER only; do NOT bet ML; hard-ban UNDER. High GVI always amplifies scoring — never suppresses it.
+> **Flag:** `"R7_GVI65: GVI≥65 — OVER O/U only (58.9%). Skip ML (50% coin flip). UNDER BANNED (0%)."`
 
-**RULE 9 — Apr 1–14: use +4.0 April bias correction, not +3.0**
-Apr 10–14 averaged 9.68 runs — 0.45 runs higher than the Apr 15–22 period. The +3.0 correction is correct for mid-late April but undercorrects in the first two weeks of the season. Apply +4.0 in Apr 1–14 window to account for this systematic bias. This alone would have converted 4 wrong predictions to correct passes in the dataset. Already incorporated in §3.9 temperature-sensitive bias table.
+**R8 (downgraded) — MCF is a caution context signal only; not actionable standalone**
+MCF (model contradicts market) no longer produces actionable edge on its own. ML at MCF = **51.8%** (near baseline). O/U at MCF = **45.8%** (barely useful). **Revised:** MCF is now a secondary context flag — use it to reduce ML stake by 25% and note elevated variance, but do NOT skip bets or revert direction solely on MCF. Remove the prior O/U advantage claim.
+> **Flag:** `"R8_MCF_CONTEXT: MCF active — reduce ML stake 25%, note variance. Not a standalone signal."`
 
-**RULE 10 — On inversion days (ML <40% but O/U >70%), shift staking to totals**
-April 21 demonstrated the inversion pattern: ML 25% but O/U 100%. This happens when conditions favour scoring volatility but not directional certainty (wind, warm temps, weak SPs throughout slate). When model detects high variance environment (avg_total likely >9.5, multiple low-confidence ML picks), reduce ML stake to $37.50 (half unit) and concentrate on O/U at full unit. The two bet types are inversely correlated on certain slate types. See P26_INVERSION_DAY.
+**R9 (revised) — Wind OUT requires a catalyst; standalone Wind OUT = pass for O/U (50.0%)**
+Wind OUT alone now produces **50.0% O/U** — breakeven, no edge. **Revised rule:** Wind OUT is only actionable when combined with at least one of: (a) PVS > 15 in either SP, or (b) Slumping SP (RED > +1.5) in either position. Wind OUT standalone = **Pass for O/U**. Wind OUT + catalyst = proceed with OVER signal per prior OU-B logic.
+> **Flag:** `"R9_WIND_CATALYST: Wind OUT active — checking for catalyst (PVS>15 or Slumping SP). Standalone = Pass."`
+
+**R10 (confirmed) — Confidence 60–64 = O/U sweet spot (63.6%, n=11); never use for ML (33.3%)**
+Confirmed at 271 games: O/U accuracy in 60–64 zone = **63.6%**. However, ML accuracy at conf 60–64 = **33.3%** — a trap. **R10 is O/U only.** When confidence falls 60–64: bet O/U, skip ML bet. This is the inverse of P9_BAN: O/U at 60–64 is good; ML at 60–64 is bad.
+> **Flag:** `"R10_CONF_ZONE: Conf 60–64 — O/U eligible (63.6%). ML skipped (33.3% — trap zone)."`
+
+**R11 (NEW) — Slumping SP in any position = O/U power signal (+20% accuracy, 62%+, n=45)**
+Strongest new finding from 271-game analysis. When either SP is Slumping (RED > +1.5): O/U accuracy rises to **62%+ regardless of direction** (away SP slumping: 62.5%, n=24; home SP slumping: 61.9%, n=21). Slumping SP elevates O/U accuracy by ~20 percentage points above baseline. **Add Slumping SP as a primary O/U signal in OU-A evaluation — it independently justifies an O/U bet when no other signal fires.** See RCF+Slumping interaction (§3.5).
+> **Flag:** `"R11_SLUMPING_SP: [Home/Away] SP Slumping (RED>+1.5) — O/U power signal (62%+, n=45). O/U bet eligible."`
+
+**R12 (NEW) — Confidence 55–60 = structural O/U pass zone (28.0%, n=25)**
+O/U accuracy at confidence 55–60 = **28.0%** — catastrophically below breakeven. Both adjacent bands outperform: 50–55 = 61.2%, 60–64 = 63.6%. The 55–60 zone is a structural dead zone. **Treat confidence 55–60 identically to < 50 for O/U decisions — pass all O/U bets.** ML bets at 55–60 are still eligible per normal confidence rules. Add −15 confidence deduction when O/U call falls in this zone.
+> **Flag:** `"R12_DEAD_ZONE: Conf 55–60 — O/U PASS (28.0% hit rate). ML still eligible. No O/U bet."`
+
+---
+
+### Priority Bet Checklist — v3.4 (271 games)
+
+**Tier 1 bets (hit rate ≥60%, n>20) — act on these:**
+- Line 9–10 OVER + ≥1 signal active → **68.8%** (R2)
+- UNDER line 8–9 with Slumping SP flag → **60.5%** (R6 + R11)
+- PVS > 15 + OVER → **61.3%** (R5)
+- RCF + OVER (§3.5) → **63.3%**
+- Slumping SP (home or away) present → **62%+** (R11)
+
+**Tier 2 bets (hit rate ≥55%, n>10) — act with normal sizing:**
+- WP-Override A fired → ML **63.0%** (R4)
+- GVI 65+ OVER prediction → **57.9%** (R7) — O/U only
+- Confidence 50–55 O/U → **61.2%**
+- Confidence 60–64 O/U → **63.6%** (R10) — O/U only, skip ML
+- WP-Override B fired O/U → **62.5%**
+
+**Hard skips — never bet these:**
+- Zero signal flags O/U → **16.3%** (R1) — catastrophic
+- Confidence 55–60 O/U → **28.0%** (R12) — structural dead zone
+- GVI 65+ UNDER → **0.0%** (R7) — hard ban
+- Line 7–8 UNDER → **34.5%** — below breakeven
+- Both LHP O/U (when calling OVER) → **16.7%** — coin flip or worse
+- Confidence 75+ O/U → **25.0%** — P9_BAN applies
+- Wind OUT standalone O/U → **50.0%** (R9) — breakeven, no edge
 
 ---
 
@@ -1127,6 +1172,7 @@ Dodgers @ Yankees,Cole (NYY),Yamamoto (LAD),54%,46%,7.5,61% (Over)
 | v3.0 | **113-game empirical refinements (2026-04-17). 9 structural updates from deep pattern analysis.** (1) **Gate 0 (Home Offensive Surge Veto)** — home avg_runs ≥ 6.0 last 3 games = veto ALL Under bets; 0% Under hit rate in 4 qualifying cases; added as first Under gate before Gate A. (2) **Gate A threshold fixed** — changed from `> 10` (strictly greater) to `≥ 10.0` (inclusive); Apr 16 borderline case confirmed the edge case. (3) **Both RED_unavailable ban** — both SPs < 3 starts = pass O/U (38% hit rate, 22 games); exception: P10 ≤ 6.5 still valid. (4) **P10 hit rate corrected** — updated from 100%/27 games to 74%/23 games; P10 stake hard-capped at $50. (5) **RCF + Slumping = explicit OVER signal** — when RCF fires + RED > +1.5 on same SP = 65% OVER, 17 games; added to §3.5 as named signal. (6) **GVI dead zone skip** — GVI 35–65 = 51% hit rate = no O/U bet unless primary signal present; OU-E updated with explicit dead zone rule. (7) **Wind OUT tiers split** — >15mph + >60°F = 78% OVER (was ~68%); 8–15mph drops to 57% (weaker, needs secondary signal). Wind IN threshold updated: >10mph + <60°F = 71% Strong UNDER. (8) **Dual PVS > 15 skip** — both SPs PVS > 15 = 41% O/U accuracy; skip unless primary signal. (9) **NYY home April Under ban** — 17% hit rate (1/6 games); added to P8_BAN. Under 6-gate system expanded to **7-gate system**. Betting Decision Flags expanded to **15 flags**. |
 | v3.1 | **128-game empirical refinements (2026-04-18). 6 critical inversions corrected.** (1) **High-Line April UNDER Default reversed** — OVER on 9.0+ lines in April = 64.3% (9/14); UNDER = 28.6% (2/7); §3.6 rule changed from "UNDER Low" to "OVER Low" on ≥9.0 April lines. Exception: dual confirmed ace xFIP ≤ 3.00 → Pass. (2) **OU-F April UNDER Default removed** — April OVER base rate = 59.4% vs UNDER 39.6% in 128-game dataset; the UNDER default (from 20-game sample, UNDER 70%) is empirically inverted at scale; §5 OU-F changed to PASS when no OU-A/B/C/D signal fires. (3) **UNDER on 7.5–7.9 lines in April banned** — 3/11 = 27.3% hit rate, avg actual total 10.3 runs; these bets lose 73% of the time. (4) **P9_BAN clarified as O/U-only** — ML at conf 65–69 = 66.7% (10/15 games), strongest ML zone; ML bets at 65–69 eligible at $75; do not bet ML at conf ≥70 (25%, 4 games). (5) **AOP confidence deduction removed** — April OVER now 59.4%; the −10 deduction for OVER predictions in April was penalizing the winning direction. (6) **Null/floor game O/U tracking note** — 25 null-confidence games had 10.3% O/U hit rate and were artificially suppressing overall stats; conf=25 or null → no active O/U bet recommendation, directional output for tracking only. Real bet zone (conf 50–64) = 55.1% O/U (27/49). |
 | v3.2 | **144-game empirical refinements (2026-04-18). 12 structural tweaks + 8 new patterns from full audit.** (1) **Temperature-sensitive April bias correction** — replaces flat +3.0: <50°F=+1.5, 50-64°F=+2.5, 65-74°F=+3.0, ≥75°F=+3.5, ≥85°F=+4.0; April 1-14 always +4.0 regardless of temp. (2) **Gate C loosened to 4+ starts + ≥20 IP** — prior 6-start threshold was blocking 11/18 profitable Under bets (61%); 4-start + IP gate restores access while maintaining ERA reliability. (3) **Gate B strengthened to require BOTH ≥5 runs AND ≥2-game win streak** — prior single-condition gate too broad; win streak confirms sustained momentum. (4) **P4_VETO softened** — dual-ace matchups (both SP xFIP ≤3.25 + Gate C) routed to P1/P2 instead of full ban; prior full ban was blocking 78% of profitable dual-ace Unders. (5) **Cold Hammer hard override** — temp <50°F + wind ≥15mph = 81% Under (pre-OU-A hard override). (6) **Under Heat Gate** — temp ≥85°F requires GVI <25 for UNDER (not <35); 31% hit rate at ≥85°F with GVI 25-35. (7) **BSS line cap** — BSS OVER only fires at line ≤8.5; line >9.0 = market priced in (41% hit rate), −20 conf flag. (8) **Coors OVER gate** — both teams must avg ≥3.5 runs for Coors OVER to activate (52% when either team <3.5). (9) **Wrigley wind direction confirmation required** — unconfirmed = downgrade to OU-D input. (10) **April ≥9.5 OVER banned** — 36% hit rate; 9.0–9.4 OVER lean retained. (11) **Slumping home SP + ≥75°F + hitter park = High OVER** even in April (87% hit rate — overrides April High cap). (12) **P10 gap threshold ≥1.5** when P10_MATCH active (was ≥2.0). (13) **Max 5 bets/day cap** (was 2). (14) **RED thin-sample blend** for 3–5 starts: 0.5×RED + 0.5×PVS_direction. (15) **Both xFIP estimated + <3 starts = no O/U direction output**. (16) **Gate A dual-day check** — if either of last 2 days >9.5 avg, halve stake. (17) **7 new confidence deductions added**: WARM_VETO, COLD_HAMMER, BSS_LINE, BOTH_XFIP_BLIND, WRIGLEY_UNCONF, HLOB, RED_THIN. |
+| v3.4 | **271-game empirical rule revision (2026-04-29). 12-rule framework — 5 rules revised/reclassified, 2 new rules added.** (1) **R3 reclassified** — single O/U signal = ML rule (75.0% ML) not O/U (37.5%); single clean signal games: bet ML, skip O/U. (2) **R4 revised** — WP-Override A = ML bet (63.0%); O/U UNDER requires confirmed xFIP gate (estimated xFIP → ML only). (3) **R7 narrowed** — GVI65+ = O/U OVER only (58.9%); ML = 50% coin flip (skip); UNDER = 0.0% hard ban. (4) **R8 downgraded** — MCF caution context only (ML 51.8%, O/U 45.8%); not actionable standalone. (5) **R9 revised** — Wind OUT standalone = 50.0% O/U (breakeven); requires PVS>15 or Slumping SP catalyst to activate. (6) **R10 confirmed** — conf 60–64 = O/U 63.6% (use); ML 33.3% (hard skip). (7) **R11 new** — Slumping SP any position = +20% O/U accuracy (62%+, n=45); add as primary O/U signal. (8) **R12 new** — conf 55–60 = structural O/U dead zone (28.0%, n=25); treat identically to <50 for O/U. (9) **Priority bet checklist added** — Tier 1 (≥60%): R2 line 9-10 OVER+signal (68.8%), R6+R11 UNDER 8-9+Slumping (60.5%), R5 PVS>15+OVER (61.3%), RCF+OVER (63.3%), R11 Slumping SP (62%+). Hard skips: R1 no-signal (16.3%), R12 conf 55-60 (28.0%), R7 GVI65+ UNDER (0%), line 7-8 UNDER (34.5%), conf 75+ (25%). (10) **R1 sharpened** — now requires BOTH zero OU signal flags AND no Slumping/Surging flags (n=49, 16.3%). |
 | v3.3 | **181-game deep analysis integration (2026-04-22). 15 new empirical patterns + 10 action rules + comprehensive confidence calibration.** (1) **15 new patterns added (P12–P26)** — OVER at 9.0–10.0 (65.2%, Pattern D), OVER at 10.0–12.0 (80%, Pattern E), OVER at 7.0–8.0 (61.5%, Pattern F), UNDER at 8.0–9.0 sweet spot (57.5%), Home WP ≥70% ML (85.7%, Pattern P16), Home WP ≥65% ML (68.8%, P17), WAS home OVER (100%, Pattern G), PIT home O/U skip (0%, banned), Dome OVER (67%), Dome UNDER ban (37%), Both LHP → UNDER (80%), Both LHP → OVER ban (50%), Named ace home UNDER (100%, Pattern H — Ohtani/Yamamoto/Sale/Castillo/Woo/Kirby), HOU home OVER (~75%), Inversion day detection (P26). (2) **ML confidence zones refined** — 181-game overall ML = 54.7% (99/181); WP ≥70% = 85.7% (6/7); WP ≥65% = 68.8% (11/16); WP ≥60% = 62.7% (32/51); conf 50–59 = 57.7–60.0%; conf 65–69 = 66.7% (10/15). (3) **O/U confidence updated** — OVER overall = 60.0% (39/65); OVER Moderate = 60.8% (31/51); OVER at 9.0–10.0 = 65.2% (15/23); OVER at 10+ = 80% (4/5); UNDER overall = 45.5% (35/77); UNDER Moderate = 52.1% (25/48); UNDER at 8.0–9.0 = 57.5% (23/40); UNDER Low = 33.3% (7/21); UNDER High = 37.5% (3/8). (4) **10 action rules from deep analysis** — §3.11 added with distilled rules ranked by evidence strength; each rule references specific pattern flags. (5) **Venue-specific patterns confirmed** — WAS home 100% OVER (avg 12.2 runs), PIT home 0% O/U (banned), HOU home ~75% OVER (avg 12.1 runs). (6) **Pitcher-specific patterns** — Ohtani/Yamamoto/Sale/Castillo/Woo 100% UNDER home starts (n=10). (7) **Both-LHP matchup rule** — 80% UNDER when predicted, 50% OVER (coin flip, banned). (8) **April 10–14 window** — +4.0 bias confirmed (avg 9.68 runs vs 9.23 rest of April). (9) **Inversion day detection** — when prev-day ML <40% + O/U >70%, shift staking to totals. (10) **P8_BAN expanded** — PIT home O/U added to permanent ban list (Trigger C). (11) **Line-specific hit rate table** — added to §5 O/U conversion table for calibration. (12) **Pattern count** — expanded from 11 to 26 patterns; Betting Decision Flags remain 15 (patterns evaluated internally). |
 
 ---
