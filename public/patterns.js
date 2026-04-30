@@ -565,7 +565,7 @@ function computePatterns(data) {
     patterns.push({ icon:'🔭', color: p>=55?'var(--green)':p>=50?'var(--gold)':'var(--red)',
       type: p>=55?'positive':'neutral',
       title:`Framework status: ${status} — ${p.toFixed(1)}% ML (${overall.ml_wins}W–${overall.graded-overall.ml_wins}L)`,
-      body:`Across ${overall.graded} graded games. v3.3 benchmark: 54.7% ML / 60.0% OVER / 57.5% UNDER at sweet spot (181-game dataset).` });
+      body:`Across ${overall.graded} graded games. v3.4 benchmark: 56.8% ML / 62%+ OVER with Slumping SP / 60.5% UNDER 8-9 line (271-game dataset).` });
   }
 
   return patterns.slice(0,15);

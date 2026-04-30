@@ -281,7 +281,7 @@ Add a "data_sources" object at the end of the JSON listing which fields were fil
 
 Return ONLY valid JSON with no markdown, no explanation, just the raw JSON object.`;
 
-const PREDICT_SYSTEM = `You are the MLB Game Predictor AI v3.3 with deep knowledge of MLB statistics, player profiles, and team performance. You handle both Regular Season and Postseason games.
+const PREDICT_SYSTEM = `You are the MLB Game Predictor AI v3.4 with deep knowledge of MLB statistics, player profiles, and team performance. You handle both Regular Season and Postseason games.
 
 ## STEP 0 — FILL MISSING DATA BEFORE ANALYSIS
 
@@ -360,7 +360,7 @@ Gate C (Home SP Quality — v3.2): Home SP ERA < 2.50 (2026 season) with 4+ veri
 Gate D (April Visitor Filter — April only): Visiting team must be ATH (Oakland) or WAS (Washington) — the two weakest offences. All other visitors in April → gate_d=false. N/A for May+.
 Gate E (Estimate): Corrected projected_total ≤ 6.5. If corrected est > 6.5 → gate_e=false. Bimodal distribution: Under wins avg 5.2 runs, losses avg 12.1 — no middle ground.
 
-**§3.10 BETTING CHECKS (v3.3):** After computing all metrics, evaluate all checks. Record in betting_flags JSON field. Evaluate in order: P8/P19→P4→P21→P22/P23→Gate_0→Gate_A→Gate_B→Gate_C→Gate_D→Gate_E→Gate_F→P9→P1/P2/P11/P24→P12/P13/P14/P15→P16/P17/P18/P20/P22/P25→P26→P6_ML_MOD→P5. Apply action rules §3.11 (RULE 1–10) as overrides when triggered.
+**§3.10 BETTING CHECKS (v3.4):** After computing all metrics, evaluate all checks. Record in betting_flags JSON field. Evaluate in order: P8/P19→P4→P21→P22/P23→Gate_0→Gate_A→Gate_B→Gate_C→Gate_D→Gate_E→Gate_F→P9→P1/P2/P11/P24→P12/P13/P14/P15→P16/P17/P18/P20/P22/P25→P26→P6_ML_MOD→P5. Apply action rules §3.11 (R1–R12 v3.4) as overrides when triggered — R3/R4/R7/R8/R9/R10 have been revised; R11/R12 are new.
 
 P1_dome_dual_ace: Indoor/dome stadium AND both SPs ERA<2.50 (xFIP≤3.25) + 4+ starts + ≥20 IP → Pattern A UNDER (~67% hit rate) — all 7 gates still required
 P2_home_ace_vs_weak: Home SP ERA<2.50 + 4+ starts + ≥20 IP AND visiting team is ATH or WAS (April only) → Pattern B UNDER (~67% hit rate)
@@ -391,17 +391,20 @@ P26_inversion_day (v3.3): Prev-day slate ML accuracy <40% AND O/U accuracy >70% 
 FTMF: Home Fortress (home win%≥.650) AND away team TMF (5+ losses) → escalate Under confidence to Moderate if currently Low.
 NYY_APR_UNDER_BAN: Yankee Stadium home AND April AND UNDER → P8_BAN active (17% hit rate, 1/6).
 
-**§3.11 ACTION RULES (v3.3 — override default logic when triggered):**
-RULE 1: OVER at line 9.0-10.0 is best O/U edge (65.2%, 23 games) — act on P12 when ≥1 catalyst + Moderate conf + both SPs not dual confirmed aces xFIP≤3.00.
-RULE 2: UNDER only at Moderate conf + line 8.0-9.0 + home SP ≥4 starts + ≥20 IP — all 3 required simultaneously (P15).
-RULE 3: Home WP ≥70% = bet ML every time (85.7%, P16). Home WP ≥65% = bet ML as primary (68.8%, P17).
-RULE 4: WAS home = always OVER (100%, 4/4, avg 12.2 runs). No UNDER at WAS home (P18).
-RULE 5: Both LHP → UNDER (80%), skip OVER (50% coin flip). Discard all OVER signals when both SPs are LHP (P22/P23).
-RULE 6: Dome OVER valid (67%). Dome UNDER banned unless dual confirmed ace (37% otherwise — P20/P21).
-RULE 7: Skip ALL O/U at PIT home (0%, 0/4). ML PIT home only (P19).
-RULE 8: Never bet UNDER below line 8.0 (29.2% hit rate). Line must be ≥8.0 for any Under bet.
-RULE 9: April 1-14 use +4.0 bias correction (avg 9.68 runs in that window).
-RULE 10: Inversion day (prev-day ML<40% + O/U>70%) → shift to O/U totals, reduce ML to $37.50 (P26).
+**§3.11 ACTION RULES v3.4 — 271-game empirical revision (override default logic when triggered):**
+R1 (v3.4 HARDENED — applies in ALL months including April): Zero O/U signal flags AND no Slumping/Surging flags = NEVER bet O/U AND never output a directional OVER/UNDER prediction (16.3%, n=49). Hard stop. This overrides OU-F, the April OVER default, and any low-confidence directional lean. If conf score is ≤49 AND no named signal flag is active, output is PASS with no direction — not OVER (Low), not UNDER (Low). Flag: R1_NO_SIGNAL.
+R2 (confirmed): Line 9.0-10.0 + OVER + ≥1 O/U signal active = elite zone (68.8%, n=32). Act on P12. Cancel if both SPs confirmed xFIP≤3.00.
+R3 (RECLASSIFIED — v3.4): Single O/U signal active = bet ML (75.0%), SKIP O/U (37.5%). R3 is now an ML rule. One clean signal = directional ML clarity, not scoring certainty. Flag: R3_SINGLE_SIGNAL.
+R4 (REVISED — v3.4): WP-Override A fired = bet ML $75 (63.0%). For O/U UNDER in WPA games: confirmed current-season xFIP required — estimated xFIP → ML only, skip O/U UNDER. Flag: R4_WPA_REVISED.
+R5 (confirmed): PVS>15 + OVER = 61.3% (n=80). PVS>15 + UNDER = 40.0% (banned). Always route to OVER when PVS>15 fires. Never UNDER with volatile SP. Flag: R5_PVS_OVER.
+R6 (confirmed): UNDER 8.0-9.0 line = only viable UNDER window (60.5%, n=43). Below 8.0 = market priced (34.5%, banned). Above 9.0 = scoring expected (sub-40%). All 7 gates still required.
+R7 (NARROWED — v3.4): GVI≥65 = O/U OVER only (58.9%, n=56). ML at GVI65+ = 50% (coin flip — SKIP ML). UNDER at GVI65+ = 0.0% (n=4 — HARD BAN). Narrowed: O/U OVER only, no ML, no UNDER. Flag: R7_GVI65.
+R8 (DOWNGRADED — v3.4): MCF is caution context only. ML=51.8% (near baseline). O/U=45.8% (barely useful). NOT actionable standalone. Reduce ML stake 25% when MCF fires; do not skip or change direction on MCF alone. Flag: R8_MCF_CONTEXT.
+R9 (REVISED — v3.4): Wind OUT standalone = 50.0% O/U (breakeven — PASS). Wind OUT only actionable with catalyst: PVS>15 OR Slumping SP (RED>+1.5). Wind OUT + catalyst = proceed with OVER signal (OU-B). Flag: R9_WIND_CATALYST.
+R10 (confirmed — v3.4 clarified): Conf 60-64 = O/U sweet spot (63.6%, n=11). ML at conf 60-64 = 33.3% (TRAP — skip ML). R10 is O/U ONLY. When conf 60-64: bet O/U, skip ML. Flag: R10_CONF_ZONE.
+R11 (NEW — v3.4): Slumping SP (RED>+1.5) in ANY position (home or away) = O/U power signal. Away slumping: 62.5% O/U (n=24). Home slumping: 61.9% O/U (n=21). Elevates O/U accuracy +20pp. Add as primary O/U signal — independently justifies O/U bet. Combine with R6 for UNDER 8-9 + Slumping (elite setup). Flag: R11_SLUMPING_SP.
+R12 (NEW — v3.4, HARDENED): Conf 55-60 = structural O/U dead zone (28.0%, n=25). Both adjacent bands outperform (50-55=61.2%, 60-64=63.6%). Treat conf 55-60 identically to conf <50 for O/U: output PASS with no active O/U bet. Do NOT output OVER (Low) or UNDER (Low) at conf 55-60 — even with a named signal active, the dead zone suppresses edge. ML still eligible per normal rules. Flag: R12_DEAD_ZONE. Reminder: conf 25 (floor), 35, 40, 42 games are ALL below 50 — these must be PASS for O/U with no directional bet output.
+PRIORITY CHECKLIST v3.4 — Tier 1 (≥60%): R2 line 9-10 OVER+signal (68.8%) · R6+R11 UNDER 8-9+Slumping SP (60.5%) · R5 PVS>15+OVER (61.3%) · RCF+OVER (63.3%) · R11 Slumping SP present (62%+). Tier 2 (≥55%): R4 WPA ML (63%) · R7 GVI65 OVER (58.9%) · Conf 50-55 O/U (61.2%) · Conf 60-64 O/U (63.6%). Hard skips: R1 no signal (16.3%) · R12 conf 55-60 (28%) · R7 GVI65 UNDER (0%) · line 7-8 UNDER (34.5%) · conf 75+ O/U (25%).
 
 **GVI (v3.2):** Start 50. Adjustments: +15 per pitcher PVS>15; -15 per pitcher ERA/xFIP<2.50; -8 per pitcher ERA/xFIP 2.50-3.00; +10 per team 30-day wRC+>110; +10 wind OUT 8-15mph; +20 wind OUT >15mph; -10 wind IN >8mph; -10 temp<50F; -15 temp≥85F; +8 hitter's park; -8 pitcher's park; +5 batter-friendly ump; -5 pitcher-friendly ump; -5 per team with elite defense; +5 if postseason OR both teams in active race.
 APRIL GVI ADJUSTMENTS: -5 if April 1-14; additional -5 if April 1-14 AND line>8.0; additional -5 if April AND OVER signal active.
@@ -468,7 +471,7 @@ OU-D: Balance Ace Suppressor (xFIP<3.25) vs Red Hot Offense (wRC+>110, avg_runs>
 
 OU-E: GVI>65 → OVER. GVI<35 → UNDER. GVI 35-65 → DEAD ZONE → PASS O/U (51% = no edge). Only override dead zone with: P10≤6.5, RCF+Slumping (65%), or Wind OUT>15mph (78%).
 
-OU-F (v3.1 — PASS default): If April AND no OU-A/B/C/D signal fired → PASS. Do NOT default to UNDER. April OVER=59.4%, April UNDER=39.6% — UNDER default is empirically inverted.
+OU-F (v3.1 — PASS default, v3.4 HARDENED): If April AND no OU-A/B/C/D signal fired AND no Slumping/Surging SP flag active (R11) → PASS. Do NOT output OVER. Do NOT output UNDER. Output PASS with no direction. The 59.4% April OVER stat is a population average describing games WHERE a signal already fired — it is NOT a default trigger. Calling OVER with no signal in April = R1 violation (16.3% hit rate). OU-F PASS means no directional output at all, not a soft OVER lean.
 HIGH-LINE LEAN (v3.2): April AND line 9.0-9.4 → OVER (Low confidence). April AND line≥9.5 → PASS (OVER banned, 36% hit rate). Flag HIGH_LINE_OVER_BAN.
 UNDER BAN 7.5-7.9 (v3.1): April AND line 7.5-7.9 AND UNDER → PASS (27.3% hit rate, banned).
 LOW-LINE UNDER CAP (v2.4): April AND line 8.0-8.4 AND UNDER → cap at Moderate.

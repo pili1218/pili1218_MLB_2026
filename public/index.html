@@ -50,7 +50,7 @@
         <div class="globe-stats">
           <div class="globe-stat"><span class="globe-stat-num">3</span><span class="globe-stat-label">AI Models</span></div>
           <div class="globe-stat-divider"></div>
-          <div class="globe-stat"><span class="globe-stat-num">v3.3</span><span class="globe-stat-label">Framework</span></div>
+          <div class="globe-stat"><span class="globe-stat-num">v3.4</span><span class="globe-stat-label">Framework</span></div>
           <div class="globe-stat-divider"></div>
           <div class="globe-stat"><span class="globe-stat-num">MLB</span><span class="globe-stat-label">All Season</span></div>
         </div>
@@ -393,11 +393,26 @@
   <section class="changelog-section">
     <div class="changelog-header" id="changelogToggle">
       <span class="changelog-title">Framework Changelog</span>
-      <span class="changelog-badge">v3.3</span>
+      <span class="changelog-badge">v3.4</span>
       <span class="changelog-chevron" id="changelogChevron">▼</span>
     </div>
     <div class="changelog-body hidden" id="changelogBody">
       <div class="changelog-entry changelog-entry--current">
+        <div class="changelog-version">v3.4 <span class="changelog-date">2026-04-29</span></div>
+        <div class="changelog-desc">271-game empirical rule revision. 12-rule framework — 5 rules revised/reclassified, 2 new rules added. R3 reclassified (single signal = ML, skip O/U). R7 narrowed (GVI65+ = O/U OVER only, ML coin flip skip, UNDER hard ban 0%). R9 revised (Wind OUT requires catalyst). R11 new: Slumping SP = +20% O/U. R12 new: conf 55–60 = dead zone (28%). Priority bet checklist added.</div>
+        <ul class="changelog-items">
+          <li><strong>R3 Reclassified</strong> — Single O/U signal = ML bet (75.0%), skip O/U (37.5%). R3 is now an ML rule, not O/U</li>
+          <li><strong>R4 Revised</strong> — WP-Override A = ML bet (63%). O/U UNDER requires confirmed xFIP gate; estimated xFIP → ML only</li>
+          <li><strong>R7 Narrowed</strong> — GVI≥65: O/U OVER only (58.9%). ML = 50% coin flip (skip). UNDER = 0.0% (hard ban)</li>
+          <li><strong>R8 Downgraded</strong> — MCF is caution context only (ML 51.8%, O/U 45.8%). Not actionable standalone; reduce ML stake 25%</li>
+          <li><strong>R9 Revised</strong> — Wind OUT standalone = 50.0% O/U (breakeven, pass). Requires PVS&gt;15 or Slumping SP catalyst</li>
+          <li><strong>R10 Confirmed</strong> — Conf 60–64 = O/U 63.6% (use). ML at 60–64 = 33.3% (trap, skip ML entirely)</li>
+          <li><strong>R11 NEW — Slumping SP Power Signal</strong> — Either SP slumping (RED&gt;+1.5) = +20% O/U accuracy (62%+, n=45). Away 62.5%, home 61.9%. Add as primary O/U signal</li>
+          <li><strong>R12 NEW — Conf 55–60 Dead Zone</strong> — O/U only 28.0% (n=25). Treat identically to &lt;50 for O/U: pass all bets. Adjacent bands (50–55=61.2%, 60–64=63.6%) both outperform</li>
+          <li><strong>Priority Bet Checklist</strong> — Tier 1 (≥60%): line 9–10 OVER+signal (68.8%), UNDER 8–9+Slumping (60.5%), PVS&gt;15+OVER (61.3%), RCF+OVER (63.3%). Hard skips: no signal (16.3%), conf 55–60 (28%), GVI65+ UNDER (0%)</li>
+        </ul>
+      </div>
+      <div class="changelog-entry changelog-entry--prev">
         <div class="changelog-version">v3.3 <span class="changelog-date">2026-04-22</span></div>
         <div class="changelog-desc">181-game deep analysis integration. 15 new empirical patterns (P12–P26), 10 action rules, and comprehensive ML/O/U confidence recalibration. OVER confirmed as primary edge (60.0%). Named-ace home Under (100%, n=10). Home WP ≥70% ML (85.7%). Venue-specific rules: WAS home 100% OVER, PIT home O/U banned (0%), HOU home ~75% OVER.</div>
         <ul class="changelog-items">

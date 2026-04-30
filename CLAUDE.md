@@ -28,16 +28,22 @@ DB_PATH=/path/to/db        # optional; Railway sets this to a persistent volume 
 ### Architecture Overview
 
 **`server.js`** — Single-file Express server (~1400 lines). Handles:
-- Image analysis: `POST /api/analyze` — receives uploaded screenshots, sends to Claude with an image-extraction system prompt, returns structured game data JSON
-- Framework prediction: `POST /api/predict` — takes extracted game data, applies the v3.4 analytical framework (PREDICT_SYSTEM prompt), returns prediction JSON; runs up to 3 verify/fix passes using `verifyPrediction()`
-- Persistence: `POST /api/save-prediction`, `POST /api/result/:id` (grades ML/OU accuracy), `GET /api/predictions`
+- Image analysis: `POST /api/analyze` — receives uploaded screenshots, sends to Claude with an image-extraction system prompt, returns structured game data JSON; both `/api/analyze` and `/api/predict` run a **multi-pass verify loop** (up to `MAX_VERIFY_PASSES = 3`) — each pass checks `verifyExtraction()` / `verifyPrediction()` and sends issues back to Claude for correction; ≤1 remaining issue is accepted
+- Text parsing: `POST /api/parse-text` — alternative to image upload; parses pasted plain-text stats into the same structured JSON via `SYSTEM_PROMPT`
+- Framework prediction: `POST /api/predict` — takes extracted game data + optional `extraNotes` scouting context, applies the v3.4 analytical framework (`PREDICT_SYSTEM` prompt), returns prediction JSON
+- Persistence: `POST /api/save-prediction`, `POST /api/result/:id` (grades ML/OU accuracy), `GET /api/predictions` (paginated)
+- Manual import: `POST /api/import-manual` — accepts either `export_string` or raw `json` body to insert a prediction directly
+- Stats: `GET /api/stats` — ML/O/U accuracy counts + per-confidence-tier breakdown (used by nav badge in `app.js`)
 - Pattern analysis: `GET /api/pattern-analysis` — 10 aggregate SQLite queries for the dashboard
+- Sync: `GET /api/export-all` — full DB dump consumed by `sync-from-railway.js` pre-commit
 - Page routes: `/`, `/history`, `/patterns`
+- Allowed models: `claude-opus-4-6` (prediction default), `claude-sonnet-4-6` (analysis default), `claude-haiku-4-5-20251001`
 
 **`public/`** — Vanilla JS frontend, no framework, no build:
-- `app.js` — analyzer page: image upload → `/api/analyze` → `/api/predict` → save. `lastResult` holds extracted game data; `lastPrediction` holds the framework output. The save button must be reset in `showPrediction()` on each new prediction (bug fix 2026-04-25).
+- `app.js` — analyzer page supports two input modes: **screenshot upload** (drag-and-drop → `/api/analyze`) and **paste/JSON text** (tab → `/api/parse-text`); both paths converge at `/api/predict`. `lastResult` holds extracted game data; `lastPrediction` holds the framework output. The save button must be reset in `showPrediction()` on each new prediction (bug fix 2026-04-25).
 - `history.js` — paginated prediction history table with inline result grading modal
 - `patterns.js` — Chart.js dashboard; fetches `/api/pattern-analysis` and renders 9 charts + 15 algorithmically derived pattern cards
+- `globe.js` — decorative rotating 3D globe on the home page rendered via D3 + canvas; no data dependency
 - `style.css` — single stylesheet with CSS custom properties for dark/light theme (`.light` class on `<body>`)
 
 **Database — `predictions.db`** (SQLite via `better-sqlite3`):
@@ -773,12 +779,13 @@ Balance the following signals:
 - GVI < 35 → **Strong UNDER** (69% hit rate)
 - **GVI 35–65 → Dead Zone — Pass O/U** (51% hit rate, no edge). Do NOT place an O/U bet based on GVI alone when it falls in this range. Only override with a primary signal: P10 ≤ 6.5, RCF+Slumping (65%), or Wind OUT > 15mph (78%). Empirical: 113-game dataset confirms GVI 35–65 produces no meaningful directional edge. *(capped at Moderate confidence in April per §3.6)*
 
-### [OU-F] April O/U Default Rule (v3.1 — replaces UNDER default)
+### [OU-F] April O/U Default Rule (v3.1 — replaces UNDER default; v3.4 HARDENED)
 **Prior rule (UNDER default) reversed.** 128-game dataset: April OVER = **59.4% (19/32)**; April UNDER = **39.6% (19/48)**. The original UNDER default (from a 20-game sample) is now empirically inverted at scale.
 
-**Trigger:** Game date April 1–30 AND no OU-A, OU-B, or OU-C signal fired.
-→ **Default: PASS** — do not force a directional bet unless a signal from OU-A through OU-D exists.
-→ The prior "default to UNDER" no longer applies. No primary signal = no O/U bet in April.
+**Trigger:** Game date April 1–30 AND no OU-A, OU-B, OU-C, or OU-D signal fired AND no Slumping/Surging SP flag active (R11).
+→ **Default: PASS — output no direction at all.** Do not output OVER. Do not output UNDER.
+→ The 59.4% April OVER stat is a **population average for games where a signal already fired** — it is NOT a default trigger. Calling OVER with no signal violates R1 (16.3% hit rate).
+→ No primary signal = no O/U direction output and no O/U bet in April.
 
 **High-Line Lean (v3.2):** See §3.6 — lines **9.0–9.4** lean OVER (Low confidence). Lines **≥9.5 → PASS** (OVER banned at 36%). Do not apply any OVER lean at ≥9.5 even in the absence of a primary signal.
 
@@ -821,8 +828,9 @@ Balance the following signals:
 
 ---
 
-**R1 (unchanged) — No O/U signal flags at all = never bet O/U (16.3% accuracy, n=49)**
-Zero OU signal flags AND no Slumping/Surging flags active = O/U accuracy collapses to **16.3%**. Catastrophic — well below the 52.4% breakeven. **Never place an O/U bet when no signal flag is active.** This single rule eliminates the worst-performing game segment. Hard stop: no exceptions.
+**R1 (v3.4 HARDENED — applies in ALL months including April) — No O/U signal flags = never output O/U direction or bet (16.3% accuracy, n=49)**
+Zero OU signal flags AND no Slumping/Surging flags active = O/U accuracy collapses to **16.3%**. Catastrophic — well below the 52.4% breakeven. **Never place an O/U bet AND never output a directional OVER/UNDER when no signal flag is active.** This overrides OU-F, the April OVER default, and any low-confidence lean. Conf ≤49 with no named signal = PASS with no direction — not OVER (Low). Hard stop: no exceptions in any month.
+> **Flag:** `"R1_NO_SIGNAL: zero O/U signal flags — PASS, no direction output (16.3%, hard stop)"`
 
 **R2 (confirmed) — Line 9.0–10.0 + OVER + ≥1 signal = elite zone (68.8%, n=32)**
 OVER predictions on lines 9.0–10.0 with at least one O/U signal active hit at **68.8%** — the strongest single bet type in the system. Always act on this combination. Condition: at least one active OU-A/B/C/D signal. Skip when both SPs have confirmed xFIP ≤ 3.00. See P12_OVER_SWEET.
@@ -862,9 +870,9 @@ Confirmed at 271 games: O/U accuracy in 60–64 zone = **63.6%**. However, ML ac
 Strongest new finding from 271-game analysis. When either SP is Slumping (RED > +1.5): O/U accuracy rises to **62%+ regardless of direction** (away SP slumping: 62.5%, n=24; home SP slumping: 61.9%, n=21). Slumping SP elevates O/U accuracy by ~20 percentage points above baseline. **Add Slumping SP as a primary O/U signal in OU-A evaluation — it independently justifies an O/U bet when no other signal fires.** See RCF+Slumping interaction (§3.5).
 > **Flag:** `"R11_SLUMPING_SP: [Home/Away] SP Slumping (RED>+1.5) — O/U power signal (62%+, n=45). O/U bet eligible."`
 
-**R12 (NEW) — Confidence 55–60 = structural O/U pass zone (28.0%, n=25)**
-O/U accuracy at confidence 55–60 = **28.0%** — catastrophically below breakeven. Both adjacent bands outperform: 50–55 = 61.2%, 60–64 = 63.6%. The 55–60 zone is a structural dead zone. **Treat confidence 55–60 identically to < 50 for O/U decisions — pass all O/U bets.** ML bets at 55–60 are still eligible per normal confidence rules. Add −15 confidence deduction when O/U call falls in this zone.
-> **Flag:** `"R12_DEAD_ZONE: Conf 55–60 — O/U PASS (28.0% hit rate). ML still eligible. No O/U bet."`
+**R12 (NEW, HARDENED) — Confidence 55–60 = structural O/U pass zone (28.0%, n=25)**
+O/U accuracy at confidence 55–60 = **28.0%** — catastrophically below breakeven. Both adjacent bands outperform: 50–55 = 61.2%, 60–64 = 63.6%. The 55–60 zone is a structural dead zone. **Treat confidence 55–60 identically to < 50 for O/U decisions — output PASS with no directional bet, even when a named signal is active.** Do NOT output OVER (Low) or UNDER (Low) in this zone. ML bets at 55–60 are still eligible per normal confidence rules. Note: conf 25 (floor), 35, 40, 42 are all below 50 — these must also be PASS for O/U with no direction output.
+> **Flag:** `"R12_DEAD_ZONE: Conf 55–60 — O/U PASS (28.0% hit rate). ML still eligible. No O/U direction output."`
 
 ---
 

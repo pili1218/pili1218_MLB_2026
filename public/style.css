@@ -317,6 +317,18 @@ body {
   padding: 40px 24px 80px;
 }
 
+.main--history { max-width: 1400px; }
+
+/* Dashboard panels stay at designed width, centered inside the wider container */
+.main--history .stats-section,
+.main--history .investigation-panel,
+.main--history .daily-row,
+.main--history .season-breakdown {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* ─── Upload Section ───────────────────────────────────────────────────── */
 .upload-section { margin-bottom: 32px; }
 
@@ -1683,7 +1695,7 @@ body {
   font-weight: 700;
 }
 
-.hist-table-wrap { overflow-x: hidden; width: 100%; }
+.hist-table-wrap { overflow-x: auto; width: 100%; }
 
 .hist-loading {
   padding: 48px;
@@ -1696,7 +1708,7 @@ body {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.78rem;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 /* Column widths — fixed layout, fits page without horizontal scroll */
@@ -1745,8 +1757,8 @@ body {
 .td-date  { color: var(--text2); white-space: nowrap; font-size: 0.75rem; }
 
 .matchup-cell { display: flex; align-items: center; gap: 3px; font-weight: 600; flex-wrap: wrap; }
-.home-name    { color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
-.away-name    { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
+.home-name    { color: var(--accent); white-space: nowrap; }
+.away-name    { color: var(--text); white-space: nowrap; }
 .at-sign      { color: var(--text3); font-size: 0.72rem; flex-shrink: 0; }
 .starter-cell { font-size: 0.68rem; color: var(--text3); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
