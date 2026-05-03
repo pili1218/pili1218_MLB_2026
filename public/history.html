@@ -103,6 +103,31 @@
 
     </div>
 
+    <!-- FLAG PERFORMANCE PANEL -->
+    <section class="flag-panel-section">
+      <div class="flag-panel-header" onclick="toggleFlagPanel()">
+        <div class="flag-panel-title">
+          <span class="flag-panel-icon">⚑</span>
+          Flag Performance
+          <span class="flag-panel-subtitle">Live accuracy per rule/pattern flag — updates with results</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="flag-filter-tabs" onclick="event.stopPropagation()">
+            <button class="flag-tab flag-tab--active" onclick="filterFlags('all')">All</button>
+            <button class="flag-tab" onclick="filterFlags('rule')">Rules</button>
+            <button class="flag-tab" onclick="filterFlags('pattern')">Patterns</button>
+            <button class="flag-tab" onclick="filterFlags('flag')">Flags</button>
+          </div>
+          <input id="flagSearch" class="flag-search-input" type="search" placeholder="Search flags…"
+            onclick="event.stopPropagation()" oninput="searchFlags(this.value)" />
+          <span class="flag-panel-chevron" id="flagChevron">▾</span>
+        </div>
+      </div>
+      <div id="flagPanelBody" class="flag-panel-body">
+        <div class="flag-loading">Loading flag stats…</div>
+      </div>
+    </section>
+
     <!-- RECENT GRADED -->
     <section class="hist-section">
       <div class="hist-header-row">
@@ -110,6 +135,7 @@
         <div style="display:flex;gap:8px">
           <button class="btn-manual-entry" onclick="openManualEntry()">+ Add Manually</button>
           <button class="btn-clear" onclick="loadHistory()">Refresh</button>
+          <button class="btn-download-json" onclick="downloadAllJson()">↓ Download JSON</button>
           <button class="btn-patterns" onclick="window.open('/patterns','_blank')">⬡ Pattern Extraction</button>
         </div>
       </div>

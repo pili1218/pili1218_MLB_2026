@@ -202,9 +202,14 @@ async function loadJsonText() {
   let parsed;
   try {
     parsed = JSON.parse(val);
-    // Unwrap single-element arrays (e.g. pasted JSON wrapped in [...])
+    // Single-element array — unwrap
     if (Array.isArray(parsed) && parsed.length === 1) parsed = parsed[0];
-    // Valid JSON — skip analyze, use directly
+    // Multi-game array — show picker
+    if (Array.isArray(parsed) && parsed.length > 1) {
+      showGamePicker(parsed);
+      return;
+    }
+    // Valid single object — skip analyze, use directly
     lastResult = parsed;
     showResult(parsed);
     return;
@@ -231,6 +236,39 @@ async function loadJsonText() {
     hideStatus();
   }
 }
+function showGamePicker(games) {
+  const container = document.getElementById('resultSection') || document.querySelector('.result-section');
+  const pickerId = 'gamePicker';
+  document.getElementById(pickerId)?.remove();
+
+  const div = document.createElement('div');
+  div.id = pickerId;
+  div.className = 'game-picker';
+  div.innerHTML = `
+    <div class="game-picker-title">Multiple games detected — select one to analyze:</div>
+    <div class="game-picker-list">
+      ${games.map((g, i) => `
+        <button class="game-picker-btn" onclick="selectPickedGame(${i})">
+          <span class="gp-time">${g.game_time || 'Game ' + (i + 1)}</span>
+          <span class="gp-matchup">${g.away_team || '?'} @ ${g.home_team || '?'}</span>
+          <span class="gp-sp">${g.starters?.away?.name || '?'} vs ${g.starters?.home?.name || '?'}</span>
+        </button>
+      `).join('')}
+    </div>`;
+
+  const anchor = document.getElementById('jtActionBar') || document.getElementById('panelJsonText');
+  anchor?.parentNode?.insertBefore(div, anchor.nextSibling);
+  window._pickerGames = games;
+}
+
+function selectPickedGame(index) {
+  const game = window._pickerGames?.[index];
+  if (!game) return;
+  document.getElementById('gamePicker')?.remove();
+  lastResult = game;
+  showResult(game);
+}
+
 function clearJsonText() {
   document.getElementById('jtPasteBox').value = '';
   document.getElementById('jtActionBar').style.display = 'none';
@@ -286,6 +324,23 @@ function showResult(data) {
   document.getElementById("resultSection").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+function patchOULine(val) {
+  const v = parseFloat(val);
+  if (!lastResult || isNaN(v)) return;
+  if (!lastResult.betting) lastResult.betting = {};
+  lastResult.betting.over_under = String(v);
+  const inp = document.getElementById('ouManualInput');
+  if (inp) inp.classList.toggle('ou-manual-input--set', !!val);
+}
+
+function showOUInput() {
+  const disp = document.getElementById('ouDisplayVal');
+  const inp  = document.getElementById('ouManualInput');
+  if (disp) disp.style.display = 'none';
+  if (inp)  inp.classList.remove('hidden');
+  inp?.focus();
+}
+
 function renderGameSummary(data) {
   const el = document.getElementById("gameSummary");
   const home = data.home_team || "Home";
@@ -326,7 +381,18 @@ function renderGameSummary(data) {
       </div>
       <div class="summary-card">
         <div class="summary-label">Over / Under</div>
-        <div class="summary-value gold">${escapeHtml(betting.over_under || "—")}</div>
+        ${(!betting.over_under || betting.over_under === '-' || betting.over_under === '—')
+          ? `<input id="ouManualInput" class="ou-manual-input" type="number" step="0.5" min="5" max="20"
+               placeholder="Enter line e.g. 8.5"
+               oninput="patchOULine(this.value)"
+               title="O/U line not found — enter manually">`
+          : `<div class="summary-value gold" id="ouDisplayVal">${escapeHtml(betting.over_under)}
+               <button class="ou-edit-btn" onclick="showOUInput()" title="Edit O/U line">✎</button>
+             </div>
+             <input id="ouManualInput" class="ou-manual-input hidden" type="number" step="0.5" min="5" max="20"
+               value="${escapeHtml(betting.over_under)}"
+               oninput="patchOULine(this.value)">`
+        }
       </div>
       <div class="summary-card">
         <div class="summary-label">${escapeHtml(home)} Record (Home)</div>

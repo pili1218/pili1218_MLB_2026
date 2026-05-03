@@ -59,57 +59,143 @@
       <!-- KPI Row -->
       <section class="pa-kpi-row" id="kpiRow"></section>
 
-      <!-- Charts Grid -->
+      <!-- ── SECTION 1: Summary Pies ── -->
       <section class="pa-section">
         <div class="pa-section-header">
-          <h2 class="pa-section-title">Performance Analytics</h2>
-          <span class="pa-section-sub">Power BI–style breakdown of your prediction dataset</span>
+          <h2 class="pa-section-title">Prediction Composition</h2>
+          <span class="pa-section-sub">Distribution breakdown — what the model is calling and how it's landing</span>
+        </div>
+        <div class="pa-charts-grid pa-charts-grid--3">
+          <div class="pa-chart-card">
+            <div class="pa-chart-title">ML Outcome Split</div>
+            <div class="pa-chart-note">Win / Loss / Pending of all predictions</div>
+            <div class="pa-chart-wrap pa-chart-wrap--pie"><canvas id="chartMLPie"></canvas></div>
+          </div>
+          <div class="pa-chart-card">
+            <div class="pa-chart-title">O/U Direction Calls</div>
+            <div class="pa-chart-note">How many OVER vs UNDER calls were made</div>
+            <div class="pa-chart-wrap pa-chart-wrap--pie"><canvas id="chartDirPie"></canvas></div>
+          </div>
+          <div class="pa-chart-card">
+            <div class="pa-chart-title">O/U Outcome Split</div>
+            <div class="pa-chart-note">O/U Win / Loss / Pending of graded bets</div>
+            <div class="pa-chart-wrap pa-chart-wrap--pie"><canvas id="chartOUPie"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── SECTION 2: Core Performance ── -->
+      <section class="pa-section">
+        <div class="pa-section-header">
+          <h2 class="pa-section-title">Core Performance Analytics</h2>
+          <span class="pa-section-sub">ML and O/U accuracy broken down by confidence, win probability, and trend</span>
         </div>
         <div class="pa-charts-grid">
           <div class="pa-chart-card">
             <div class="pa-chart-title">ML Accuracy by Confidence Score</div>
+            <div class="pa-chart-note">Breakeven = 52.4% · Dead zone: 55–65 · Best: 65–69</div>
             <div class="pa-chart-wrap"><canvas id="chartConf"></canvas></div>
           </div>
           <div class="pa-chart-card">
-            <div class="pa-chart-title">O/U Accuracy by Line Range</div>
-            <div class="pa-chart-wrap"><canvas id="chartLine"></canvas></div>
-          </div>
-          <div class="pa-chart-card">
             <div class="pa-chart-title">ML Accuracy by Win Probability Tier</div>
+            <div class="pa-chart-note">P16 ≥70% = 85.7% expected · P17 ≥65% = 68.8% expected</div>
             <div class="pa-chart-wrap"><canvas id="chartWP"></canvas></div>
-          </div>
-          <div class="pa-chart-card">
-            <div class="pa-chart-title">OVER vs UNDER — Prediction Split & Accuracy</div>
-            <div class="pa-chart-wrap"><canvas id="chartDir"></canvas></div>
           </div>
           <div class="pa-chart-card pa-chart-card--wide">
             <div class="pa-chart-title">Running ML Accuracy — 10-Game Rolling Window</div>
+            <div class="pa-chart-note">Green band = profitable zone (≥52.4%) · Shows model momentum over time</div>
             <div class="pa-chart-wrap pa-chart-wrap--tall"><canvas id="chartTrend"></canvas></div>
           </div>
           <div class="pa-chart-card">
             <div class="pa-chart-title">O/U Accuracy by Confidence Tier</div>
+            <div class="pa-chart-note">Moderate = 56.6% expected · High O/U historically 37.5% (banned)</div>
             <div class="pa-chart-wrap"><canvas id="chartOUTier"></canvas></div>
           </div>
           <div class="pa-chart-card">
-            <div class="pa-chart-title">Actual Game Total Distribution</div>
-            <div class="pa-chart-wrap"><canvas id="chartTotalDist"></canvas></div>
-          </div>
-          <div class="pa-chart-card pa-chart-card--wide">
-            <div class="pa-chart-title">Monthly ML & O/U Accuracy</div>
-            <div class="pa-chart-wrap"><canvas id="chartMonthly"></canvas></div>
-          </div>
-          <div class="pa-chart-card">
             <div class="pa-chart-title">Home vs Away Pick Accuracy</div>
+            <div class="pa-chart-note">Away teams won 58% in April — home bias is a systematic risk</div>
             <div class="pa-chart-wrap"><canvas id="chartHomeAway"></canvas></div>
           </div>
         </div>
       </section>
 
-      <!-- Pattern Cards -->
+      <!-- ── SECTION 3: O/U Deep Dive ── -->
       <section class="pa-section">
         <div class="pa-section-header">
-          <h2 class="pa-section-title">Extracted Patterns & Trends</h2>
-          <span class="pa-section-sub">Algorithmically derived from your recorded prediction outcomes</span>
+          <h2 class="pa-section-title">O/U Line Analysis</h2>
+          <span class="pa-section-sub">OVER and UNDER hit rates at each half-point line interval — framework sweet spots and ban zones</span>
+        </div>
+        <div class="pa-charts-grid">
+          <div class="pa-chart-card pa-chart-card--wide">
+            <div class="pa-chart-title">O/U Hit Rate by Line (0.5 Increments)</div>
+            <div class="pa-chart-note">R2: Line 9–10 OVER = 68.8% · R6: UNDER 8–9 = 60.5% · UNDER 7–8 = 34.5% (banned)</div>
+            <div class="pa-chart-wrap pa-chart-wrap--tall"><canvas id="chartGranularLine"></canvas></div>
+          </div>
+          <div class="pa-chart-card">
+            <div class="pa-chart-title">O/U Hit Rate by Broad Line Range</div>
+            <div class="pa-chart-note">OVER vs UNDER accuracy per range bucket — framework pattern zones highlighted</div>
+            <div class="pa-chart-wrap"><canvas id="chartLine"></canvas></div>
+          </div>
+          <div class="pa-chart-card">
+            <div class="pa-chart-title">Actual Game Total Distribution</div>
+            <div class="pa-chart-note">Under wins avg 5.2 runs · Under losses avg 12.1 runs — bimodal distribution</div>
+            <div class="pa-chart-wrap"><canvas id="chartTotalDist"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── SECTION 4: Context & Signals ── -->
+      <section class="pa-section">
+        <div class="pa-section-header">
+          <h2 class="pa-section-title">Signal Context Analysis</h2>
+          <span class="pa-section-sub">GVI environment, SP handedness matchups, and monthly trend</span>
+        </div>
+        <div class="pa-charts-grid">
+          <div class="pa-chart-card pa-chart-card--wide">
+            <div class="pa-chart-title">O/U Accuracy by GVI Range</div>
+            <div class="pa-chart-note">GVI&lt;35 UNDER = 0% (hard ban) · GVI≥65 OVER = 58.9% · Dead zone 35–65 = 51% (no edge)</div>
+            <div class="pa-chart-wrap"><canvas id="chartGVI"></canvas></div>
+          </div>
+          <div class="pa-chart-card">
+            <div class="pa-chart-title">SP Handedness Matchup Performance</div>
+            <div class="pa-chart-note">Both LHP = UNDER 80% (R22) · Both LHP OVER = 50% (coin flip, banned R23)</div>
+            <div class="pa-chart-wrap"><canvas id="chartHandedness"></canvas></div>
+          </div>
+          <div class="pa-chart-card pa-chart-card--wide">
+            <div class="pa-chart-title">Monthly ML & O/U Accuracy</div>
+            <div class="pa-chart-note">April April baseline: away 58% win rate · May+ standard home field advantage resumes</div>
+            <div class="pa-chart-wrap"><canvas id="chartMonthly"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── SECTION 5: Pattern Index Table ── -->
+      <section class="pa-section">
+        <div class="pa-section-header">
+          <h2 class="pa-section-title">Pattern Index — P1 to P26</h2>
+          <span class="pa-section-sub">Live hit rates from your 294-game dataset vs framework expected rates · Green = outperforming · Red = underperforming</span>
+        </div>
+        <div id="patternIndexTable">
+          <div class="pa-loading-text" style="padding:24px">Loading pattern index…</div>
+        </div>
+      </section>
+
+      <!-- ── SECTION 6: Rule Performance Table ── -->
+      <section class="pa-section">
+        <div class="pa-section-header">
+          <h2 class="pa-section-title">Rule Index — R1 to R14</h2>
+          <span class="pa-section-sub">Empirical rule performance validated against your prediction history</span>
+        </div>
+        <div id="ruleIndexTable">
+          <div class="pa-loading-text" style="padding:24px">Loading rule index…</div>
+        </div>
+      </section>
+
+      <!-- ── SECTION 7: Extracted Pattern Cards ── -->
+      <section class="pa-section">
+        <div class="pa-section-header">
+          <h2 class="pa-section-title">Extracted Patterns & Insights</h2>
+          <span class="pa-section-sub">Algorithmically derived from your recorded prediction outcomes — actionable observations</span>
         </div>
         <div class="pa-patterns-grid" id="patternsGrid"></div>
       </section>

@@ -749,6 +749,36 @@ body {
 .summary-value.loss { color: var(--red); }
 .summary-value.gold { color: var(--gold); }
 
+.ou-manual-input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1.5px solid var(--gold);
+  border-radius: var(--radius-sm);
+  color: var(--gold);
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ou-manual-input:focus { box-shadow: 0 0 0 3px rgba(245,197,24,0.18); }
+.ou-manual-input::placeholder { color: var(--text3); font-weight: 400; font-size: 0.78rem; }
+.ou-manual-input--set { border-color: #4ade80; color: #4ade80; }
+
+.ou-edit-btn {
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0 2px;
+  margin-left: 4px;
+  vertical-align: middle;
+  opacity: 0.6;
+  transition: opacity 0.12s;
+}
+.ou-edit-btn:hover { opacity: 1; color: var(--gold); }
+
 .pitcher-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1675,6 +1705,139 @@ body {
 .season-stat.dim { color: var(--text3); }
 
 /* ─── History Section ───────────────────────────────────────────────────── */
+/* ─── Flag Performance Panel ────────────────────────────────────────────────── */
+.flag-panel-section {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.flag-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+}
+.flag-panel-header:hover { background: var(--bg3); }
+
+.flag-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.flag-panel-icon { font-size: 1rem; }
+.flag-panel-subtitle { font-size: 0.72rem; font-weight: 400; color: var(--text3); margin-left: 4px; }
+.flag-panel-chevron { font-size: 0.85rem; color: var(--text3); transition: transform 0.2s; }
+
+.flag-search-input {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg3);
+  color: var(--text);
+  font-size: 0.75rem;
+  width: 160px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.flag-search-input:focus { border-color: var(--accent); }
+.flag-search-input::placeholder { color: var(--text3); }
+
+.flag-chip-code {
+  display: inline-block;
+  font-family: monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(96,165,250,0.12);
+  color: #60a5fa;
+  border: 1px solid rgba(96,165,250,0.25);
+  white-space: nowrap;
+}
+
+.flag-filter-tabs { display: flex; gap: 4px; }
+.flag-tab {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text3);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.flag-tab:hover { border-color: var(--text2); color: var(--text2); }
+.flag-tab--active { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,0.08); }
+
+.flag-panel-body { overflow-x: auto; }
+.flag-loading { padding: 24px; text-align: center; color: var(--text3); font-size: 0.85rem; }
+
+.flag-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+.flag-table th {
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text3);
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.flag-th-num { text-align: center; }
+.flag-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.flag-table tr:last-child td { border-bottom: none; }
+.flag-table tr:hover td { background: var(--bg3); }
+
+.flag-row--rule td:first-child { border-left: 3px solid var(--accent); }
+.flag-row--pattern td:first-child { border-left: 3px solid var(--gold); }
+.flag-row--flag td:first-child { border-left: 3px solid var(--blue); }
+
+.flag-code { font-family: monospace; font-size: 0.75rem; color: var(--text); background: var(--bg3); padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+.flag-desc { color: var(--text2); max-width: 320px; line-height: 1.5; }
+.flag-num { text-align: center; white-space: nowrap; }
+.flag-expected { font-size: 0.65rem; color: var(--text3); margin-left: 4px; }
+.flag-sample { font-size: 0.65rem; color: var(--text3); margin-left: 2px; }
+
+.flag-type-chip {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 0.67rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--bg3);
+  color: var(--text3);
+}
+
+.flag-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.flag-chip--green  { background: rgba(34,197,94,0.15);  color: var(--green); }
+.flag-chip--yellow { background: rgba(234,179,8,0.15);  color: var(--gold); }
+.flag-chip--red    { background: rgba(239,68,68,0.15);  color: var(--red); }
+.flag-chip--neutral{ background: var(--bg3); color: var(--text3); }
+.flag-chip--dim    { background: transparent; color: var(--text3); font-weight: 400; }
+
 .hist-section {
   background: var(--bg2);
   border: 1px solid var(--border);
@@ -1794,17 +1957,25 @@ body {
 .s-badge--post { background: rgba(245,197,24,0.15); color: var(--gold); border: 1px solid rgba(245,197,24,0.3); }
 
 /* Flags column */
-.td-flags { overflow: hidden; }
+.td-flags {
+  overflow: visible;
+  min-width: 140px;
+}
+.td-flags-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: flex-start;
+}
 .flag-chip {
   display: inline-block;
   font-size: 0.58rem;
   font-weight: 700;
-  padding: 1px 4px;
+  padding: 2px 5px;
   border-radius: 3px;
   background: rgba(96,165,250,0.12);
   color: #60a5fa;
   border: 1px solid rgba(96,165,250,0.25);
-  margin: 1px 1px 1px 0;
   white-space: nowrap;
   letter-spacing: 0.02em;
 }
@@ -2262,6 +2433,37 @@ body {
 .jt-paste-area { display: flex; flex-direction: column; gap: 6px; }
 .jt-paste-header { display: flex; align-items: center; justify-content: space-between; }
 .jt-paste-label { color: var(--text2); font-size: 0.85rem; font-weight: 500; }
+.game-picker {
+  background: var(--bg2);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-top: 12px;
+}
+.game-picker-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 12px;
+}
+.game-picker-list { display: flex; flex-direction: column; gap: 8px; }
+.game-picker-btn {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+.game-picker-btn:hover { border-color: var(--accent); background: rgba(99,102,241,0.08); }
+.gp-time  { font-size: 0.78rem; color: var(--text3); white-space: nowrap; min-width: 48px; }
+.gp-matchup { font-size: 0.9rem; font-weight: 700; color: var(--text); flex: 1; }
+.gp-sp    { font-size: 0.75rem; color: var(--text3); white-space: nowrap; }
+
 .jt-paste-hint { font-size: 0.78rem; color: var(--text3); }
 .jt-valid { color: #4ade80 !important; }
 .jt-text  { color: #facc15 !important; }
@@ -2302,6 +2504,18 @@ body {
   transition: opacity 0.18s, transform 0.15s;
 }
 .btn-patterns:hover { opacity: 0.88; transform: translateY(-1px); }
+
+.btn-download-json {
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid rgba(34,197,94,0.4);
+  border-radius: var(--radius-sm);
+  color: var(--green);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-download-json:hover { background: rgba(34,197,94,0.08); border-color: var(--green); }
 
 /* ─── Patterns page — loading state ──────────────────────────────────────────  */
 .pa-loading {
@@ -2357,7 +2571,8 @@ body {
   grid-template-columns: repeat(2, 1fr);
   gap: 18px;
 }
-@media (max-width: 700px) { .pa-charts-grid { grid-template-columns: 1fr; } }
+.pa-charts-grid--3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 700px) { .pa-charts-grid, .pa-charts-grid--3 { grid-template-columns: 1fr; } }
 
 .pa-chart-card {
   background: var(--card);
@@ -2366,12 +2581,59 @@ body {
   padding: 20px 18px 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 .pa-chart-card--wide { grid-column: 1 / -1; }
 .pa-chart-title { font-size: 0.82rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; }
+.pa-chart-note  { font-size: 0.72rem; color: var(--text3); line-height: 1.4; }
 .pa-chart-wrap  { position: relative; height: 220px; }
 .pa-chart-wrap--tall { height: 260px; }
+.pa-chart-wrap--pie  { height: 200px; }
+
+/* ─── Pattern / Rule Index Table ─────────────────────────────────────────────── */
+.pi-wrap { overflow-x: auto; }
+.pi-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.74rem;
+}
+.pi-table th {
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 0.63rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text3);
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.pi-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+.pi-table tr:last-child td { border-bottom: none; }
+.pi-table tr:hover td { background: var(--bg3); }
+.pi-code  { font-family: monospace; font-size: 0.75rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.pi-label { font-weight: 600; color: var(--text); white-space: nowrap; }
+.pi-desc  { color: var(--text3); max-width: 280px; }
+.pi-note  { color: var(--text3); max-width: 240px; font-style: italic; }
+.pi-center { text-align: center; white-space: nowrap; }
+.pi-exp   { font-size: 0.63rem; color: var(--text3); display: block; margin-top: 2px; }
+.pi-dim   { color: var(--text3); }
+
+.pi-chip { display:inline-block; padding:2px 7px; border-radius:4px; font-size:0.7rem; font-weight:600; }
+.pi-chip--green  { background:rgba(34,197,94,0.15);  color:var(--green); }
+.pi-chip--yellow { background:rgba(234,179,8,0.15);  color:var(--gold); }
+.pi-chip--red    { background:rgba(239,68,68,0.15);  color:var(--red); }
+.pi-chip--blue   { background:rgba(99,102,241,0.15); color:var(--accent); }
+.pi-chip--dim    { color:var(--text3); }
+
+.pi-badge { display:inline-block; padding:1px 8px; border-radius:4px; font-size:0.65rem; font-weight:600; white-space:nowrap; }
+.pi-badge--green  { background:rgba(34,197,94,0.15);  color:var(--green); }
+.pi-badge--orange { background:rgba(224,92,58,0.15);  color:#e05c3a; }
+.pi-badge--blue   { background:rgba(58,143,224,0.15); color:#3a8fe0; }
+.pi-badge--red    { background:rgba(239,68,68,0.15);  color:var(--red); }
+.pi-badge--yellow { background:rgba(245,197,24,0.15); color:var(--gold); }
+.pi-badge--purple { background:rgba(167,139,250,0.15);color:#a78bfa; }
+.pi-badge--gray   { background:var(--bg3); color:var(--text3); }
 
 /* ─── Pattern cards grid ──────────────────────────────────────────────────────  */
 .pa-patterns-grid {

@@ -2,13 +2,221 @@
 let currentPage = 1;
 let totalPages  = 1;
 let activePredId = null;
+let flagPanelOpen = true;
+let flagFilter = 'all';
+let flagSearch  = '';
+let flagData = [];
+
+// Maps FLAG_DEFS code → short chip code shown in history table rows
+const CHIP_CODE_MAP = {
+  R4_WPA:            'WPOvr-A',
+  WP_OVERRIDE_B:     'WPOvr-B',
+  SURGING_SP:        'SURGE-H/A',
+  SLUMP_H:           'SLUMP-H',
+  SLUMP_A:           'SLUMP-A',
+  HVOL_H:            'HVOL-H',
+  HVOL_A:            'HVOL-A',
+  DH_G2:             'DH-G2',
+  FORTRESS:          'FORTRESS',
+  RCF:               'RCF',
+  PDCF:              'PDCF',
+  MCF:               'MCF',
+  HFCF:              'HFCF',
+  TMF:               'TMF',
+  HVIF:              'HVIF',
+  HSGV_FLAG:         'HSGV',
+  VMF_FLAG:          'VMF',
+  ESDU:              'ESDU',
+  BSS:               'BSS',
+  SWR:               'SWR',
+  AHP:               'AHP',
+  KHA:               'KHA',
+  KXF:               'KXF',
+  RED_THIN:          'RED_THIN',
+  COLD_HAMMER:       'COLD_HAMMER',
+  SLUMP_HEAT_PARK:   'SLUMP+HEAT+PARK',
+  DHVP:              'DHVP',
+  BSS_LINE_CAP:      'BSS_LINE',
+  WARM_VETO:         'WARM_VETO',
+  GVI_UNDER_BAN:     'GVI<35_BAN',
+  BOTH_XFIP_BLIND:   'BOTH_XFIP_BLIND',
+  NO_EDGE:           'NO-EDGE',
+  WIND_COLD_GATE:    'WIND-COLD',
+  HIGH_LINE_OVER_BAN:'HLOB',
+  UNDER_BAN_LOW:     'UNDER_BAN_7.5',
+  P4_ROAD_ACE:       'P4_VETO',
+  P7_SKIP:           'P7_SKIP',
+  P8_BAN:            'P8_BAN',
+  P9_BAN_FLAG:       'P9_BAN',
+  P10_MATCH:         'P10',
+  P11_LAD_ACE:       'P11_LAD_ACE',
+  P19_PIT_HOME:      'P19_PIT',
+  P22_DUAL_LHP_UNDER:'P22_LHP_UNDER',
+  P23_DUAL_LHP_OBan: 'P23_LHP_OVER',
+  BOTH_LHP_FLAG:     'BOTH_LHP',
+  R1_NO_SIGNAL:      'R1_NO_SIGNAL',
+  R2_LINE_9_10:      'R2',
+  R3_SINGLE_SIGNAL:  'R3_SINGLE',
+  R5_PVS_OVER:       'R5_PVS',
+  R7_GVI65:          'R7_GVI65',
+  R8_MCF_FLAG:       'R8_MCF',
+  R9_WIND:           'R9_WIND',
+  R11_SLUMPING_SP:   'R11_SLUMP',
+  R12_DEAD_ZONE:     'R12_DEAD',
+  PWF_MATCH:         'PWF',
+  AWAY_ACE_OVERRIDE: 'AWAY_ACE',
+  SINGLE_RED_UNAV:   'RED_UNAV',
+  APRIL_OU_GATE:     'APR_OU_GATE',
+  XFIP_ESTIM_GATE:   'XFIP_EST',
+  GATE_D_FAIL:       'GATE-D✗',
+  HOS_GATE0:         'GATE-0✗',
+  DIVISIONAL_RIVALRY:'DIV-RACE',
+  FTMF:              'FTMF',
+};
+
+// ─── Flag Panel ───────────────────────────────────────────────────────────────
+function toggleFlagPanel() {
+  flagPanelOpen = !flagPanelOpen;
+  document.getElementById('flagPanelBody').classList.toggle('hidden', !flagPanelOpen);
+  document.getElementById('flagChevron').textContent = flagPanelOpen ? '▾' : '▸';
+}
+
+function filterFlags(type) {
+  flagFilter = type;
+  document.querySelectorAll('.flag-tab').forEach(t => t.classList.remove('flag-tab--active'));
+  event.target.classList.add('flag-tab--active');
+  renderFlagTable(flagData);
+}
+
+function searchFlags(query) {
+  flagSearch = query.toLowerCase().trim();
+  renderFlagTable(flagData);
+}
+
+async function loadFlagStats() {
+  try {
+    const res  = await fetch('/api/flag-stats');
+    const json = await res.json();
+    if (!json.success) return;
+    flagData = json.data;
+    renderFlagTable(flagData);
+  } catch (e) {
+    document.getElementById('flagPanelBody').innerHTML =
+      '<div class="flag-loading" style="color:var(--red)">Failed to load flag stats</div>';
+  }
+}
+
+function renderFlagTable(data) {
+  let rows = flagFilter === 'all' ? data : data.filter(f => f.type === flagFilter);
+  if (flagSearch) {
+    rows = rows.filter(f => {
+      const chipCode = (CHIP_CODE_MAP[f.code] || '').toLowerCase();
+      return f.label.toLowerCase().includes(flagSearch)
+          || f.code.toLowerCase().includes(flagSearch)
+          || f.desc.toLowerCase().includes(flagSearch)
+          || chipCode.includes(flagSearch);
+    });
+  }
+
+  const chip = (actual, expected, label) => {
+    if (actual === null) return `<span class="flag-chip flag-chip--dim">${label || '—'}</span>`;
+    const diff = expected !== null ? actual - expected : null;
+    const cls = diff === null ? 'flag-chip--neutral'
+               : diff >= 5   ? 'flag-chip--green'
+               : diff >= -3  ? 'flag-chip--yellow'
+               :               'flag-chip--red';
+    const arrow = diff === null ? '' : diff >= 5 ? ' ↑' : diff <= -3 ? ' ↓' : '';
+    return `<span class="flag-chip ${cls}">${actual}%${arrow}</span>`;
+  };
+
+  const statusChip = (f) => {
+    const hasData = f.ml_graded >= 3 || f.ou_graded >= 3;
+    if (!hasData) return `<span class="flag-chip flag-chip--dim">< 3 graded</span>`;
+    const mlDiff = f.ml_accuracy !== null && f.expected_ml !== null ? f.ml_accuracy - f.expected_ml : null;
+    const ouDiff = f.ou_accuracy !== null && f.expected_ou !== null ? f.ou_accuracy - f.expected_ou : null;
+    const bestDiff = [mlDiff, ouDiff].filter(d => d !== null).reduce((a, b) => Math.max(a, b), -Infinity);
+    if (bestDiff === -Infinity) return `<span class="flag-chip flag-chip--neutral">Tracking</span>`;
+    if (bestDiff >= 5)  return `<span class="flag-chip flag-chip--green">On Track ✓</span>`;
+    if (bestDiff >= -3) return `<span class="flag-chip flag-chip--yellow">Marginal</span>`;
+    return `<span class="flag-chip flag-chip--red">Below Expected</span>`;
+  };
+
+  const typeLabel = { rule:'Rule', pattern:'Pattern', flag:'Flag' };
+
+  const html = `
+    <table class="flag-table">
+      <thead>
+        <tr>
+          <th>Flag / Label</th>
+          <th>Table Code</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th class="flag-th-num">Triggered</th>
+          <th class="flag-th-num">ML% (actual vs expected)</th>
+          <th class="flag-th-num">O/U% (actual vs expected)</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(f => {
+          const chipCode = CHIP_CODE_MAP[f.code] || '';
+          return `
+          <tr class="flag-row flag-row--${f.type}">
+            <td><code class="flag-code">${f.label}</code></td>
+            <td>${chipCode ? `<span class="flag-chip-code">${esc(chipCode)}</span>` : '<span class="flag-sample">—</span>'}</td>
+            <td><span class="flag-type-chip">${typeLabel[f.type] || f.type}</span></td>
+            <td class="flag-desc">${esc(f.desc)}</td>
+            <td class="flag-num">${f.triggered}</td>
+            <td class="flag-num">
+              ${chip(f.ml_accuracy, f.expected_ml, null)}
+              ${f.expected_ml !== null ? `<span class="flag-expected">exp ${f.expected_ml}%</span>` : ''}
+              ${f.ml_graded > 0 ? `<span class="flag-sample">(${f.ml_graded}g)</span>` : ''}
+            </td>
+            <td class="flag-num">
+              ${chip(f.ou_accuracy, f.expected_ou, null)}
+              ${f.expected_ou !== null ? `<span class="flag-expected">exp ${f.expected_ou}%</span>` : ''}
+              ${f.ou_graded > 0 ? `<span class="flag-sample">(${f.ou_graded}g)</span>` : ''}
+            </td>
+            <td>${statusChip(f)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+
+  document.getElementById('flagPanelBody').innerHTML = html;
+}
+
+// ─── Download all predictions as JSON ────────────────────────────────────────
+async function downloadAllJson() {
+  const btn = document.querySelector('.btn-download-json');
+  const orig = btn.textContent;
+  btn.textContent = 'Fetching…';
+  btn.disabled = true;
+  try {
+    const res  = await fetch('/api/export-all');
+    const json = await res.json();
+    const blob = new Blob([JSON.stringify(json.data, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `mlb_predictions_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('Download failed: ' + err.message);
+  } finally {
+    btn.textContent = orig;
+    btn.disabled = false;
+  }
+}
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
   loadStats();
   loadHistory();
-  // Auto-refresh banner every 30 seconds
-  setInterval(loadStats, 30000);
+  loadFlagStats();
+  // Auto-refresh every 30 seconds
+  setInterval(() => { loadStats(); loadFlagStats(); }, 30000);
 });
 
 // ─── Stats Dashboard ──────────────────────────────────────────────────────────
@@ -556,7 +764,7 @@ function buildFlags(r) {
   const BAN_FLAGS  = new Set(['P4_VETO','P7_SKIP','P8_BAN','P9_BAN','GATE-A✗','GATE-B✗','GATE-C✗','GATE-D✗','GATE-E✗','PDCF','MCF','HFCF','TMF','RAF','HCB','VCB','ENV_BLOCK','EST_HIGH']);
   const GOOD_FLAGS = new Set(['ML✓','P1','P2','P10','Pattern_A','Pattern_B','Strong_Under','WPOvr-A','WPOvr-B','SURGE-H','SURGE-A','FORTRESS']);
 
-  const MAX = 5;
+  const MAX = 10;
   const visible = unique.slice(0, MAX);
   const overflow = unique.length - MAX;
   const tooltip = unique.join(' | ');
@@ -568,7 +776,7 @@ function buildFlags(r) {
 
   const more = overflow > 0 ? `<span class="flag-more" title="${esc(tooltip)}">+${overflow}</span>` : '';
 
-  return chips + more;
+  return `<div class="td-flags-inner">${chips}${more}</div>`;
 }
 
 // ─── Rule detection (mirrors export_with_rules.js logic) ─────────────────────
