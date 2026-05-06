@@ -75,7 +75,9 @@ db.exec(`
     if (count > 0) return;
     const seedPath = path.join(__dirname, "predictions-export.json");
     if (!require("fs").existsSync(seedPath)) return;
-    const rows = JSON.parse(require("fs").readFileSync(seedPath, "utf8"));
+    const parsed = JSON.parse(require("fs").readFileSync(seedPath, "utf8"));
+    const rows = Array.isArray(parsed) ? parsed : (parsed.data || []);
+    if (!rows.length) return;
     const seedStmt = db.prepare(`
       INSERT OR IGNORE INTO predictions (
         id, saved_at, game_date, season_type, home_team, away_team,
@@ -103,7 +105,7 @@ db.exec(`
       for (const r of records) seedStmt.run(r);
     });
     seedAll(rows);
-    const newest = rows.reduce((a, b) => (a.saved_at > b.saved_at ? a : b), rows[0]);
+    const newest = rows.length ? rows.reduce((a, b) => (a.saved_at > b.saved_at ? a : b), rows[0]) : null;
     console.log(`[DB] Seeded ${rows.length} records from predictions-export.json (newest: id=${newest?.id} saved_at=${newest?.saved_at})`);
   } catch (e) {
     console.warn("[DB] Auto-seed skipped:", e.message);
@@ -1088,7 +1090,8 @@ app.get("/api/predictions", (req, res) => {
 // ─── TEMPORARY: Force-reseed from predictions-export.json (remove after use) ──
 app.post("/api/force-reseed", (req, res) => {
   try {
-    const rows = JSON.parse(fs.readFileSync(path.join(__dirname, "predictions-export.json"), "utf8"));
+    const parsed = JSON.parse(fs.readFileSync(path.join(__dirname, "predictions-export.json"), "utf8"));
+    const rows = Array.isArray(parsed) ? parsed : (parsed.data || []);
     const insertRow = db.prepare(`
       INSERT OR IGNORE INTO predictions (
         id, saved_at, game_date, season_type, home_team, away_team,

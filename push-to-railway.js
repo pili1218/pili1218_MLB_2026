@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// push-to-railway.js — push local predictions that are missing from Railway
+// push-to-railway.js — batch push all local predictions to Railway /api/import
 
 const Database = require('better-sqlite3');
 const https = require('https');
@@ -23,7 +23,7 @@ function httpsPost(url, body) {
       res.on('data', c => d += c);
       res.on('end', () => {
         try { resolve(JSON.parse(d)); }
-        catch { resolve({ raw: d }); }
+        catch { resolve({ raw: d.slice(0, 200) }); }
       });
     });
     req.on('error', reject);
@@ -39,53 +39,41 @@ function httpsGet(url) {
       res.on('data', c => d += c);
       res.on('end', () => {
         try { resolve(JSON.parse(d)); }
-        catch { reject(new Error('Invalid JSON')); }
+        catch { reject(new Error('Invalid JSON: ' + d.slice(0, 100))); }
       });
     }).on('error', reject);
   });
 }
 
 async function main() {
-  console.log('[push] Fetching Railway IDs…');
-  const railwayData = await httpsGet(`${RAILWAY}/api/export-all`);
-  const railwayIds = new Set(railwayData.data.map(r => r.id));
-  console.log(`[push] Railway has ${railwayIds.size} predictions (newest id=${Math.max(...railwayIds)})`);
-
+  // Read local DB
   const db = new Database('./predictions.db');
   const localRows = db.prepare('SELECT * FROM predictions ORDER BY id ASC').all();
   db.close();
-  console.log(`[push] Local has ${localRows.length} predictions`);
+  console.log(`[push] Local DB: ${localRows.length} predictions`);
 
-  const missing = localRows.filter(r => !railwayIds.has(r.id));
-  console.log(`[push] ${missing.length} predictions to push to Railway`);
+  // Check Railway current state
+  const stats = await httpsGet(`${RAILWAY}/api/stats`);
+  console.log(`[push] Railway current: ${stats.total} predictions`);
 
-  if (missing.length === 0) {
-    console.log('[push] Railway is already up to date.');
-    return;
-  }
+  // Send in batches of 50
+  const BATCH = 50;
+  let totalInserted = 0;
 
-  let ok = 0, fail = 0;
-  for (const row of missing) {
-    try {
-      const res = await httpsPost(`${RAILWAY}/api/import-manual`, { json: row });
-      if (res.success || res.id) {
-        ok++;
-        process.stdout.write(`\r[push] ${ok}/${missing.length} pushed (id=${row.id})   `);
-      } else {
-        fail++;
-        console.log(`\n[push] FAIL id=${row.id}:`, JSON.stringify(res));
-      }
-    } catch (e) {
-      fail++;
-      console.log(`\n[push] ERROR id=${row.id}:`, e.message);
+  for (let i = 0; i < localRows.length; i += BATCH) {
+    const batch = localRows.slice(i, i + BATCH);
+    const res = await httpsPost(`${RAILWAY}/api/import`, { rows: batch });
+    if (res.inserted !== undefined) {
+      totalInserted += res.inserted;
+      console.log(`[push] Batch ${Math.floor(i/BATCH)+1}: inserted ${res.inserted}/${batch.length} (total so far: ${totalInserted})`);
+    } else {
+      console.log(`[push] Batch ${Math.floor(i/BATCH)+1} response:`, JSON.stringify(res).slice(0, 150));
     }
   }
 
-  console.log(`\n[push] Done — ${ok} pushed, ${fail} failed`);
-
-  // Verify
-  const verify = await httpsGet(`${RAILWAY}/api/export-all`);
-  console.log(`[push] Railway now has ${verify.count} predictions`);
+  // Verify final count
+  const verify = await httpsGet(`${RAILWAY}/api/stats`);
+  console.log(`\n[push] ✅ Done — Railway now has ${verify.total} predictions (ML: ${verify.ml_accuracy}%)`);
 }
 
 main().catch(e => { console.error('[push] Fatal:', e.message); process.exit(1); });
