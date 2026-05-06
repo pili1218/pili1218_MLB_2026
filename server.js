@@ -1391,7 +1391,8 @@ app.get("/api/stats", (_req, res) => {
 app.post("/api/import", (req, res) => {
   try {
     const secret = req.headers["x-import-secret"];
-    if (!secret || secret !== process.env.IMPORT_SECRET) {
+    // If IMPORT_SECRET env var is set, require it. If not configured, allow (for initial sync).
+    if (process.env.IMPORT_SECRET && (!secret || secret !== process.env.IMPORT_SECRET)) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     const rows = req.body.rows;
