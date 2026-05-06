@@ -580,7 +580,7 @@ const RULE_DEFS = [
   { code:'R9',  label:'Wind OUT Sizing',          expOU:54.0, expML:null,  note:'Standalone = OVER $25 lean (54–56%). With catalyst = OVER $50 standard.' },
   { code:'R10', label:'Conf 60–64 [RETIRED]',    expOU:63.6, expML:null,  note:'Retired v3.5. Superseded by R12 extension. Conf 60–64 is now inside the dead zone.' },
   { code:'R11', label:'Slumping SP',             expOU:62.0, expML:null,  note:'Either SP RED>+1.5 → O/U power signal +20pp. Independently justifies O/U bet.' },
-  { code:'R12', label:'Conf 55–65 Dead Zone',    expOU:28.0, expML:null,  note:'Extended from 55–60 to 55–65 (v3.5). Output PASS — no O/U direction. ML still eligible.' },
+  { code:'R12', label:'Conf 55–65 Dead Zone',    expOU:28.0, expML:null,  note:'Extended from 55–60 to 55–65 (v3.5). v3.6: Lean [direction] 🔴 HIGH RISK max $25 — no standard O/U bet. ML still eligible.' },
   { code:'R13', label:'Platoon Weakness Flag',   expOU:null, expML:86.0,  note:'Batting team 0-for-3+ vs SP handedness → ML 86%. Highest alpha signal. Apply +8% WP.' },
   { code:'R14', label:'Away Ace Override',       expOU:null, expML:100.0, note:'Away SP RED<−1.0 while model backs home → 9/9 failure. Apply −10% home WP, flip ML away.' },
 ];

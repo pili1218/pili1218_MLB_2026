@@ -13,6 +13,9 @@ export type Prediction = {
   ou_prediction: string | null;
   ou_confidence: string | null;
   ou_over_pct: number | null;
+  ou_risk_level: string | null;
+  ou_bet_eligible: boolean | null;
+  ou_bet_size: string | null;
   confidence_score: number | null;
   gvi: number | null;
   home_tms: number | null;
@@ -31,6 +34,20 @@ export type Prediction = {
   ml_correct: number | null;
   ou_correct: number | null;
   notes: string | null;
+};
+
+export type FlagStat = {
+  code: string;
+  label: string;
+  desc: string;
+  type: 'rule' | 'pattern' | 'flag';
+  triggered: number;
+  ml_graded: number;
+  ml_accuracy: number | null;
+  ou_graded: number;
+  ou_accuracy: number | null;
+  expected_ml: number | null;
+  expected_ou: number | null;
 };
 
 export type PatternData = {

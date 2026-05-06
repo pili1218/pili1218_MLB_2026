@@ -78,7 +78,7 @@ export default function HomeScreen({ navigation }: Props) {
     >
       <View style={s.hero}>
         <Text style={s.heroTitle}>MLB Game Predictor</Text>
-        <Text style={s.heroSub}>Framework v3.3 · {stats?.total ?? 0} predictions tracked</Text>
+        <Text style={s.heroSub}>Framework v3.6 · {stats?.total ?? 0} predictions tracked</Text>
       </View>
 
       <View style={s.section}>
@@ -98,12 +98,13 @@ export default function HomeScreen({ navigation }: Props) {
       </View>
 
       <View style={s.section}>
-        <Text style={s.secTitle}>V3.3 BENCHMARKS (181-game dataset)</Text>
+        <Text style={s.secTitle}>V3.6 BENCHMARKS (314-game dataset)</Text>
         {[
-          ['ML overall', '54.7%', C.green],
-          ['OVER overall', '60.0%', C.green],
+          ['ML overall', '55.3%', C.green],
+          ['OVER overall', '54.5%', C.green],
           ['UNDER at 8.0–9.0 line', '57.5%', C.green],
           ['Breakeven needed', '52.4%', C.gold],
+          ['Never-Pass lean tracking', 'v3.6', C.blue],
         ].map(([lbl, val, col]) => (
           <View key={lbl} style={s.benchRow}>
             <Text style={s.benchLbl}>{lbl}</Text>

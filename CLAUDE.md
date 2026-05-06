@@ -30,7 +30,7 @@ DB_PATH=/path/to/db        # optional; Railway sets this to a persistent volume 
 **`server.js`** — Single-file Express server (~1400 lines). Handles:
 - Image analysis: `POST /api/analyze` — receives uploaded screenshots, sends to Claude with an image-extraction system prompt, returns structured game data JSON; both `/api/analyze` and `/api/predict` run a **multi-pass verify loop** (up to `MAX_VERIFY_PASSES = 3`) — each pass checks `verifyExtraction()` / `verifyPrediction()` and sends issues back to Claude for correction; ≤1 remaining issue is accepted
 - Text parsing: `POST /api/parse-text` — alternative to image upload; parses pasted plain-text stats into the same structured JSON via `SYSTEM_PROMPT`
-- Framework prediction: `POST /api/predict` — takes extracted game data + optional `extraNotes` scouting context, applies the v3.5 analytical framework (`PREDICT_SYSTEM` prompt), returns prediction JSON
+- Framework prediction: `POST /api/predict` — takes extracted game data + optional `extraNotes` scouting context, applies the v3.6 analytical framework (`PREDICT_SYSTEM` prompt), returns prediction JSON
 - Persistence: `POST /api/save-prediction`, `POST /api/result/:id` (grades ML/OU accuracy), `GET /api/predictions` (paginated)
 - Manual import: `POST /api/import-manual` — accepts either `export_string` or raw `json` body to insert a prediction directly
 - Stats: `GET /api/stats` — ML/O/U accuracy counts + per-confidence-tier breakdown (used by nav badge in `app.js`)
@@ -58,7 +58,7 @@ DB_PATH=/path/to/db        # optional; Railway sets this to a persistent volume 
 
 ---
 
-# MLB Game Predictor — Analytical Framework v3.4
+# MLB Game Predictor — Analytical Framework v3.6
 
 > **Operational protocol for Claude Code.**
 > Do not make any changes until you have 95% confidence in what you need to build. Ask me follow-up questions until you reach that confidence.
@@ -147,7 +147,7 @@ Per-start ERA from game log: `(Earned Runs / IP) × 9`
 **Minimum Starts Gate (v2.2):** If a pitcher has fewer than **3 confirmed regular-season MLB starts in the current season**, set RED = 0 (neutral) and mark as `RED_unavailable`. WP-Override A cannot fire for a pitcher with `RED_unavailable` status. Knowledge-fill from spring training or prior seasons does **not** satisfy this gate. Add flag: "Early-Season RED Unreliable (Home SP)" or "Early-Season RED Unreliable (Away SP)".
 
 **Single SP RED_unavailable O/U Ban (NEW — 15-rule win/loss analysis):** When `RED_unavailable` fires on **either** starting pitcher (not just both), **pass all O/U bets**. 294-game data: RED missing on either SP appears in **26.1% of both-wrong games vs only 4.8% of both-correct games** — the largest directional gap of any single flag (−21.2% gap). 40.5% of staked losses had RED missing on at least one SP. Without RED, the model routes O/U from GVI and park factors alone — systematically wrong. The existing `BOTH_RED_UNAVAIL` ban remains; this single-SP gate is stricter. ML still eligible if conf in zone.
-> **Flag:** `"SINGLE_RED_UNAV: [home/away] SP RED_unavailable — O/U PASS (26.1% BW vs 4.8% BC, most extreme gap)"`
+> **Flag:** `"SINGLE_RED_UNAV: [home/away] SP RED_unavailable — O/U Lean [direction] ⚫ EXTREME RISK, no bet (26.1% BW vs 4.8% BC, most extreme gap — §3.12)"`
 
 **RED Reliability Blend (v3.2 — 3–5 starts):** For pitchers with 3–5 confirmed starts (satisfies RED_unavailable gate but sample is thin), blend RED at reduced weight: `RED_blended = RED × 0.5 + PVS_direction × 0.5` where PVS_direction = +1.0 if PVS > 15 (volatile trending), −1.0 if PVS < 8 (consistently low-variance). Tag as `RED_thin`. This prevents over-reliance on a 3–5 start ERA sample while retaining the directional signal. Full-weight RED resumes at 6+ confirmed starts. Flag: `"RED_thin (Home SP) — 3–5 starts, blended weight"`
 
@@ -264,7 +264,7 @@ Composite score from 1–100. Start at **50**, apply all applicable adjustments.
 
 **High-Line April OVER Signal (v3.1/v3.2):** When game date is **April 1–30** AND O/U line **9.0–9.4** → **lean OVER (Low confidence)**. OVER on 9.0+ lines in April = 64.3% overall. Exception: cancel OVER lean if BOTH confirmed SPs have xFIP ≤ 3.00 → Pass instead.
 
-**High-Line April OVER Ban (v3.2 — NEW):** When game date is **April 1–30** AND O/U line **≥ 9.5** → **PASS** — do NOT lean OVER. OVER on ≥9.5 April lines = **36% hit rate** — the market at these extreme lines fully prices in the offense; calling OVER on top produces losses. Previously lumped with 9.0–9.4 (64.3%) but the ≥9.5 bucket is empirically inverted. Flag: `"HIGH_LINE_OVER_BAN: April line ≥9.5 → PASS (36% OVER)"`
+**High-Line April OVER Ban (v3.2 — NEW, v3.6 updated):** When game date is **April 1–30** AND O/U line **≥ 9.5** → **Lean [GVI/subsidiary direction] 🔴 HIGH RISK — no active OVER bet** (36% hit rate). OVER bet is suppressed; direction is still output per §3.12. The market at ≥9.5 fully prices in the offense; calling OVER produces losses. Flag: `"HIGH_LINE_OVER_BAN: April line ≥9.5 → Lean [direction] 🔴 HIGH RISK, no OVER bet (36% OVER, §3.12)"`
 
 **Wind-Cold Interaction Rule (v2.3):** When wind blows OUT AND temperature < 60°F, **cancel the wind OVER bonus entirely** — cold air kills ball carry. Fall through to OU-D/OU-E instead. Wind IN is still valid regardless of temperature.
 
@@ -304,8 +304,8 @@ Composite score from 1–100. Start at **50**, apply all applicable adjustments.
 | Home TMS Dampener | Home TMS advantage capped at +1% (not +4%) — see §3.3 |
 | O/U confidence cap | Cap ALL O/U confidence at **Moderate** — High tier unavailable (see §3.6) |
 | xFIP Estimation Gate | Estimated xFIP cannot drive High confidence — cap at Moderate (see §3.6) |
-| High-line OVER lean (v3.2) | O/U line **9.0–9.4** → OVER (Low confidence). O/U line **≥9.5 → PASS** (OVER banned, 36% hit rate). See §3.6. |
-| 7.5–7.9 UNDER ban (v3.1) | O/U line 7.5–7.9 → PASS on UNDER — 27.3% hit rate (avg actual 10.3 runs). No bet. |
+| High-line OVER lean (v3.2, v3.6) | O/U line **9.0–9.4** → OVER (Low confidence). O/U line **≥9.5** → Lean [GVI direction] 🔴 HIGH RISK — no active OVER bet (36% hit rate). See §3.6 + §3.12. |
+| 7.5–7.9 UNDER ban (v3.1, v3.6) | O/U line 7.5–7.9 → Lean UNDER 🔴 HIGH RISK — max $25 lean, no standard UNDER bet (27.3% hit rate). Per §3.12. |
 | Wind-Cold gate | Cancel wind OVER bonus if temp < 60°F (see §3.6 Wind-Cold Interaction Rule) |
 | No-Edge Pass | Final win probability 47–53% → betting recommendation = Pass (no ML edge) |
 
@@ -319,8 +319,8 @@ Composite score from 1–100. Start at **50**, apply all applicable adjustments.
 | Home TMS Dampener | Home TMS advantage capped at +1% (not +4%) — see §3.3 |
 | O/U confidence cap | Cap ALL O/U confidence at **Moderate** — High tier unavailable |
 | xFIP Estimation Gate | Estimated xFIP cannot drive High confidence — cap at Moderate |
-| High-line OVER lean (v3.2) | O/U line **9.0–9.4** → OVER (Low confidence). O/U line **≥9.5 → PASS** (OVER banned, 36% hit rate). See §3.6. |
-| 7.5–7.9 UNDER ban (v3.1) | O/U line 7.5–7.9 → PASS on UNDER — 27.3% hit rate (avg actual 10.3 runs). No bet. |
+| High-line OVER lean (v3.2, v3.6) | O/U line **9.0–9.4** → OVER (Low confidence). O/U line **≥9.5** → Lean [GVI direction] 🔴 HIGH RISK — no active OVER bet (36% hit rate). See §3.6 + §3.12. |
+| 7.5–7.9 UNDER ban (v3.1, v3.6) | O/U line 7.5–7.9 → Lean UNDER 🔴 HIGH RISK — max $25 lean, no standard UNDER bet (27.3% hit rate). Per §3.12. |
 | Wind-Cold gate | Cancel wind OVER bonus if temp < 60°F |
 | No-Edge Pass | Final win probability 47–53% → betting recommendation = Pass (no ML edge) |
 
@@ -660,6 +660,55 @@ Before finalizing any betting recommendation, evaluate in this order:
 
 ---
 
+### 3.12 Never-Pass O/U Direction Policy (v3.6 — 2026-05-05)
+
+> **Core Rule:** The model must ALWAYS output a directional lean (OVER or UNDER) for O/U predictions — never a bare "PASS." The **betting recommendation** may still be "no active bet" or a reduced stake, but the direction field is always populated. Ban rules and dead zones become **risk level escalators**, not direction eliminators.
+
+> **Empirical basis:** 50 graded PASS games showed 46% OVER / 54% UNDER (May actuals: 58.7% UNDER, n=46). Big OVER misses (5+ runs above line) had GVI 37–88, confirming GVI remains useful for lean direction even when primary signals are banned. Eliminating the PASS output captures this directional information without implying a bet should be placed.
+
+#### Step 1 — Determine Lean Direction (when primary signals result in no clear direction)
+
+After completing OU-A through OU-F, if the result is a suppressed/banned direction, apply in priority order:
+
+1. **GVI ≥ 65** → Lean OVER (R7: 58.9% OVER at GVI 65+)
+2. **GVI < 35** → Lean UNDER (GVI clearly suppressive — note: GVI<35+UNDER *bet* ban still applies; lean is informational only)
+3. **GVI 35–65 (dead zone)** → use subsidiary signals to determine lean:
+   - R11 Slumping SP active (RED > +1.5 on either pitcher) → Lean OVER
+   - Wind OUT > 8 mph (even if cancelled by ace veto) → Lean OVER
+   - Wind IN > 8 mph → Lean UNDER
+   - Hitter's park + temperature ≥ 65°F → Lean OVER
+   - Pitcher's park + temperature < 55°F → Lean UNDER
+   - Park factor alone (no temperature signal) → Lean per park classification
+   - **May+** with no other signal → Lean UNDER (May actual: 58.7% UNDER, n=46)
+   - **April** with no other signal → Lean OVER (April base rate: 59.4% OVER)
+
+#### Step 2 — Assign Risk Level
+
+Evaluate all ban/suppression rules that fired; assign the **highest applicable tier**:
+
+| Risk Level | Symbol | Trigger Conditions | Bet Size |
+|-----------|--------|--------------------|---------|
+| EXTREME RISK | ⚫ | SINGLE_RED_UNAV OR R1 (zero signals) OR BOTH_XFIP_BLIND OR P4_VETO OR P19_PIT OR GVI<35 (UNDER) | **Lean only — no bet. Display for tracking.** |
+| HIGH RISK | 🔴 | R12 dead zone (conf 55–65) OR DUAL_PVS_SKIP OR BOTH_RED_UNAVAIL OR HIGH_LINE_OVER_BAN (April ≥9.5) OR GVI dead zone (35–65) as sole basis for direction | **Max $25 lean** — informational stake only |
+| MODERATE RISK | 🟡 | Gap 1.0–1.9 runs (below 2.0 threshold) OR single suppression flag OR BSS_LINE_CAP OR April cap limiting | **$25–$37.50 lean** |
+| STANDARD | 🟢 | All gates pass; primary signal active; gap ≥ 2.0 | **Normal sizing per pattern tier** |
+
+#### Step 3 — Output Format (replaces bare "PASS")
+
+Every O/U prediction must show direction + risk annotation. Examples:
+- `OVER (Lean — ⚫ EXTREME RISK — tracking only: SINGLE_RED_UNAV + no primary signal)`
+- `UNDER (Lean — 🔴 HIGH RISK — max $25: R12 dead zone, conf 58 in 55–65 range)`
+- `OVER (Lean — 🟡 MODERATE RISK — $25 lean: gap 1.4 runs < 2.0 threshold)`
+- `OVER (Moderate — 🟢 STANDARD — $75: line 9.0–10.0 OVER Pattern D)`
+
+> **GVI<35 UNDER note:** The ban on GVI<35 UNDER *bets* remains fully active (7/7 = 100% failure). The lean of UNDER is still displayed with ⚫ EXTREME RISK — tracking only. Distinction: directional lean ≠ bet recommendation.
+
+> **R1 (no signal) lean:** When zero OU signals fire, GVI-based direction from Step 1 is the lean. Marked ⚫ EXTREME RISK (16.3% accuracy). No bet placed. Prior "no direction output" rule is retired for tracking purposes.
+
+> **JSON field behavior:** The `ou_prediction` JSON field must always be "OVER" or "UNDER" — never "PASS". Add `ou_risk_level` (STANDARD / MODERATE RISK / HIGH RISK / EXTREME RISK) and `ou_bet_eligible` (true/false) fields to the output schema.
+
+---
+
 ## 4. Hierarchical Winning Chance Synthesis
 
 ### Step 1 — Collect All Inputs
@@ -750,8 +799,8 @@ If one team holds a clear advantage, they are the strong favorite.
 - **Condition 1 — Surging vs Slumping:** → Lean OVER. Escalate to Strong OVER only if the slumping pitcher's team also has 15-day wRC+ > 108.
 - **Condition 2 — Two Surging pitchers:** → Strong UNDER. **April cap (v2.4):** Capped at Moderate confidence in April per §3.6.
 - **Condition 3 — Both Slumping (REVISED THRESHOLD v3.5):** Combined RED (homeRED + awayRED) > **+1.0** when BOTH SPs are trending slumping direction (both RED positive) → **Lean OVER** + WP equalize −8%. *Threshold lowered from "both individually >+1.5" to "combined >+1.0"* — external validation: combined >+1.0 = 54% OVER; prior "both >+1.5" collapsed to 30% (market priced extreme slumping into the line). Escalate to Strong OVER if either team's 15-day wRC+ > 108. Flag: "Both SP Slumping — WP Equalized".
-  > **BSS Line Cap (v3.2):** BSS OVER fires only when line ≤ 8.5. Line > 9.0 → −20 confidence, cap at PASS. Flag: `BSS_LINE_CAP`
-  > **BSS Line Cap (v3.2):** BSS OVER signal only fires (and escalates to OVER direction) when the **O/U line is ≤ 8.5**. When line > 9.0, the market has already priced in the expected pitching volatility — BSS edge disappears at high lines (41% hit rate at line >9.0). Apply −20 confidence if BSS fires but line > 9.0, and cap at PASS. Flag: `"BSS_LINE_CAP active — line >9.0, BSS signal suppressed (-20 conf)"`
+  > **BSS Line Cap (v3.2):** BSS OVER fires only when line ≤ 8.5. Line > 9.0 → −20 confidence, cap at **Lean OVER (🟡 MODERATE RISK — no standard bet)** per §3.12. Flag: `BSS_LINE_CAP`
+  > **BSS Line Cap (v3.2):** BSS OVER signal only fires (and escalates to OVER direction) when the **O/U line is ≤ 8.5**. When line > 9.0, the market has already priced in the expected pitching volatility — BSS edge disappears at high lines (41% hit rate at line >9.0). Apply −20 confidence if BSS fires but line > 9.0; output Lean OVER (🟡 MODERATE RISK) per §3.12 Never-Pass Policy — no standard bet placed. Flag: `"BSS_LINE_CAP active — line >9.0, BSS signal suppressed (-20 conf), Lean OVER §3.12"`
 - **Condition 4 — Slumping Home SP + Heat + Hitter's Park (v3.2 NEW):** Home SP is Slumping (RED > +1.5) AND temperature ≥ 75°F AND park classification = Hitter's Park → **Strong OVER** — **87% OVER hit rate**. This combo overrides the April High Confidence Hard Cap: escalate to **High OVER** even in April when all three conditions are confirmed. Mechanism: slumping pitcher + heat-inflated ball carry + offensive park = structural OVER condition. Flag: `"SLUMP+HEAT+PARK: home SP slumping + ≥75°F + hitter park → Strong/High OVER (87%)"`
 - **Veto (per-condition):**
   - Condition 2 (UNDER) nullified by wind blowing OUT > 15 mph → drop to OU-B
@@ -788,20 +837,19 @@ Balance the following signals:
 ### [OU-E] Tiebreaker — GVI Synthesis
 - GVI > 75 (no ace veto) → **Strong OVER** (67% hit rate — requires no ace xFIP ≤ 3.25 veto)
 - GVI 65–75 → **Lean OVER** (61% hit rate)
-- GVI < 35 + UNDER → **PRE-GATE HARD BAN** — 294-game data: 7/7 = **100% failure**, avg actual 13.7 runs. This is the most dangerous rule in the system. The prior "Strong UNDER 69%" figure is completely inverted at scale. **NEVER output UNDER when GVI < 35.** GVI < 35 may suggest OVER or PASS only. Flag: `"GVI<35_UNDER_BAN: hard ban — 7/7 failure, avg 13.7 actual runs"`
-- **GVI 35–65 → Dead Zone — Pass O/U** (51% hit rate, no edge). Do NOT place an O/U bet based on GVI alone when it falls in this range. Only override with a primary signal: P10 ≤ 6.5, RCF+Slumping (65%), or Wind OUT > 15mph (78%). Empirical: 113-game dataset confirms GVI 35–65 produces no meaningful directional edge. *(capped at Moderate confidence in April per §3.6)*
+- GVI < 35 + UNDER → **PRE-GATE HARD BAN** — 294-game data: 7/7 = **100% failure**, avg actual 13.7 runs. This is the most dangerous rule in the system. The prior "Strong UNDER 69%" figure is completely inverted at scale. **NEVER bet UNDER when GVI < 35.** GVI < 35 → Lean OVER or Lean UNDER (⚫ EXTREME RISK) only — no standard bet on UNDER. Per §3.12, direction is still output for tracking. Flag: `"GVI<35_UNDER_BAN: hard ban — 7/7 failure, avg 13.7 actual runs"`
+- **GVI 35–65 → Dead Zone — Lean [direction via §3.12 subsidiary signals] (🔴 HIGH RISK — max $25; no active bet based on GVI alone)**. Do NOT place a standard O/U bet based on GVI alone in this range. Only override with a primary signal: P10 ≤ 6.5, RCF+Slumping (65%), or Wind OUT > 15mph (78%). Empirical: 113-game dataset confirms GVI 35–65 produces no meaningful directional edge. Apply §3.12 Step 1 subsidiary signals to determine lean direction. *(capped at Moderate confidence in April per §3.6)*
 
 ### [OU-F] April O/U Default Rule (v3.1 — replaces UNDER default; v3.4 HARDENED)
 **Prior rule (UNDER default) reversed.** 128-game dataset: April OVER = **59.4% (19/32)**; April UNDER = **39.6% (19/48)**. The original UNDER default (from a 20-game sample) is now empirically inverted at scale.
 
 **Trigger:** Game date April 1–30 AND no OU-A, OU-B, OU-C, or OU-D signal fired AND no Slumping/Surging SP flag active (R11).
-→ **Default: PASS — output no direction at all.** Do not output OVER. Do not output UNDER.
-→ The 59.4% April OVER stat is a **population average for games where a signal already fired** — it is NOT a default trigger. Calling OVER with no signal violates R1 (16.3% hit rate).
-→ No primary signal = no O/U direction output and no O/U bet in April.
+→ **Default: Lean [direction via §3.12 Step 1] (⚫ EXTREME RISK — tracking only, no bet).** Apply §3.12 Never-Pass Policy. The 59.4% April OVER stat is a population average for games where a signal already fired — it is NOT a bet trigger. R1 (16.3% accuracy with no signal) = no active bet.
+→ Per §3.12 Step 1: if GVI ≥ 65 → Lean OVER; if GVI < 35 → Lean UNDER; GVI 35–65 → use subsidiary signals (park factor, temperature, wind) to determine lean. Output direction always; stake never in this scenario.
 
-**High-Line Lean (v3.2):** See §3.6 — lines **9.0–9.4** lean OVER (Low confidence). Lines **≥9.5 → PASS** (OVER banned at 36%). Do not apply any OVER lean at ≥9.5 even in the absence of a primary signal.
+**High-Line Lean (v3.2):** See §3.6 — lines **9.0–9.4** lean OVER (Low confidence). Lines **≥9.5** → Lean [GVI/subsidiary direction] (🔴 HIGH RISK — max $25, no standard bet; OVER banned at 36% in April at ≥9.5). Output direction always per §3.12; suppress active OVER bet only.
 
-**Low-Line UNDER Ban — 7.5–7.9 (v3.1 — NEW):** When O/U line is **7.5–7.9** AND model direction is UNDER in April → **PASS (banned)**. Hit rate: 3/11 = **27.3%**, avg actual total = **10.3 runs**. The market price of 7.5–7.9 already reflects suppression; UNDER has zero additional edge and loses badly. This supersedes the prior Low-confidence cap.
+**Low-Line UNDER Ban — 7.5–7.9 (v3.1 — NEW):** When O/U line is **7.5–7.9** AND model direction is UNDER in April → **Lean UNDER (🔴 HIGH RISK — max $25 lean, no standard Under bet)**. Hit rate: 3/11 = **27.3%**, avg actual total = **10.3 runs**. The market price of 7.5–7.9 already reflects suppression; no standard Under bet. Direction still shown per §3.12. This supersedes the prior Low-confidence cap.
 
 **Low-Line UNDER Floor (retained from v2.5, narrowed):** When O/U line **≤ 7.4** AND model predicts UNDER in April → cap confidence at **Low**. Lines ≤7.4 = 60% Under hit rate when projected total ≤ 6.5; proceed with Low confidence only (subject to all 7 gates).
 
@@ -841,8 +889,8 @@ Balance the following signals:
 ---
 
 **R1 (v3.4 HARDENED — applies in ALL months including April) — No O/U signal flags = never output O/U direction or bet (16.3% accuracy, n=49)**
-Zero OU signal flags AND no Slumping/Surging flags active = O/U accuracy collapses to **16.3%**. Catastrophic — well below the 52.4% breakeven. **Never place an O/U bet AND never output a directional OVER/UNDER when no signal flag is active.** This overrides OU-F, the April OVER default, and any low-confidence lean. Conf ≤49 with no named signal = PASS with no direction — not OVER (Low). Hard stop: no exceptions in any month.
-> **Flag:** `"R1_NO_SIGNAL: zero O/U signal flags — PASS, no direction output (16.3%, hard stop)"`
+Zero OU signal flags AND no Slumping/Surging flags active = O/U accuracy collapses to **16.3%**. Catastrophic — well below the 52.4% breakeven. **Never place an O/U bet when no signal flag is active.** Per §3.12, output a directional lean (GVI-based or subsidiary signal via §3.12 Step 1) marked ⚫ EXTREME RISK — tracking only, no bet. Conf ≤49 with no named signal = Lean [direction] (⚫ EXTREME RISK) — not a bet. Hard stop on any stake: no exceptions in any month.
+> **Flag:** `"R1_NO_SIGNAL: zero O/U signal flags — Lean [direction] ⚫ EXTREME RISK, no bet (16.3%, §3.12 lean-only)"`
 
 **R2 (confirmed) — Line 9.0–10.0 + OVER + ≥1 signal = elite zone (68.8%, n=32)**
 OVER predictions on lines 9.0–10.0 with at least one O/U signal active hit at **68.8%** — the strongest single bet type in the system. Always act on this combination. Condition: at least one active OU-A/B/C/D signal. Skip when both SPs have confirmed xFIP ≤ 3.00. See P12_OVER_SWEET.
@@ -863,8 +911,8 @@ The 61.3% OVER figure was a biased sub-sample. **294-game staked reality: 38–4
 UNDER at line 8.0–9.0 hits **60.5%** — both ML and O/U above 60% in this window. This remains the only line range where UNDER has a true edge. **Below 8.0 = market priced (34.5%); above 9.0 = scoring expected (sub-40%).** No change to logic — confirmed at scale. All 7 Under gates still required. See P15_UNDER_SWEET.
 
 **R7 (narrowed) — GVI 65+ = O/U OVER only (58.9%, n=56); skip ML (50%); UNDER banned (0.0%, n=4)**
-Narrowed from prior rule. At GVI ≥ 65: O/U OVER hits **58.9%** (viable). ML = **50%** (coin flip — skip). UNDER = **0.0%** (n=4 — catastrophic). **New rule:** GVI ≥ 65 → place O/U OVER only; do NOT bet ML; hard-ban UNDER. High GVI always amplifies scoring — never suppresses it.
-> **Flag:** `"R7_GVI65: GVI≥65 — OVER O/U only (58.9%). Skip ML (50% coin flip). UNDER BANNED (0%)."`
+Narrowed from prior rule. At GVI ≥ 65: O/U OVER hits **58.9%** (viable). ML = **50%** (coin flip — skip). UNDER = **0.0%** (n=4 — catastrophic). **New rule:** GVI ≥ 65 → place O/U OVER only; do NOT bet ML; UNDER bet hard-banned (output as Lean UNDER ⚫ EXTREME RISK per §3.12 if other signals force UNDER direction — bet never placed). High GVI always amplifies scoring — never suppresses it.
+> **Flag:** `"R7_GVI65: GVI≥65 — OVER O/U only (58.9%). Skip ML (50% coin flip). UNDER BANNED (0%) — Lean UNDER ⚫ EXTREME RISK if direction forced."`
 
 **R8 (UPGRADED TO ML BAN — v3.5, 294-game) — MCF active = full ML prohibition**
 MCF (model contradicts market) = **ML BANNED.** 294-game reality: MCF ML = **50% coin flip** — caused the two biggest Apr 29 staked losses. Prior "reduce 25%" was insufficient; MCF games are structurally unedgeable on ML. **When MCF fires: skip ML bet entirely.** O/U still eligible when a signal exists. Do not place any ML bet when the model contradicts the market-implied favourite.
@@ -883,8 +931,8 @@ Strongest new finding from 271-game analysis. When either SP is Slumping (RED > 
 > **Flag:** `"R11_SLUMPING_SP: [Home/Away] SP Slumping (RED>+1.5) — O/U power signal (62%+, n=45). O/U bet eligible."`
 
 **R12 (EXTENDED — v3.5, 294-game) — Confidence 55–65 = structural O/U dead zone**
-Dead zone **extended from 55–60 to 55–65**. 294-game finding: conf 60–65 cluster is elevated in wrong games (15.9%) vs correct games (6.5%). **R10 ("conf 60–64 = O/U sweet spot 63.6%") is retired** — superseded by the 294-game reality. Valid O/U betting zone is now **conf 50–55 only** (below the dead zone) plus high-confidence Tier 1 signals where applicable. **Treat conf 55–65 identically to conf < 50 for O/U — output PASS with no directional bet.** ML at conf 55–65 still eligible per normal rules.
-> **Flag:** `"R12_DEAD_ZONE: Conf 55–65 (extended) — O/U PASS. ML still eligible. R10 retired."`
+Dead zone **extended from 55–60 to 55–65**. 294-game finding: conf 60–65 cluster is elevated in wrong games (15.9%) vs correct games (6.5%). **R10 ("conf 60–64 = O/U sweet spot 63.6%") is retired** — superseded by the 294-game reality. Valid O/U betting zone is now **conf 50–55 only** (below the dead zone) plus high-confidence Tier 1 signals where applicable. **Treat conf 55–65 for O/U as 🔴 HIGH RISK — output Lean [direction] (max $25) per §3.12; no standard O/U bet.** ML at conf 55–65 still eligible per normal rules.
+> **Flag:** `"R12_DEAD_ZONE: Conf 55–65 (extended) — Lean [direction] 🔴 HIGH RISK max $25, no standard O/U bet. ML still eligible. R10 retired."`
 
 **R14 (NEW v3.5 — 294-game) — AWAY_ACE_OVERRIDE: surging away SP overrides all home-field adjustments**
 When the **away SP is confirmed Surging (RED < −1.0)** AND the model was routing ML to the home team (due to Home Fortress, WP-Override B, or home-field stacking) → the away ace signal is being overwhelmed. **294-game result: home team lost 9/9 cases in this exact scenario.** Rule: apply **−10% to home WP** when AWAY_ACE_OVERRIDE fires, and route ML to the away team regardless of home-field bonuses. The surging away ace overrides WPB, TMS home advantage, and Home Fortress. Does NOT override WP-Override A (which itself requires a surging SP on one side).
@@ -916,7 +964,7 @@ Highest alpha ML signal from external cross-validation. When the **batting team 
 - Wind OUT + catalyst → OVER **56%**, $50 stake (R9)
 
 **Hard skips / inversion triggers — 100% inversion rate in both-wrong games:**
-- **SINGLE SP RED_unavailable** → O/U PASS (26.1% BW vs 4.8% BC — most extreme gap)
+- **SINGLE SP RED_unavailable** → O/U Lean ⚫ EXTREME RISK, no bet (26.1% BW vs 4.8% BC — most extreme gap; direction shown per §3.12)
 - Zero signal flags O/U → **16.3%** (R1) — catastrophic
 - Confidence 55–65 O/U → dead zone (R12 EXTENDED) — R10 retired
 - GVI 65+ UNDER → **0.0%** (R7) — hard ban
@@ -1028,7 +1076,7 @@ All outputs must include a `data_sources` record indicating which fields came fr
 2. **Flags & Scores** — all §3 metrics with computed values and triggered flags
 3. **Override Status** — WP-Overrides and OU-Overrides evaluated, fired, or skipped
 4. **Win Probability** — Home % and Away % (sum to 100; max 80/20)
-5. **O/U Prediction** — displayed as `DIRECTION (Confidence — X%)` e.g. `UNDER (Moderate — 39%)` or `OVER (Low — 54%)`
+5. **O/U Prediction** — ALWAYS output a direction per §3.12. Format: `DIRECTION (Confidence — X%) [Risk]`. Standard: `OVER (Moderate — 61%) 🟢`. Lean/banned: `OVER (Lean — ⚫ EXTREME RISK — tracking only: SINGLE_RED_UNAV)` or `UNDER (Lean — 🔴 HIGH RISK — max $25: R12 dead zone)`. Never output bare "PASS".
 6. **Confidence Score** — final score out of 100, all deductions itemized
 7. **Key Driver Narrative** — 2–3 sentences plain English
 8. **Betting Strategy** — tier (Pattern A / Pattern B / Pattern C / Standard / Pass) with O/U and ML recommendations; Combo Bet note when applicable
@@ -1060,8 +1108,10 @@ FLAG 15 FTMF_MATCH:   [ACTIVE ✓ FORTRESS+TMF → Under confidence escalated / 
 ════════════════════════════════════════════════════════════
 ML BET:    [Bet $75 — conf [x] in zone ✓ / Pass — conf outside 50–64 / Pass — conf ≥65]
 COMBO BET: [+$25 available — ML and Under align ✓ / N/A — directions differ]
-UNDER BET: [All gates pass → Bet $[size] [pattern tier] UNDER [line] / Pass — Gate [X] failed: [reason]]
-FINAL RECOMMENDATION: [Combined ML + Under + Combo summary, or Pass with reason]
+O/U DIRECTION: [OVER/UNDER always shown per §3.12 — never blank]
+O/U RISK:  [🟢 STANDARD / 🟡 MODERATE RISK $25–37 / 🔴 HIGH RISK max $25 / ⚫ EXTREME RISK tracking only]
+UNDER BET: [All gates pass → Bet $[size] [pattern tier] UNDER [line] / Lean [direction] [risk level] — Gate [X] failed: [reason]]
+FINAL RECOMMENDATION: [Combined ML + O/U bet/lean summary. Always includes O/U direction + risk level. No "PASS" as final output.]
 ```
 
 > **Purpose:** Betting Decision Flags give the user a transparent checklist of every empirically-derived gate. The user makes the final call — the model shows exactly where edge exists and where it doesn't.
@@ -1080,9 +1130,9 @@ FINAL RECOMMENDATION: [Combined ML + Under + Combo summary, or Pass with reason]
 
 | Condition | Bet Type | Size | Action |
 |-----------|----------|------|--------|
-| P4_VETO or P8_BAN active | **Pass** | — | No bet — hard ban |
-| P19_PIT_HOME_SKIP active | **Pass (O/U)** | — | PIT home O/U banned; ML still eligible |
-| BOTH_RED_UNAVAIL or DUAL_PVS_SKIP active (no primary signal) | **Pass (O/U)** | — | O/U pass; ML still eligible |
+| P4_VETO or P8_BAN active | **Lean [direction] ⚫ EXTREME RISK** | — | No bet — hard ban; output GVI-based lean per §3.12; ML still eligible |
+| P19_PIT_HOME_SKIP active | **Lean [direction] ⚫ EXTREME RISK** | — | PIT home O/U bet banned; lean direction shown; ML still eligible |
+| BOTH_RED_UNAVAIL or DUAL_PVS_SKIP active (no primary signal) | **Lean [direction] 🔴 HIGH RISK** | max $25 | O/U bet suppressed; GVI lean shown per §3.12; ML still eligible |
 | P7_SKIP active | **⚠️ Hard Skip** | — | Output warning, no auto-bet |
 | P26_INVERSION_DAY active | **Reduce ML** | **$37.50** | Half ML stake; prioritise O/U at full unit |
 | Home WP ≥ 70% (P16_HOME_WP70) | **ML Bet** | **$75** | Bet ML home unconditionally (85.7%) |
@@ -1100,17 +1150,19 @@ FINAL RECOMMENDATION: [Combined ML + Under + Combo summary, or Pass with reason]
 | P10_MATCH (corrected projected total ≤ 6.5) AND all 7 Under gates pass AND conf 50–64 | **Strong UNDER** | $50 unit | UNDER — hard cap $50 (74% hit rate) |
 | P22_DUAL_LHP_UNDER (both LHP, UNDER direction) AND all 7 Under gates pass AND conf 50–64 | **Standard Under** | $50 unit | UNDER (80% hit rate) |
 | All 7 Under gates pass AND conf 50–64 only, no pattern match | **Standard Under** | $50 unit | UNDER per model |
-| Confidence < 50 OR confidence ≥ 65 (P9_BAN) | **Pass** | — | Outside target zone — no O/U bet |
-| Corrected projected total gap < 2.0 runs vs line (§3.9) | **Pass** | — | Insufficient edge |
-| Any Under gate 0 or A–E fails | **Pass (Under)** | — | ML still eligible if conf 50–64 |
+| Confidence < 50 (O/U) | **Lean [direction] 🔴 HIGH RISK** | max $25 | Outside target zone — no standard O/U bet; lean per §3.12 |
+| Confidence ≥ 65 O/U (P9_BAN) | **Lean [direction] 🟡 MODERATE RISK** | $25–37 | Capped; lean shown; ML at 65–69 still eligible at $75 |
+| Corrected projected total gap 1.0–1.9 runs vs line | **Lean [direction] 🟡 MODERATE RISK** | $25 lean | Insufficient gap for standard bet; direction shown |
+| Corrected projected total gap < 1.0 runs vs line | **Lean [direction] 🔴 HIGH RISK** | max $25 | Near-zero gap; tracking lean only |
+| Any Under gate 0 or A–E fails | **Lean [direction] per risk level** | per §3.12 | ML still eligible if conf 50–64; Under bet suppressed with lean shown |
 
 > **Confidence zone (v2.7):** The ONLY valid O/U betting zone is confidence score 50–64. Below 50 = too uncertain. Confidence ≥ 65 = historically counter-productive (25% hit rate). P9_BAN always caps at 64 for betting purposes. The model may still show a higher calculated confidence for informational tracking — the bet is still capped.
 
 **O/U Bet Gate (v3.2 updated):**
 - Calculate `Projected Total` per §3.9
-- If `|Projected Total − O/U Line| < 2.0 runs` → O/U bet = **Pass (insufficient gap)**, regardless of confidence tier
+- If `|Projected Total − O/U Line| < 2.0 runs` → O/U bet suppressed; output **Lean [direction] (🟡 MODERATE RISK — $25 lean: gap [x] < 2.0)** per §3.12; direction always shown
 - **Exception:** When P10_MATCH is active (corrected total ≤ 6.5), gap threshold = **≥ 1.5 runs** (see §3.9 P10 Gap Exception)
-- If gap ≥ 2.0 runs (or ≥ 1.5 for P10) AND DH G2 flag active AND direction = UNDER → **Pass** (DH G2 never bet UNDER)
+- If gap ≥ 2.0 runs (or ≥ 1.5 for P10) AND DH G2 flag active AND direction = UNDER → output **Lean UNDER (🟡 MODERATE RISK — $25: DH G2 no UNDER bet)** per §3.12
 - Otherwise: apply pattern-based tier above
 
 **Slate Discipline Cap (v3.2 updated):**
@@ -1147,6 +1199,9 @@ Dodgers @ Yankees,Cole (NYY),Yamamoto (LAD),54%,46%,7.5,61% (Over)
   "ou_prediction": "OVER",
   "ou_confidence": "Moderate",
   "ou_over_pct": 61,
+  "ou_risk_level": "STANDARD",
+  "ou_bet_eligible": true,
+  "ou_bet_size": "$75",
   "confidence_score": 72,
   "confidence_deductions": ["PDCF: -30", "HVIF: -15"],
   "active_flags": ["Surging (Home SP)", "Division Race (Away)", "PDCF"],
@@ -1186,7 +1241,7 @@ Dodgers @ Yankees,Cole (NYY),Yamamoto (LAD),54%,46%,7.5,61% (Over)
 }
 ```
 
-> **Critical:** Return only valid JSON. No markdown fences, no preamble. Use `"Data Notice: [field] not found"` for unavailable fields. The `ml_recommendation` field must output either `"ML $75 — conf [x] in zone"` or `"Pass — conf outside 50–64"` — never output a banned/suppressed message (P6_BAN was lifted in v2.8).
+> **Critical:** Return only valid JSON. No markdown fences, no preamble. Use `"Data Notice: [field] not found"` for unavailable fields. The `ml_recommendation` field must output either `"ML $75 — conf [x] in zone"` or `"Pass — conf outside 50–64"` — never output a banned/suppressed message (P6_BAN was lifted in v2.8). The `ou_prediction` field must ALWAYS be "OVER" or "UNDER" — never "PASS" (see §3.12). Use `ou_risk_level` to communicate bet eligibility: "STANDARD" (🟢 bet eligible), "MODERATE RISK" (🟡 $25–37 lean), "HIGH RISK" (🔴 max $25 lean), "EXTREME RISK" (⚫ tracking only, no bet). `ou_bet_eligible`: true when standard bet applies, false when lean-only. `ou_bet_size`: actual recommended stake ("$75", "$50", "$25", "$0").
 
 ---
 
@@ -1194,6 +1249,7 @@ Dodgers @ Yankees,Cole (NYY),Yamamoto (LAD),54%,46%,7.5,61% (Over)
 
 | Version | Changes |
 |---------|---------|
+| v3.6 | **Never-Pass O/U Direction Policy (2026-05-05).** §3.12 added: model must always output OVER or UNDER — never bare "PASS." Ban rules and dead zones become risk level escalators (⚫ EXTREME RISK / 🔴 HIGH RISK / 🟡 MODERATE RISK / 🟢 STANDARD) rather than direction eliminators. Step 1 lean hierarchy: GVI≥65→OVER, GVI<35→UNDER, GVI 35–65→subsidiary signals (Slumping SP, wind, park, temperature; May+ default UNDER, April default OVER). Step 2 risk assignment based on which ban rules fired. Step 3 output format always includes direction + risk annotation. Affected rules: OU-E dead zone (GVI 35–65) → HIGH RISK lean; OU-F April no-signal → EXTREME RISK lean; BSS Line Cap → MODERATE RISK lean; R1 → EXTREME RISK lean; R7 GVI<35 UNDER → EXTREME RISK (bet still banned); R12 dead zone → HIGH RISK lean. JSON schema: `ou_prediction` always OVER/UNDER; new fields `ou_risk_level`, `ou_bet_eligible`, `ou_bet_size`. Empirical basis: 50 graded PASS games = 46% OVER / 54% UNDER — useful directional signal suppressed by prior PASS policy. |
 | v1.0 | Initial framework — postseason only |
 | v2.0 | Defined TMS/GVI formulas; fixed Over%; confidence floor=25; connected RCF; fixed §5A veto logic; wind direction spec; renamed overrides WP/OU prefix; defined HFCF/TMF thresholds; dual-override priority; PDCF fallback; connected all dead inputs |
 | v2.1 | **Expanded to Regular Season + Postseason.** Season Type field added to Match ID. PMS split into Regular Season vs Postseason bonus tables. Added regular season flags: Division Race, Wild Card Race, Late Season, Must-Win, Series Momentum. GVI +5 high-stakes bonus. EGV replaced by HSGV (covers both seasons). §8 JSON schema adds season_type field. Export string examples for both seasons. |
@@ -1237,7 +1293,7 @@ All design screenshots are stored in the `/screenshot` folder at the project roo
 
 ---
 
-*MLB Game Predictor — CLAUDE.md v3.5*
+*MLB Game Predictor — CLAUDE.md v3.6*
 
 ---
 

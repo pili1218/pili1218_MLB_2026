@@ -17,6 +17,11 @@
       },
       "package": "com.pili1218.mlbpredictor"
     },
-    "plugins": []
+    "plugins": [],
+    "extra": {
+      "eas": {
+        "projectId": "1481f283-91ac-449f-979a-86c61530854e"
+      }
+    }
   }
 }

@@ -50,7 +50,7 @@
         <div class="globe-stats">
           <div class="globe-stat"><span class="globe-stat-num">3</span><span class="globe-stat-label">AI Models</span></div>
           <div class="globe-stat-divider"></div>
-          <div class="globe-stat"><span class="globe-stat-num">v3.4</span><span class="globe-stat-label">Framework</span></div>
+          <div class="globe-stat"><span class="globe-stat-num">v3.6</span><span class="globe-stat-label">Framework</span></div>
           <div class="globe-stat-divider"></div>
           <div class="globe-stat"><span class="globe-stat-num">MLB</span><span class="globe-stat-label">All Season</span></div>
         </div>
@@ -393,11 +393,23 @@
   <section class="changelog-section">
     <div class="changelog-header" id="changelogToggle">
       <span class="changelog-title">Framework Changelog</span>
-      <span class="changelog-badge">v3.4</span>
+      <span class="changelog-badge">v3.6</span>
       <span class="changelog-chevron" id="changelogChevron">▼</span>
     </div>
     <div class="changelog-body hidden" id="changelogBody">
       <div class="changelog-entry changelog-entry--current">
+        <div class="changelog-version">v3.6 <span class="changelog-date">2026-05-05</span></div>
+        <div class="changelog-desc">Never-Pass O/U Direction Policy. The model now always outputs a directional lean (OVER or UNDER) — never a bare PASS. Ban rules and dead zones become risk level escalators with 4 tiers: ⚫ EXTREME RISK (tracking only, no bet), 🔴 HIGH RISK (max $25 lean), 🟡 MODERATE RISK ($25–37 lean), 🟢 STANDARD (normal sizing). Based on 50 graded PASS games showing 46% OVER / 54% UNDER directional signal was being suppressed.</div>
+        <ul class="changelog-items">
+          <li><strong>§3.12 Never-Pass Policy NEW</strong> — O/U prediction always shows OVER or UNDER with risk annotation. Direction determined by GVI hierarchy: GVI≥65=Lean OVER, GVI&lt;35=Lean UNDER, GVI 35–65=subsidiary signals (Slumping SP, wind, park, temp; May+=UNDER default, April=OVER default)</li>
+          <li><strong>Risk Level System</strong> — ⚫ EXTREME RISK (SINGLE_RED_UNAV, R1 no-signal, P4_VETO, P19_PIT, BOTH_XFIP_BLIND) · 🔴 HIGH RISK (R12 dead zone, BOTH_RED_UNAVAIL, GVI dead zone 35–65, April ≥9.5 ban) · 🟡 MODERATE RISK (gap &lt;2.0 runs, BSS cap, P9_BAN) · 🟢 STANDARD (bet eligible)</li>
+          <li><strong>OU-E Dead Zone Updated</strong> — GVI 35–65: "Pass O/U" → Lean [direction] 🔴 HIGH RISK; direction determined by subsidiary signals</li>
+          <li><strong>OU-F April Default Updated</strong> — No-signal April games: "PASS" → Lean ⚫ EXTREME RISK tracking only. R1 still prevents any stake.</li>
+          <li><strong>JSON Schema</strong> — New fields: ou_risk_level, ou_bet_eligible, ou_bet_size. ou_prediction always OVER/UNDER (never PASS)</li>
+          <li><strong>R1, R12 Updated</strong> — Both rules now output lean + risk level instead of suppressing direction. R12 dead zone (conf 55–65) = 🔴 HIGH RISK lean max $25</li>
+        </ul>
+      </div>
+      <div class="changelog-entry changelog-entry--prev">
         <div class="changelog-version">v3.4 <span class="changelog-date">2026-04-29</span></div>
         <div class="changelog-desc">271-game empirical rule revision. 12-rule framework — 5 rules revised/reclassified, 2 new rules added. R3 reclassified (single signal = ML, skip O/U). R7 narrowed (GVI65+ = O/U OVER only, ML coin flip skip, UNDER hard ban 0%). R9 revised (Wind OUT requires catalyst). R11 new: Slumping SP = +20% O/U. R12 new: conf 55–60 = dead zone (28%). Priority bet checklist added.</div>
         <ul class="changelog-items">

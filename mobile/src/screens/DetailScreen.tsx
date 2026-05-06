@@ -70,6 +70,7 @@ export default function DetailScreen({ route, navigation }: Props) {
     : null;
 
   async function submitGrade() {
+    if (!pred) return;
     const hs = parseInt(homeScore, 10);
     const as_ = parseInt(awayScore, 10);
     if (isNaN(hs) || isNaN(as_) || hs < 0 || as_ < 0) {
