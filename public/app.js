@@ -132,7 +132,7 @@ async function analyzeImages() {
       throw new Error(json.error || `Server error ${res.status}`);
     }
 
-    lastResult = json.data;
+    lastResult = normalizeGameData(json.data);
     const v = json.verify;
     if (v) {
       const label = v.remaining_issues.length === 0
@@ -141,7 +141,7 @@ async function analyzeImages() {
       updateStatus(label);
       await new Promise(r => setTimeout(r, 900));
     }
-    showResult(json.data);
+    showResult(lastResult);
   } catch (err) {
     showError(err.message);
   } finally {
@@ -210,8 +210,8 @@ async function loadJsonText() {
       return;
     }
     // Valid single object — skip analyze, use directly
-    lastResult = parsed;
-    showResult(parsed);
+    lastResult = normalizeGameData(parsed);
+    showResult(lastResult);
     return;
   } catch (_) { /* not JSON — send to AI */ }
   // Plain text path — send to /api/parse-text
@@ -227,8 +227,8 @@ async function loadJsonText() {
     });
     const json = await res.json();
     if (!res.ok || json.error) throw new Error(json.error || `Server error ${res.status}`);
-    lastResult = json.data;
-    showResult(json.data);
+    lastResult = normalizeGameData(json.data);
+    showResult(lastResult);
   } catch (err) {
     showError(err.message);
   } finally {
@@ -265,8 +265,8 @@ function selectPickedGame(index) {
   const game = window._pickerGames?.[index];
   if (!game) return;
   document.getElementById('gamePicker')?.remove();
-  lastResult = game;
-  showResult(game);
+  lastResult = normalizeGameData(game);
+  showResult(lastResult);
 }
 
 function clearJsonText() {
@@ -800,6 +800,98 @@ function copyExportStr() {
     const btn = document.querySelector(".btn-copy-exp");
     if (btn) { btn.textContent = "Copied!"; setTimeout(() => { btn.textContent = "Copy"; }, 2000); }
   });
+}
+
+// ─── JSON structure normalizer ────────────────────────────────────────────────
+// Handles multiple JSON schemas: flat, game_info-wrapped, and the alternate
+// schema that uses starting_pitchers / team_recent_form / betting_lines keys.
+function normalizeGameData(data) {
+  if (!data || typeof data !== "object") return data;
+  // Already in the expected flat format
+  if (data.home_team && data.starters && data.team_stats) return data;
+
+  // Pull identity fields from game_info wrapper if present
+  const gi = data.game_info || {};
+
+  // ── Weather ──────────────────────────────────────────────────────────────
+  const weather = data.weather || gi.weather || {};
+
+  // ── Betting ─ normalize betting_lines → betting; strip "Runs" from O/U ──
+  const bRaw = data.betting || data.betting_lines || gi.betting || gi.betting_lines || {};
+  const ouRaw = String(bRaw.over_under || "").replace(/\s*runs?\s*/i, "").trim();
+  const betting = {
+    line:       bRaw.line || bRaw.run_line || "",
+    over_under: ouRaw,
+  };
+
+  // ── Starters ─ normalize starting_pitchers → starters; flatten season_stats
+  const spRaw = data.starters || data.starting_pitchers || gi.starters || gi.starting_pitchers || {};
+  function flattenPitcher(p) {
+    if (!p || typeof p !== "object") return {};
+    const ss = p.season_stats || {};
+    return {
+      name:               p.name || "",
+      handedness:         p.handedness || "",
+      era:                p.era  || ss.era  || "",
+      whip:               p.whip || ss.whip || "",
+      win_loss:           p.win_loss || ss.win_loss || "",
+      strikeouts:         p.strikeouts || ss.strikeouts || "",
+      innings_pitched:    p.innings_pitched || ss.innings_pitched || "",
+      batting_avg_against:p.batting_avg_against || ss.batting_avg_against || "",
+      walks:              p.walks || ss.walks || "",
+      recent_games:       p.recent_games || p.recent_outings || [],
+    };
+  }
+  const starters = {
+    home: flattenPitcher(spRaw.home),
+    away: flattenPitcher(spRaw.away),
+  };
+
+  // ── Team stats ─ normalize team_recent_form with dynamic keys → home/away ─
+  const tfRaw = data.team_stats || data.team_recent_form || gi.team_stats || gi.team_recent_form || {};
+  let hStats = tfRaw.home || {};
+  let aStats = tfRaw.away || {};
+  // Handle dynamic team-name keys like "home_marlins" / "away_orioles"
+  if (!tfRaw.home && !tfRaw.away) {
+    for (const [key, val] of Object.entries(tfRaw)) {
+      if (key.toLowerCase().startsWith("home")) hStats = val;
+      else if (key.toLowerCase().startsWith("away")) aStats = val;
+    }
+  }
+  const team_stats = {
+    home: {
+      batting_avg: hStats.batting_avg || "",
+      on_base_pct: hStats.obp || hStats.on_base_pct || "",
+      avg_runs:    hStats.avg_runs_scored || hStats.avg_runs || "",
+      recent_form: hStats.record || hStats.recent_form || "",
+      home_record: hStats.home_record || "",
+      last_10:     hStats.last_10 || "",
+      streak:      hStats.streak || "",
+    },
+    away: {
+      batting_avg: aStats.batting_avg || "",
+      on_base_pct: aStats.obp || aStats.on_base_pct || "",
+      avg_runs:    aStats.avg_runs_scored || aStats.avg_runs || "",
+      recent_form: aStats.record || aStats.recent_form || "",
+      away_record: aStats.away_record || "",
+      last_10:     aStats.last_10 || "",
+      streak:      aStats.streak || "",
+    },
+  };
+
+  return {
+    game_date:   gi.game_date  || data.game_date  || "",
+    game_time:   gi.game_time  || data.game_time  || "",
+    venue:       gi.venue      || data.venue      || "",
+    home_team:   gi.home_team  || data.home_team  || "",
+    away_team:   gi.away_team  || data.away_team  || "",
+    weather,
+    betting,
+    starters,
+    team_stats,
+    lineups:      data.lineups || data.expected_lineups || gi.lineups || {},
+    data_sources: data.data_sources || gi.data_sources,
+  };
 }
 
 // ─── Utility ──────────────────────────────────────────────────────────────────

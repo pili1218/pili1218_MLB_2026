@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "sync-railway": "node sync-from-railway.js",
+    "sync-local": "node sync-local-db.js",
     "sync-scores": "node sync-scores-to-local.js"
   },
   "dependencies": {

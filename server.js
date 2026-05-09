@@ -164,6 +164,25 @@ const upload = multer({
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// Retry wrapper for 529 overloaded errors — up to 3 attempts with exponential backoff
+async function callClaude(params, attempt = 1) {
+  try {
+    return await client.messages.create(params);
+  } catch (err) {
+    const isOverloaded = err.status === 529 || err.message?.includes("overloaded");
+    if (isOverloaded && attempt < 3) {
+      const delay = attempt * 3000; // 3s, 6s
+      console.warn(`[Claude] Overloaded (attempt ${attempt}/3) — retrying in ${delay / 1000}s...`);
+      await new Promise(r => setTimeout(r, delay));
+      return callClaude(params, attempt + 1);
+    }
+    if (isOverloaded) {
+      err.message = "Anthropic API is overloaded — please try again in a moment.";
+    }
+    throw err;
+  }
+}
+
 const JSON_TEMPLATE = `{
   "game_date": "YYYY-MM-DD",
   "game_time": "HH:MM TZ",
@@ -775,7 +794,7 @@ app.post("/api/parse-text", async (req, res) => {
     if (!text || !text.trim()) return res.status(400).json({ error: "No text provided" });
     if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured" });
     const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : "claude-sonnet-4-6";
-    const message = await client.messages.create({
+    const message = await callClaude({
       model,
       max_tokens: 4000,
       system: SYSTEM_PROMPT,
@@ -837,7 +856,7 @@ app.post("/api/analyze", async (req, res) => {
 
     while (pass < MAX_VERIFY_PASSES) {
       pass++;
-      const message = await client.messages.create({ model, max_tokens: 8000, system: SYSTEM_PROMPT, messages });
+      const message = await callClaude({ model, max_tokens: 8000, system: SYSTEM_PROMPT, messages });
       const rawText = message.content[0].text.trim();
 
       try {
@@ -910,7 +929,7 @@ app.post("/api/predict", async (req, res) => {
 
     while (pass < MAX_VERIFY_PASSES) {
       pass++;
-      const message = await client.messages.create({ model, max_tokens: 8000, system: PREDICT_SYSTEM, messages });
+      const message = await callClaude({ model, max_tokens: 8000, system: PREDICT_SYSTEM, messages });
 
       if (message.stop_reason === "max_tokens") {
         console.warn(`⚠️  Prediction pass ${pass} hit max_tokens limit`);
