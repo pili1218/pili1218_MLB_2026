@@ -1,79 +1,59 @@
 #!/usr/bin/env node
-// push-to-railway.js — batch push all local predictions to Railway /api/import
+// push-to-railway.js
+// Pushes all local predictions.db rows to Railway via /api/import.
+// INSERT OR IGNORE — safe to run multiple times; only new rows are inserted.
+//
+// Usage:  node push-to-railway.js
+//    OR:  npm run push-railway
 
-const Database = require('better-sqlite3');
-const https = require('https');
+const https    = require("https");
+const Database = require("better-sqlite3");
+const path     = require("path");
+require("dotenv").config();
 
-const RAILWAY = 'https://pili1218mlb2026-production.up.railway.app';
+const RAILWAY_URL = "https://pili1218mlb2026-production.up.railway.app/api/import";
+const DB_PATH     = path.join(__dirname, "predictions.db");
+const SECRET      = process.env.IMPORT_SECRET || "";
 
-function httpsPost(url, body) {
-  return new Promise((resolve, reject) => {
-    const data = JSON.stringify(body);
-    const u = new URL(url);
-    const req = https.request({
-      hostname: u.hostname,
-      path: u.pathname + u.search,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(data),
-      },
-    }, res => {
-      let d = '';
-      res.on('data', c => d += c);
-      res.on('end', () => {
-        try { resolve(JSON.parse(d)); }
-        catch { resolve({ raw: d.slice(0, 200) }); }
-      });
-    });
-    req.on('error', reject);
-    req.write(data);
-    req.end();
-  });
-}
+const db   = new Database(DB_PATH);
+const rows = db.prepare("SELECT * FROM predictions ORDER BY id ASC").all();
+db.close();
 
-function httpsGet(url) {
-  return new Promise((resolve, reject) => {
-    https.get(url, res => {
-      let d = '';
-      res.on('data', c => d += c);
-      res.on('end', () => {
-        try { resolve(JSON.parse(d)); }
-        catch { reject(new Error('Invalid JSON: ' + d.slice(0, 100))); }
-      });
-    }).on('error', reject);
-  });
-}
+console.log(`[push] Local DB: ${rows.length} rows — sending to Railway...`);
 
-async function main() {
-  // Read local DB
-  const db = new Database('./predictions.db');
-  const localRows = db.prepare('SELECT * FROM predictions ORDER BY id ASC').all();
-  db.close();
-  console.log(`[push] Local DB: ${localRows.length} predictions`);
+const body    = JSON.stringify({ rows });
+const url     = new URL(RAILWAY_URL);
+const options = {
+  hostname: url.hostname,
+  path:     url.pathname,
+  method:   "POST",
+  headers: {
+    "Content-Type":     "application/json",
+    "Content-Length":   Buffer.byteLength(body),
+    "x-import-secret":  SECRET,
+  },
+};
 
-  // Check Railway current state
-  const stats = await httpsGet(`${RAILWAY}/api/stats`);
-  console.log(`[push] Railway current: ${stats.total} predictions`);
-
-  // Send in batches of 50
-  const BATCH = 50;
-  let totalInserted = 0;
-
-  for (let i = 0; i < localRows.length; i += BATCH) {
-    const batch = localRows.slice(i, i + BATCH);
-    const res = await httpsPost(`${RAILWAY}/api/import`, { rows: batch });
-    if (res.inserted !== undefined) {
-      totalInserted += res.inserted;
-      console.log(`[push] Batch ${Math.floor(i/BATCH)+1}: inserted ${res.inserted}/${batch.length} (total so far: ${totalInserted})`);
-    } else {
-      console.log(`[push] Batch ${Math.floor(i/BATCH)+1} response:`, JSON.stringify(res).slice(0, 150));
+const req = https.request(options, (res) => {
+  let data = "";
+  res.on("data", chunk => { data += chunk; });
+  res.on("end", () => {
+    try {
+      const json = JSON.parse(data);
+      if (json.success) {
+        console.log(`[push] SUCCESS: ${json.inserted} new rows inserted on Railway`);
+        console.log(`[push] ${json.total} sent total, ${json.total - json.inserted} already existed`);
+      } else {
+        console.error("[push] ERROR from Railway:", json.error || data);
+        process.exit(1);
+      }
+    } catch (e) {
+      console.error("[push] ERROR parsing response:", e.message, data.slice(0, 300));
+      process.exit(1);
     }
-  }
+  });
+});
 
-  // Verify final count
-  const verify = await httpsGet(`${RAILWAY}/api/stats`);
-  console.log(`\n[push] ✅ Done — Railway now has ${verify.total} predictions (ML: ${verify.ml_accuracy}%)`);
-}
-
-main().catch(e => { console.error('[push] Fatal:', e.message); process.exit(1); });
+req.on("error", e => { console.error("[push] ERROR:", e.message); process.exit(1); });
+req.write(body);
+req.end();

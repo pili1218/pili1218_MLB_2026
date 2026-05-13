@@ -302,7 +302,7 @@ Add a "data_sources" object at the end of the JSON listing which fields were fil
 
 Return ONLY valid JSON with no markdown, no explanation, just the raw JSON object.`;
 
-const PREDICT_SYSTEM = `You are the MLB Game Predictor AI v3.6 with deep knowledge of MLB statistics, player profiles, and team performance. You handle both Regular Season and Postseason games.
+const PREDICT_SYSTEM = `You are the MLB Game Predictor AI v3.7 with deep knowledge of MLB statistics, player profiles, and team performance. You handle both Regular Season and Postseason games.
 
 ## STEP 0 — FILL MISSING DATA BEFORE ANALYSIS
 
@@ -370,7 +370,7 @@ EARLY SEASON TMS CAP: <5 games played = 0% weight (ignore TMS). 5-9 games = 25% 
 APRIL BIAS CORRECTION (v3.2 — temperature-sensitive): Add to projected_total BEFORE gap check based on game-time temperature:
   temp<50F → +1.5 runs | temp 50-64F → +2.5 runs | temp 65-74F → +3.0 runs | temp ≥75F → +3.5 runs | temp ≥85F → +4.0 runs
   April 1-14 (any temp) → +4.0 runs (opening weeks always max correction)
-  May onward: +2.0 runs. When temp unavailable, default +3.0.
+  May onward (DYNAMIC v3.7): Base +2.0 runs. EXCEPTION: If rolling 7-day avg actual total provided in ROLLING ENVIRONMENT STATS is < 8.5 → use +1.5 runs instead (compressed scoring environment detected). If no rolling data available, use +2.0. When temp unavailable, default +3.0.
 O/U bet requires |bias-corrected projected_total - ou_line| ≥ 2.0 runs — if gap < 2.0, set ou_bet_eligible=false.
 P10 EXCEPTION: When P10_MATCH active (corrected total ≤ 6.5), minimum gap is ≥ 1.5 runs (not 2.0).
 GOLDEN CONDITION EXCEPTION (NEW v3.5, 294-game): When ALL THREE fire simultaneously — (1) OU-A triggered (pitcher form dominance), (2) OU-B triggered (wind/environmental), AND (3) RED mismatch between SPs >1.5 points — reduce gap threshold to ≥ 1.5 runs. This triple signal appears in 42% of both-correct games. The prior 2.0-run gate was blocking 45% of correctly-directed bets as PASS. Flag: GOLDEN_CONDITION — "OU-A+OU-B+RED mismatch >1.5 → gap reduced to 1.5 runs (42% of both-correct games)".
@@ -383,7 +383,14 @@ Gate C (Home SP Quality — v3.2): Home SP ERA < 2.50 (2026 season) with 4+ veri
 Gate D (April Visitor Filter — April only): Visiting team must be ATH (Oakland) or WAS (Washington) — the two weakest offences. All other visitors in April → gate_d=false. N/A for May+.
 Gate E (Estimate): Corrected projected_total ≤ 6.5. If corrected est > 6.5 → gate_e=false. Bimodal distribution: Under wins avg 5.2 runs, losses avg 12.1 — no middle ground.
 
-**§3.10 BETTING CHECKS (v3.6):** After computing all metrics, evaluate all checks. Record in betting_flags JSON field. Evaluate in order: P8/P19→P4→P21→P22/P23→Gate_0→Gate_A→Gate_B→Gate_C→Gate_D→Gate_E→Gate_F→P9→P1/P2/P11/P24→P12/P13/P14/P15→P16/P17/P18/P20/P22/P25→P26→P6_ML_MOD→P5. Apply action rules §3.11 (R1–R14 v3.6) as overrides when triggered. NEVER-PASS POLICY (v3.6 §3.12): ou_prediction must ALWAYS be "OVER" or "UNDER" — never "PASS". Use ou_risk_level to communicate bet eligibility.
+**§3.10 BETTING CHECKS (v3.7):** After computing all metrics, evaluate all checks. Record in betting_flags JSON field. Evaluate in order: OVER_RATE_GATE→P8/P19→P4→P21→P22/P23→Gate_0→Gate_A→Gate_B→Gate_C→Gate_D→Gate_E→Gate_F→P9→P1/P2/P11/P24→P12/P13/P14/P15→P16/P17/P18/P20/P22/P25→P26→P6_ML_MOD→P5. Apply action rules §3.11 (R1–R16 v3.7) as overrides when triggered. NEVER-PASS POLICY (v3.6 §3.12): ou_prediction must ALWAYS be "OVER" or "UNDER" — never "PASS". Use ou_risk_level to communicate bet eligibility.
+
+OVER_RATE_GATE (v3.7 — NEW, applies May+ only): If ROLLING ENVIRONMENT STATS are provided, read the rolling 5-day actual OVER rate and apply BEFORE any O/U direction is set:
+- Rate ≥45%: NORMAL — proceed with standard OVER signals.
+- Rate 42–44%: OVER_CAUTION — apply −15 confidence to all OVER predictions; require RED mismatch >2.0 between SPs to confirm OVER direction. Flag "OVER_RATE_GATE: CAUTION [X]%".
+- Rate <42%: OVER_SUPPRESSED — GVI-only OVER calls blocked. OVER eligible ONLY with: Slumping SP RED>+1.5 OR Wind OUT>12mph+temp>65F OR both offenses wRC+>105 OR line 9.0–10.0. Flag "OVER_RATE_GATE: SUPPRESSED [X]%".
+- Rate <38%: OVER_HARDBAN — apply −25 confidence; OVER bet requires 2+ named primary signals; GVI from PVS alone = PASS. Flag "OVER_RATE_GATE: HARDBAN [X]%".
+Evidence: May 8–10 rate=36%, model called OVER 84% — 24/26 both-wrong games had OVER→UNDER misfire.
 
 P1_dome_dual_ace: Indoor/dome stadium AND both SPs ERA<2.50 (xFIP≤3.25) + 4+ starts + ≥20 IP → Pattern A UNDER (~67% hit rate) — all 7 gates still required
 P2_home_ace_vs_weak: Home SP ERA<2.50 + 4+ starts + ≥20 IP AND visiting team is ATH or WAS (April only) → Pattern B UNDER (~67% hit rate)
@@ -414,22 +421,24 @@ P26_inversion_day (v3.3): Prev-day slate ML accuracy <40% AND O/U accuracy >70% 
 FTMF: Home Fortress (home win%≥.650) AND away team TMF (5+ losses) → escalate Under confidence to Moderate if currently Low.
 NYY_APR_UNDER_BAN: Yankee Stadium home AND April AND UNDER → P8_BAN active (17% hit rate, 1/6).
 
-**§3.11 ACTION RULES v3.6 — 271-game empirical revision + v3.6 Never-Pass update:**
+**§3.11 ACTION RULES v3.7 — 437-game empirical revision. New rules R15, R16 added. R7 and R8 updated:**
 R1 (v3.4 HARDENED, v3.6 UPDATED): Zero O/U signal flags AND no Slumping/Surging flags = NEVER bet O/U (16.3%, n=49). Hard stop on any stake. Per §3.12 Never-Pass: ALWAYS output a directional lean. When R1 fires: determine lean direction from GVI (GVI≥65=Lean OVER, GVI<35=Lean UNDER, GVI 35-65=use subsidiary signals: Slumping SP/wind/park/temp/month default). Set ou_risk_level="EXTREME RISK", ou_bet_eligible=false. Output format: "Lean [OVER/UNDER] ⚫ EXTREME RISK — tracking only (16.3%, R1 no signal, §3.12)". Flag: R1_NO_SIGNAL.
 R2 (confirmed): Line 9.0-10.0 + OVER + ≥1 O/U signal active = elite zone (68.8%, n=32). Act on P12. Cancel if both SPs confirmed xFIP≤3.00.
 R3 (RECLASSIFIED — v3.4): Single O/U signal active = bet ML (75.0%), SKIP O/U (37.5%). R3 is now an ML rule. One clean signal = directional ML clarity, not scoring certainty. Flag: R3_SINGLE_SIGNAL.
 R4 (REVISED — v3.4): WP-Override A fired = bet ML $75 (63.0%). For O/U UNDER in WPA games: confirmed current-season xFIP required — estimated xFIP → ML only, skip O/U UNDER. Flag: R4_WPA_REVISED.
 R5 (REVERSED — v3.5, 294-game): PVS>15 as an OVER routing signal is REMOVED. 294-game staked reality = 38–40% OVER hit rate (below breakeven). The 61.3% figure was from a biased sub-sample. PVS>15 now functions ONLY as a confidence suppressor: apply −10 confidence per pitcher with PVS>15. DO NOT route O/U direction based on PVS. Never bet UNDER with PVS>15 (still banned). But do NOT bet OVER on PVS alone either — it loses. Flag: R5_PVS_CONF_ONLY (confidence suppressor, not directional).
 R6 (confirmed): UNDER 8.0-9.0 line = only viable UNDER window (60.5%, n=43). Below 8.0 = market priced (34.5%, banned). Above 9.0 = scoring expected (sub-40%). All 7 gates still required.
-R7 (NARROWED — v3.4): GVI≥65 = O/U OVER only (58.9%, n=56). ML at GVI65+ = 50% (coin flip — SKIP ML). UNDER at GVI65+ = 0.0% (n=4 — HARD BAN). Narrowed: O/U OVER only, no ML, no UNDER. Flag: R7_GVI65.
-R8 (UPGRADED TO BAN — v3.5, 294-game): MCF active = FULL ML PROHIBITION. ML at MCF = 50% (coin flip) — caused the two biggest Apr 29 staked losses. Prior "reduce 25%" was insufficient; MCF games are structurally unedgeable on ML. When MCF fires: skip ML bet entirely (do not place, not even reduced). O/U still eligible if signal exists. Flag: R8_MCF_BAN — "MCF active: ML BANNED (50% coin flip, 294-game data). O/U proceeds normally."
+R7 (UPDATED v3.7 — 437-game): GVI≥65 OVER: viable in April (58.9%) but inverted in May without catalyst (44.9% — below breakeven). UNDER at GVI65+ = 0.0% (n=4 — HARD BAN). ML at GVI65+ = 50% (coin flip — SKIP ML). MAY+ CATALYST GATE: In May+, GVI≥65 OVER direction requires at least ONE confirmed catalyst beyond GVI itself: (a) Slumping SP RED>+1.5, (b) Wind OUT confirmed >12mph + temp>65F, (c) both offenses 30-day wRC+>105, OR (d) line 9.0–10.0. GVI elevated by PVS volatility alone (no named catalyst) in May+ → route to PASS (OVER_GVI_CATALYST_FAIL). Evidence: pitchers accumulate more starts in May so PVS rises mechanically — but this does NOT predict actual scoring explosions. Flag: R7_GVI65 — "GVI≥65: UNDER BANNED (0%). ML skip (50%). May+ OVER: catalyst required (44.9% without — below breakeven)."
+R8 (UPDATED v3.7 — MCF OVER flip added): MCF active = FULL ML PROHIBITION (50% coin flip — 294-game reality). NEW v3.7: When MCF fires AND model direction is OVER → the market is pricing UNDER. FLIP O/U direction to UNDER. MCF + UNDER = 63.6% OU in May (strongest UNDER signal). MCF + OVER = 41.8% OU in May (market correct). RULE: MCF active + OVER → output direction as UNDER (market-implied), escalate UNDER confidence. MCF active + UNDER → escalate UNDER confidence (double confirmation). Flag: R8_MCF_BAN — "MCF active: ML BANNED. OVER direction flipped to UNDER (market pricing suppression, 63.6% May OU)."
 R9 (REVISED — v3.5, external validated): Wind OUT standalone = 54-56% OVER edge — thin but real. Use as OVER lean at $25 minimum stake only (not full pass). Wind OUT + catalyst (PVS>15, Slumping SP RED>+1.5, or GVI>65) = OVER at standard $50 stake. External cross-validation confirms 54% standalone — prior "full PASS" was too conservative. Size according to signal strength. Flag: R9_WIND_CATALYST (catalyst present → $50) / R9_WIND_LEAN (standalone → $25).
 R10 (confirmed — v3.4 clarified): Conf 60-64 = O/U sweet spot (63.6%, n=11). ML at conf 60-64 = 33.3% (TRAP — skip ML). R10 is O/U ONLY. When conf 60-64: bet O/U, skip ML. Flag: R10_CONF_ZONE.
 R11 (NEW — v3.4): Slumping SP (RED>+1.5) in ANY position (home or away) = O/U power signal. Away slumping: 62.5% O/U (n=24). Home slumping: 61.9% O/U (n=21). Elevates O/U accuracy +20pp. Add as primary O/U signal — independently justifies O/U bet. Combine with R6 for UNDER 8-9 + Slumping (elite setup). Flag: R11_SLUMPING_SP.
 R12 (EXTENDED — v3.5, v3.6 UPDATED): Conf 55-65 = structural O/U dead zone. EXTENDED from 55-60 to 55-65. Treat conf 55-65 as 🔴 HIGH RISK for O/U: output Lean [direction] 🔴 HIGH RISK, max $25 lean — no standard O/U bet. Set ou_risk_level="HIGH RISK", ou_bet_eligible=false. R10 is retired. ML at conf 55-65 still eligible. Valid standard O/U betting zone is conf 50-55 only. Per §3.12 Never-Pass: ou_prediction always set to OVER or UNDER (never PASS). Flag: R12_DEAD_ZONE. Reminder: conf 25, 35, 40, 42 are all below 50 — Lean [direction] 🔴 HIGH RISK for O/U.
 R14 (NEW — v3.5, 294-game): AWAY_ACE_OVERRIDE — When the away SP has RED<−1.0 (confirmed Surging) AND the model was routing ML to the home team (due to Home Fortress, WPB, or home-field stacking), the away surging ace signal is being systematically overwhelmed. 294-game result: home team lost 9/9 cases in this scenario. RULE: when away SP RED<−1.0 AND any home-favoring override (WPB, Home Fortress, TMS home) would route ML home → flip ML to AWAY team. The surging away ace overrides all home-field adjustments. Apply −10% to home WP when AWAY_ACE_OVERRIDE fires. Flag: AWAY_ACE_OVERRIDE — "Surging away ace (RED<−1.0) overrides home-field advantage — route ML to away (9/9 failures when ignored)."
+R15 (NEW v3.7 — 437-game): OVER_RATE_GATE — rolling 5-day actual OVER rate <42% = suppress GVI-only OVER bets. May 8–10: rate=36%, model called OVER 84% of slates, OVER accuracy collapsed to 41.8%. Root cause: GVI/PVS mechanics calibrated on April data fire at same rate in May but scoring environment compressed. Apply thresholds per OVER_RATE_GATE instruction above. UNDER accuracy improved to 63.6% in May — shift staking toward UNDER when gate is active. Flag: R15_OVER_RATE.
+R16 (NEW v3.7 — 437-game): Conf 50-55 + OVER in May requires 2 named signals. Conf 50-55 + OVER dropped from 59.3% to 31.2% in May — reliable zone polluted by directional OVER bias in compressed environment. Conf 50-55 + UNDER still ~60%+. RULE: May+, conf 50-55 + OVER direction requires ≥2 named O/U signals (e.g. Slumping SP + Wind OUT, or OU-A + OU-B). Conf 50-55 + UNDER remains eligible with 1 named signal. Flag: R16_MAY_CONF_FILTER — "May conf 50-55 + OVER: 2 signals required (33% with 1 signal only)."
 R13 (NEW — v3.5, external validated): Platoon Weakness Flag (PWF) — if the BATTING team is 0-for-3 or worse vs the opposing SP's handedness this season → 86% ML win rate for the pitcher's team. This is the highest alpha ML signal in cross-validation. Add PWF as a PRIMARY ML driver when present. If PWF + WP-Override A both fire → treat as near-automatic ML bet (dual-override). Check batting team season wRC+ vs LHP or vs RHP (whichever matches the opposing SP). When detected, apply +8% WP to the pitcher's team. Flag: PWF_MATCH — "Platoon Weakness: [batting team] 0-for-season vs [handedness] → ML [pitcher team] (86% hit rate)".
-PRIORITY CHECKLIST v3.6 — Tier 1 (≥60%): R13 PWF + any signal (86% ML) · R2 line 9-10 OVER+signal (68.8%) · R6+R11 UNDER 8-9+Slumping SP (60.5%) · RCF+OVER (63.3%) · R11 Slumping SP present (62%+) · GOLDEN_CONDITION triple signal (gap≥1.5) · OU-A+OU-B together (41.9% BC vs 26.1% BW) · Conf 50-55 (32.3% BC vs 11.6% BW — highest gap of any zone). Tier 2 (≥55%): R4 WPA ML (63%) · R7 GVI65 OVER (58.9%) · R9 Wind OUT+catalyst OVER (56%). Hard skips / inversion triggers (never-pass: always show lean direction, suppress bet only): R1 no signal (16.3%) → ⚫ EXTREME RISK lean · R12 conf 55-65 extended dead zone → 🔴 HIGH RISK lean · GVI<35+UNDER (100% failure, 7/7) → ⚫ EXTREME RISK lean · SINGLE_RED_UNAV on either SP (26.1% BW, 4.8% BC) → ⚫ EXTREME RISK lean · R5 PVS>15+OVER REMOVED (38-40%) · MCF+ML BAN (50%) · TMS≥15+OU-A HALVE stake (negative interaction) · line 7-8 UNDER (34.5%) → 🔴 HIGH RISK lean · conf 75+ O/U (25%) → 🟡 MODERATE RISK lean.
+PRIORITY CHECKLIST v3.7 — Tier 1 (≥60%): R13 PWF + any signal (86% ML) · R2 line 9-10 OVER+signal (68.8%) · MCF active + OVER → flip to UNDER (63.6% May OU — R8 v3.7) · UNDER prediction generally in May (63.6% — scoring environment compressed) · R6+R11 UNDER 8-9+Slumping SP (63.6% in May, improving) · RCF+OVER (63.3% — valid catalyst for OVER_RATE_GATE) · R11 Slumping SP present (62%+) · GOLDEN_CONDITION triple signal (gap≥1.5) · OU-A+OU-B together (41.9% BC vs 26.1% BW) · Conf 50-55+UNDER (reliable; conf 50-55+OVER in May requires 2 named signals per R16). Tier 2 (≥55%): R4 WPA ML (63%) · R7 GVI65 OVER WITH catalyst in May (58.9%) · R9 Wind OUT+catalyst OVER (56%). Hard skips / inversion triggers (never-pass: always show lean direction, suppress bet only): R1 no signal (16.3%) → ⚫ EXTREME RISK lean · R12 conf 55-65 extended dead zone → 🔴 HIGH RISK lean · GVI<35+UNDER (100% failure, 7/7) → ⚫ EXTREME RISK lean · SINGLE_RED_UNAV on either SP (26.1% BW, 4.8% BC) → ⚫ EXTREME RISK lean · R5 PVS>15+OVER REMOVED (38-40%) · MCF+ML BAN (50%) · TMS≥15+OU-A HALVE stake (negative interaction) · line 7-8 UNDER (34.5%) → 🔴 HIGH RISK lean · conf 75+ O/U (25%) → 🟡 MODERATE RISK lean · GVI≥65 OVER in May+ without catalyst → 44.9% (OVER_GVI_CATALYST_FAIL — route to PASS) · OVER_RATE_GATE active <42% + GVI-only OVER → suppressed (R15) · Conf 50-55 + OVER in May with only 1 named signal → 33% (R16 — needs 2 signals).
 
 **GVI (v3.2):** Start 50. Adjustments: +15 per pitcher PVS>15; -15 per pitcher ERA/xFIP<2.50; -8 per pitcher ERA/xFIP 2.50-3.00; +10 per team 30-day wRC+>110; +10 wind OUT 8-15mph; +20 wind OUT >15mph; -10 wind IN >8mph; -10 temp<50F; -15 temp≥85F; +8 hitter's park; -8 pitcher's park; +5 batter-friendly ump; -5 pitcher-friendly ump; -5 per team with elite defense; +5 if postseason OR both teams in active race.
 APRIL GVI ADJUSTMENTS: -5 if April 1-14; additional -5 if April 1-14 AND line>8.0; additional -5 if April AND OVER signal active.
@@ -498,7 +507,8 @@ OU-C: Both teams 15-day wRC+>115 → OVER.
 
 OU-D: Balance Ace Suppressor (xFIP<3.25) vs Red Hot Offense (wRC+>110, avg_runs>5.0). Park factor. Temp<50F → UNDER bias. Conflict → fall to OU-E.
 
-OU-E: GVI>65 → OVER (58.9%). GVI<35 + UNDER → PRE-GATE HARD BAN (294-game: 7/7 = 100% failure, avg actual 13.7 runs). NEVER bet UNDER when GVI<35 — output Lean UNDER ⚫ EXTREME RISK, no bet (§3.12 Never-Pass). GVI 35-65 → DEAD ZONE → Lean [direction] 🔴 HIGH RISK — no standard bet. Determine lean using §3.12 Step 1 subsidiary signals: Slumping SP active→OVER, wind OUT>8mph→OVER, wind IN>8mph→UNDER, hitter's park + temp≥65F→OVER, pitcher's park + temp<55F→UNDER, May+ default=UNDER, April default=OVER. Only full-bet override for dead zone: P10≤6.5, RCF+Slumping (65%), or Wind OUT>15mph (78%). Set ou_bet_eligible=false for dead-zone-only leans. Flag GVI<35_UNDER_BAN when GVI<35 and UNDER direction triggered.
+OU-E: GVI>65 → OVER (58.9% historically — but see May+ Catalyst Gate below). GVI<35 + UNDER → PRE-GATE HARD BAN (294-game: 7/7 = 100% failure, avg actual 13.7 runs). NEVER bet UNDER when GVI<35 — output Lean UNDER ⚫ EXTREME RISK, no bet (§3.12 Never-Pass). GVI 35-65 → DEAD ZONE → Lean [direction] 🔴 HIGH RISK — no standard bet. Determine lean using §3.12 Step 1 subsidiary signals: Slumping SP active→OVER, wind OUT>8mph→OVER, wind IN>8mph→UNDER, hitter's park + temp≥65F→OVER, pitcher's park + temp<55F→UNDER, May+ default=UNDER, April default=OVER. Only full-bet override for dead zone: P10≤6.5, RCF+Slumping (65%), or Wind OUT>15mph (78%). Set ou_bet_eligible=false for dead-zone-only leans. Flag GVI<35_UNDER_BAN when GVI<35 and UNDER direction triggered.
+MAY+ GVI OVER CATALYST GATE (v3.7 NEW): In May and beyond, GVI≥65 OVER direction requires at least ONE confirmed catalyst: (a) Slumping SP RED>+1.5, (b) Wind OUT confirmed >12mph + temp>65F, (c) both offenses 30-day wRC+>105, OR (d) line 9.0–10.0 (R2). GVI elevated purely from PVS volatility (pitchers accumulating starts) with no named catalyst → set ou_bet_eligible=false, route to PASS with flag "OVER_GVI_CATALYST_FAIL: GVI≥65 but no May+ catalyst — PASS (44.9% without catalyst — below breakeven)". Evidence: May 4+ GVI≥65 OVER dropped from 56.6% to 44.9%.
 
 OU-F (v3.1 updated, v3.6 NEVER-PASS): If no OU-A/B/C/D signal fired AND no Slumping/Surging SP flag active (R11) → output Lean [direction] ⚫ EXTREME RISK — tracking only, no bet (§3.12 Never-Pass). Apply §3.12 Step 1 to determine lean: GVI≥65=Lean OVER, GVI<35=Lean UNDER, GVI 35-65=use subsidiary signals (park/temp/wind; May+=UNDER default, April=OVER default). The 59.4% April OVER stat is a population average for games where a signal fired — NOT a default trigger. Set ou_bet_eligible=false. Output format: "Lean [OVER/UNDER] ⚫ EXTREME RISK — tracking only (R1 no signal)".
 HIGH-LINE LEAN (v3.2, updated v3.6): April AND line 9.0-9.4 → OVER (Low confidence). April AND line≥9.5 → Lean [GVI direction] 🔴 HIGH RISK — no OVER bet (36% hit rate); output direction always per §3.12. Flag HIGH_LINE_OVER_BAN.
@@ -522,6 +532,7 @@ HBTF(v2.7, hot batting team P7_SKIP active):-25. RAF(v2.7, road ace P4_VETO acti
 ENV_BLOCK(v2.8, prev-day slate avg>=10 Gate A failed):-20. EST_HIGH(v2.8, corrected est>6.5 Gate E failed):-15.
 HOS(v3.0, home avg_runs>=6.0 last 3G Gate 0 failed):-30. BRU(v3.0, both SPs <3 starts O/U 38%):-20. DHVP(v3.0, both SPs PVS>15 O/U 41%):-15.
 WARM_VETO(v3.2, temp>=85F AND UNDER AND GVI>=25):-20. BSS_LINE(v3.2, BSS fires but line>9.0):-20. BOTH_XFIP_BLIND(v3.2, both SPs estimated xFIP + <3 starts):-25. WRIGLEY_UNCONF(v3.2, Wrigley wind unconfirmed):-15. HLOB(v3.2, April line>=9.5 OVER direction):-30. RED_THIN(v3.2, SP 3-5 starts blended RED):-5.
+ORC(v3.7, rolling 5-day OVER rate 42-44% — OVER caution, RED mismatch >2.0 required):-15. ORS(v3.7, rolling 5-day OVER rate <42% — GVI-only OVER blocked):-25. ORHB(v3.7, rolling 5-day OVER rate <38% — 2 primary signals required for any OVER):-30. OGCF(v3.7, May+ GVI≥65 OVER with no named catalyst — PASS):-20. MCOW(v3.7, May+ conf 50-55 + OVER with only 1 named signal — needs 2):-20.
 April ceiling: cap final score at 70 for any April game.
 
 ## BETTING RECOMMENDATION (v3.3 — DUAL STRATEGY)
@@ -915,6 +926,31 @@ app.post("/api/predict", async (req, res) => {
 
     const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : "claude-opus-4-6";
 
+    // ── Compute rolling environment stats for OVER_RATE_GATE (v3.7) ──────────
+    let rollingStatsBlock = "";
+    try {
+      const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const recent5 = db.prepare(`
+        SELECT COUNT(*) as total,
+               SUM(CASE WHEN actual_total > CAST(ou_line AS REAL) THEN 1 ELSE 0 END) as overs
+        FROM predictions
+        WHERE saved_at >= ? AND actual_total IS NOT NULL AND ou_line IS NOT NULL AND ou_line != ''
+      `).get(fiveDaysAgo);
+      const recent7 = db.prepare(`
+        SELECT AVG(actual_total) as avg_total
+        FROM predictions
+        WHERE saved_at >= ? AND actual_total IS NOT NULL
+      `).get(sevenDaysAgo);
+      const overRate5 = recent5.total > 0 ? Math.round((recent5.overs / recent5.total) * 100) : null;
+      const avg7 = recent7.avg_total ? recent7.avg_total.toFixed(1) : null;
+      if (overRate5 !== null || avg7 !== null) {
+        rollingStatsBlock = `\n\nROLLING ENVIRONMENT STATS (auto-computed from graded history — apply OVER_RATE_GATE §3.6 and dynamic May bias §3.9):
+- Rolling 5-day actual OVER rate: ${overRate5 !== null ? overRate5 + "% (n=" + recent5.total + " graded games)" : "insufficient data"}
+- Rolling 7-day avg actual total: ${avg7 !== null ? avg7 + " runs" : "insufficient data"}`;
+      }
+    } catch (_) { /* non-critical — skip if DB query fails */ }
+
     const notesBlock = extraNotes && extraNotes.trim()
       ? `\n\nADDITIONAL CONTEXT FROM USER (treat as high-priority scouting notes — incorporate into your analysis):\n${extraNotes.trim()}`
       : "";
@@ -922,7 +958,7 @@ app.post("/api/predict", async (req, res) => {
     // ── Pass 1: initial prediction ──────────────────────────────────────────
     let messages = [{
       role: "user",
-      content: `Apply the MLB Game Predictor v2.6 framework to this extracted game data. Fill any missing fields from your knowledge base first, then return the complete JSON prediction:\n\n${JSON.stringify(gameData, null, 2)}${notesBlock}`,
+      content: `Apply the MLB Game Predictor v3.7 framework to this extracted game data. Fill any missing fields from your knowledge base first, then return the complete JSON prediction:\n\n${JSON.stringify(gameData, null, 2)}${rollingStatsBlock}${notesBlock}`,
     }];
 
     let parsed, issues, pass = 0;

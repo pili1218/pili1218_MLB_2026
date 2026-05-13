@@ -803,56 +803,77 @@ function copyExportStr() {
 }
 
 // ─── JSON structure normalizer ────────────────────────────────────────────────
-// Handles multiple JSON schemas: flat, game_info-wrapped, and the alternate
-// schema that uses starting_pitchers / team_recent_form / betting_lines keys.
+// Handles all known JSON schemas: flat, game_info-wrapped, and alternate schemas
+// using starting_pitchers / team_recent_form / betting_lines / betting_odds keys.
 function normalizeGameData(data) {
   if (!data || typeof data !== "object") return data;
-  // Already in the expected flat format
-  if (data.home_team && data.starters && data.team_stats) return data;
+  // Already flat — home_team is a plain string, starters and team_stats present
+  if (typeof data.home_team === "string" && data.home_team && data.starters && data.team_stats) return data;
 
-  // Pull identity fields from game_info wrapper if present
   const gi = data.game_info || {};
 
-  // ── Weather ──────────────────────────────────────────────────────────────
-  const weather = data.weather || gi.weather || {};
+  // ── Team name — may be a string OR an object {city, name, abbreviation} ──
+  function extractTeamName(val) {
+    if (!val) return "";
+    if (typeof val === "string") return val;
+    if (typeof val === "object") return [val.city, val.name].filter(Boolean).join(" ") || val.abbreviation || "";
+    return String(val);
+  }
+  const home_team = extractTeamName(gi.home_team || data.home_team);
+  const away_team = extractTeamName(gi.away_team || data.away_team);
 
-  // ── Betting ─ normalize betting_lines → betting; strip "Runs" from O/U ──
-  const bRaw = data.betting || data.betting_lines || gi.betting || gi.betting_lines || {};
+  // ── Weather — normalize wind/wind_speed key ──────────────────────────────
+  const wRaw = data.weather || gi.weather || {};
+  const weather = {
+    condition:   wRaw.condition   || "",
+    temperature: wRaw.temperature || "",
+    wind_speed:  wRaw.wind_speed  || wRaw.wind || "",
+  };
+
+  // ── Betting — handle betting_lines / betting_odds / betting keys ──────────
+  const bRaw = data.betting      || data.betting_lines || data.betting_odds ||
+               gi.betting        || gi.betting_lines   || gi.betting_odds   || {};
   const ouRaw = String(bRaw.over_under || "").replace(/\s*runs?\s*/i, "").trim();
   const betting = {
     line:       bRaw.line || bRaw.run_line || "",
     over_under: ouRaw,
   };
 
-  // ── Starters ─ normalize starting_pitchers → starters; flatten season_stats
+  // ── Starters — handle home/away OR home_team/away_team keys ─────────────
   const spRaw = data.starters || data.starting_pitchers || gi.starters || gi.starting_pitchers || {};
+  const spHome = spRaw.home || spRaw.home_team || {};
+  const spAway = spRaw.away || spRaw.away_team || {};
+
   function flattenPitcher(p) {
     if (!p || typeof p !== "object") return {};
     const ss = p.season_stats || {};
+    // Build win_loss string from numbers if not already a string
+    const wl = p.win_loss || ss.win_loss ||
+      (ss.wins != null && ss.losses != null ? `${ss.wins}-${ss.losses}` : "");
     return {
-      name:               p.name || "",
-      handedness:         p.handedness || "",
-      era:                p.era  || ss.era  || "",
-      whip:               p.whip || ss.whip || "",
-      win_loss:           p.win_loss || ss.win_loss || "",
-      strikeouts:         p.strikeouts || ss.strikeouts || "",
-      innings_pitched:    p.innings_pitched || ss.innings_pitched || "",
-      batting_avg_against:p.batting_avg_against || ss.batting_avg_against || "",
-      walks:              p.walks || ss.walks || "",
-      recent_games:       p.recent_games || p.recent_outings || [],
+      name:                p.name || "",
+      handedness:          p.handedness || "",
+      era:                 String(p.era  != null ? p.era  : (ss.era  != null ? ss.era  : "")),
+      whip:                String(p.whip != null ? p.whip : (ss.whip != null ? ss.whip : "")),
+      win_loss:            wl,
+      strikeouts:          String(p.strikeouts       != null ? p.strikeouts       : (ss.strikeouts       ?? "")),
+      innings_pitched:     String(p.innings_pitched  != null ? p.innings_pitched  : (ss.innings_pitched  ?? "")),
+      batting_avg_against: p.batting_avg_against || ss.batting_avg_against || ss.batting_average_against || "",
+      walks:               String(p.walks != null ? p.walks : (ss.walks ?? "")),
+      recent_games:        p.recent_games || p.recent_outings || [],
     };
   }
   const starters = {
-    home: flattenPitcher(spRaw.home),
-    away: flattenPitcher(spRaw.away),
+    home: flattenPitcher(spHome),
+    away: flattenPitcher(spAway),
   };
 
-  // ── Team stats ─ normalize team_recent_form with dynamic keys → home/away ─
+  // ── Team stats — handle home/away, home_team/away_team, dynamic keys ─────
   const tfRaw = data.team_stats || data.team_recent_form || gi.team_stats || gi.team_recent_form || {};
-  let hStats = tfRaw.home || {};
-  let aStats = tfRaw.away || {};
-  // Handle dynamic team-name keys like "home_marlins" / "away_orioles"
-  if (!tfRaw.home && !tfRaw.away) {
+  let hStats = tfRaw.home || tfRaw.home_team || {};
+  let aStats = tfRaw.away || tfRaw.away_team || {};
+  // Fallback: dynamic keys like "home_marlins" / "away_orioles"
+  if (!Object.keys(hStats).length && !Object.keys(aStats).length) {
     for (const [key, val] of Object.entries(tfRaw)) {
       if (key.toLowerCase().startsWith("home")) hStats = val;
       else if (key.toLowerCase().startsWith("away")) aStats = val;
@@ -860,31 +881,31 @@ function normalizeGameData(data) {
   }
   const team_stats = {
     home: {
-      batting_avg: hStats.batting_avg || "",
-      on_base_pct: hStats.obp || hStats.on_base_pct || "",
-      avg_runs:    hStats.avg_runs_scored || hStats.avg_runs || "",
-      recent_form: hStats.record || hStats.recent_form || "",
-      home_record: hStats.home_record || "",
-      last_10:     hStats.last_10 || "",
-      streak:      hStats.streak || "",
+      batting_avg: hStats.batting_avg  || hStats.batting_average  || "",
+      on_base_pct: hStats.obp || hStats.on_base_pct || hStats.on_base_percentage || "",
+      avg_runs:    hStats.avg_runs_scored || hStats.avg_runs || hStats.average_runs || "",
+      recent_form: hStats.record_overall || hStats.record || hStats.recent_form || "",
+      home_record: hStats.home_record    || hStats.record_home  || "",
+      last_10:     hStats.last_10        || hStats.last_10_games || "",
+      streak:      hStats.streak         || "",
     },
     away: {
-      batting_avg: aStats.batting_avg || "",
-      on_base_pct: aStats.obp || aStats.on_base_pct || "",
-      avg_runs:    aStats.avg_runs_scored || aStats.avg_runs || "",
-      recent_form: aStats.record || aStats.recent_form || "",
-      away_record: aStats.away_record || "",
-      last_10:     aStats.last_10 || "",
-      streak:      aStats.streak || "",
+      batting_avg: aStats.batting_avg  || aStats.batting_average  || "",
+      on_base_pct: aStats.obp || aStats.on_base_pct || aStats.on_base_percentage || "",
+      avg_runs:    aStats.avg_runs_scored || aStats.avg_runs || aStats.average_runs || "",
+      recent_form: aStats.record_overall || aStats.record || aStats.recent_form || "",
+      away_record: aStats.away_record    || aStats.record_away  || "",
+      last_10:     aStats.last_10        || aStats.last_10_games || "",
+      streak:      aStats.streak         || "",
     },
   };
 
   return {
-    game_date:   gi.game_date  || data.game_date  || "",
-    game_time:   gi.game_time  || data.game_time  || "",
-    venue:       gi.venue      || data.venue      || "",
-    home_team:   gi.home_team  || data.home_team  || "",
-    away_team:   gi.away_team  || data.away_team  || "",
+    game_date:    gi.game_date || gi.date || data.game_date || "",
+    game_time:    gi.game_time || gi.time || data.game_time || "",
+    venue:        gi.venue     || data.venue || "",
+    home_team,
+    away_team,
     weather,
     betting,
     starters,

@@ -50,7 +50,7 @@
         <div class="globe-stats">
           <div class="globe-stat"><span class="globe-stat-num">3</span><span class="globe-stat-label">AI Models</span></div>
           <div class="globe-stat-divider"></div>
-          <div class="globe-stat"><span class="globe-stat-num">v3.6</span><span class="globe-stat-label">Framework</span></div>
+          <div class="globe-stat"><span class="globe-stat-num">v3.7</span><span class="globe-stat-label">Framework</span></div>
           <div class="globe-stat-divider"></div>
           <div class="globe-stat"><span class="globe-stat-num">MLB</span><span class="globe-stat-label">All Season</span></div>
         </div>
@@ -393,20 +393,30 @@
   <section class="changelog-section">
     <div class="changelog-header" id="changelogToggle">
       <span class="changelog-title">Framework Changelog</span>
-      <span class="changelog-badge">v3.6</span>
+      <span class="changelog-badge">v3.7</span>
       <span class="changelog-chevron" id="changelogChevron">▼</span>
     </div>
     <div class="changelog-body hidden" id="changelogBody">
       <div class="changelog-entry changelog-entry--current">
+        <div class="changelog-version">v3.7 <span class="changelog-date">2026-05-12</span></div>
+        <div class="changelog-desc">437-game OVER environment collapse correction. May 8–10 avg actual total = 7.8 runs while model called OVER 84% of games — 24/26 both-wrong games had OVER→UNDER misfire. GVI≥65 OVER dropped from 56.6% to 44.9% in May. UNDER prediction improved to 63.6%. Six targeted fixes implemented.</div>
+        <ul class="changelog-items">
+          <li><strong>OVER_RATE_GATE NEW (R15)</strong> — Rolling 5-day actual OVER rate gate: &lt;44%=caution (−15 conf, RED mismatch &gt;2.0 required); &lt;42%=suppressed (GVI-only OVER blocked); &lt;38%=hard ban (2 primary signals required). Auto-computed from DB and injected into every prediction.</li>
+          <li><strong>May+ GVI Catalyst Gate (R7 updated)</strong> — GVI≥65 OVER in May+ requires a named catalyst: Slumping SP RED&gt;+1.5 · Wind OUT &gt;12mph+temp&gt;65°F · both wRC+&gt;105 · line 9–10. GVI from PVS volatility alone = PASS (44.9% without catalyst — below breakeven).</li>
+          <li><strong>MCF OVER Flip (R8 updated)</strong> — MCF active + OVER direction → flip to UNDER. Market pricing suppression = 63.6% May O/U. MCF + UNDER = escalated confirmation. ML ban unchanged.</li>
+          <li><strong>Conf 50–55 May Filter (R16 NEW)</strong> — May+ conf 50–55 + OVER requires 2 named signals (was 1). Conf 50–55 + OVER with 1 signal = 33% in May. UNDER unchanged at 1 signal.</li>
+          <li><strong>May Bias Dynamic (§3.9)</strong> — Rolling 7-day avg actual &lt;8.5 → reduce May bias from +2.0 to +1.5 runs. Model was projecting 0.6 runs too high in May 8–10.</li>
+          <li><strong>New deductions</strong> — ORC(−15) · ORS(−25) · ORHB(−30) · OGCF(−20) · MCOW(−20)</li>
+        </ul>
+      </div>
+      <div class="changelog-entry changelog-entry--prev">
         <div class="changelog-version">v3.6 <span class="changelog-date">2026-05-05</span></div>
         <div class="changelog-desc">Never-Pass O/U Direction Policy. The model now always outputs a directional lean (OVER or UNDER) — never a bare PASS. Ban rules and dead zones become risk level escalators with 4 tiers: ⚫ EXTREME RISK (tracking only, no bet), 🔴 HIGH RISK (max $25 lean), 🟡 MODERATE RISK ($25–37 lean), 🟢 STANDARD (normal sizing). Based on 50 graded PASS games showing 46% OVER / 54% UNDER directional signal was being suppressed.</div>
         <ul class="changelog-items">
-          <li><strong>§3.12 Never-Pass Policy NEW</strong> — O/U prediction always shows OVER or UNDER with risk annotation. Direction determined by GVI hierarchy: GVI≥65=Lean OVER, GVI&lt;35=Lean UNDER, GVI 35–65=subsidiary signals (Slumping SP, wind, park, temp; May+=UNDER default, April=OVER default)</li>
-          <li><strong>Risk Level System</strong> — ⚫ EXTREME RISK (SINGLE_RED_UNAV, R1 no-signal, P4_VETO, P19_PIT, BOTH_XFIP_BLIND) · 🔴 HIGH RISK (R12 dead zone, BOTH_RED_UNAVAIL, GVI dead zone 35–65, April ≥9.5 ban) · 🟡 MODERATE RISK (gap &lt;2.0 runs, BSS cap, P9_BAN) · 🟢 STANDARD (bet eligible)</li>
-          <li><strong>OU-E Dead Zone Updated</strong> — GVI 35–65: "Pass O/U" → Lean [direction] 🔴 HIGH RISK; direction determined by subsidiary signals</li>
-          <li><strong>OU-F April Default Updated</strong> — No-signal April games: "PASS" → Lean ⚫ EXTREME RISK tracking only. R1 still prevents any stake.</li>
-          <li><strong>JSON Schema</strong> — New fields: ou_risk_level, ou_bet_eligible, ou_bet_size. ou_prediction always OVER/UNDER (never PASS)</li>
-          <li><strong>R1, R12 Updated</strong> — Both rules now output lean + risk level instead of suppressing direction. R12 dead zone (conf 55–65) = 🔴 HIGH RISK lean max $25</li>
+          <li><strong>§3.12 Never-Pass Policy NEW</strong> — O/U prediction always shows OVER or UNDER with risk annotation.</li>
+          <li><strong>Risk Level System</strong> — ⚫ EXTREME RISK · 🔴 HIGH RISK · 🟡 MODERATE RISK · 🟢 STANDARD</li>
+          <li><strong>OU-E &amp; OU-F Updated</strong> — Dead zone and no-signal cases now output lean + risk level instead of bare PASS</li>
+          <li><strong>JSON Schema</strong> — New fields: ou_risk_level, ou_bet_eligible, ou_bet_size</li>
         </ul>
       </div>
       <div class="changelog-entry changelog-entry--prev">
