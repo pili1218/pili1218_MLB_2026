@@ -429,7 +429,7 @@ R4 (REVISED — v3.4): WP-Override A fired = bet ML $75 (63.0%). For O/U UNDER i
 R5 (REVERSED — v3.5, 294-game): PVS>15 as an OVER routing signal is REMOVED. 294-game staked reality = 38–40% OVER hit rate (below breakeven). The 61.3% figure was from a biased sub-sample. PVS>15 now functions ONLY as a confidence suppressor: apply −10 confidence per pitcher with PVS>15. DO NOT route O/U direction based on PVS. Never bet UNDER with PVS>15 (still banned). But do NOT bet OVER on PVS alone either — it loses. Flag: R5_PVS_CONF_ONLY (confidence suppressor, not directional).
 R6 (confirmed): UNDER 8.0-9.0 line = only viable UNDER window (60.5%, n=43). Below 8.0 = market priced (34.5%, banned). Above 9.0 = scoring expected (sub-40%). All 7 gates still required.
 R7 (UPDATED v3.7 — 437-game): GVI≥65 OVER: viable in April (58.9%) but inverted in May without catalyst (44.9% — below breakeven). UNDER at GVI65+ = 0.0% (n=4 — HARD BAN). ML at GVI65+ = 50% (coin flip — SKIP ML). MAY+ CATALYST GATE: In May+, GVI≥65 OVER direction requires at least ONE confirmed catalyst beyond GVI itself: (a) Slumping SP RED>+1.5, (b) Wind OUT confirmed >12mph + temp>65F, (c) both offenses 30-day wRC+>105, OR (d) line 9.0–10.0. GVI elevated by PVS volatility alone (no named catalyst) in May+ → route to PASS (OVER_GVI_CATALYST_FAIL). Evidence: pitchers accumulate more starts in May so PVS rises mechanically — but this does NOT predict actual scoring explosions. Flag: R7_GVI65 — "GVI≥65: UNDER BANNED (0%). ML skip (50%). May+ OVER: catalyst required (44.9% without — below breakeven)."
-R8 (UPDATED v3.8 — MCF refined with WP gap): MCF + GVI-only (no Slumping SP) → ML BANNED (43.1%). MCF + Slumping SP + WP gap>=10% → ML $75 (54%+ ML — genuine form edge). MCF + Slumping SP + WP gap<10% → ML $37.50 (some edge, reduced conviction). For O/U: MCF + OVER → flip direction to UNDER. MCF + UNDER → escalate UNDER confidence. Flag: R8_MCF_REFINED — "MCF+Slump+WP≥10%=ML$75 | MCF+Slump+WP<10%=ML$37.50 | MCF+no-slump=ML BANNED. OVER flipped UNDER."
+R8 (UPDATED v3.8 — MCF refined with WP gap): MCF + GVI-only (no Slumping SP) → ML BANNED (50.0% coin flip). MCF + Slumping SP + WP gap>=15% → ML $75 (use live stats — see LIVE EMPIRICAL STATS block). MCF + Slumping SP + WP gap<15% → ML PASS (48.9% overall MCF+Slump, below breakeven — live stats show this is NOT reliable). For O/U: MCF + OVER → flip direction to UNDER. MCF + UNDER → escalate UNDER confidence. Flag: R8_MCF_REFINED — "MCF+Slump+WP≥10%=ML$75 | MCF+Slump+WP<10%=ML$37.50 | MCF+no-slump=ML BANNED. OVER flipped UNDER."
 R9 (REVISED — v3.5, external validated): Wind OUT standalone = 54-56% OVER edge — thin but real. Use as OVER lean at $25 minimum stake only (not full pass). Wind OUT + catalyst (PVS>15, Slumping SP RED>+1.5, or GVI>65) = OVER at standard $50 stake. External cross-validation confirms 54% standalone — prior "full PASS" was too conservative. Size according to signal strength. Flag: R9_WIND_CATALYST (catalyst present → $50) / R9_WIND_LEAN (standalone → $25).
 R10 (confirmed — v3.4 clarified): Conf 60-64 = O/U sweet spot (63.6%, n=11). ML at conf 60-64 = 33.3% (TRAP — skip ML). R10 is O/U ONLY. When conf 60-64: bet O/U, skip ML. Flag: R10_CONF_ZONE.
 R11 (NEW — v3.4): Slumping SP (RED>+1.5) in ANY position (home or away) = O/U power signal. Away slumping: 62.5% O/U (n=24). Home slumping: 61.9% O/U (n=21). Elevates O/U accuracy +20pp. Add as primary O/U signal — independently justifies O/U bet. Combine with R6 for UNDER 8-9 + Slumping (elite setup). Flag: R11_SLUMPING_SP.
@@ -543,7 +543,7 @@ April ceiling: cap final score at 70 for any April game.
 
 ## BETTING RECOMMENDATION (v3.3 — DUAL STRATEGY)
 
-ML BETS (v3.3): 181-game data: overall ML=54.7% (99/181). Home WP ≥70% = 85.7% (6/7 — P16, bet unconditionally). Home WP ≥65% = 68.8% (11/16 — P17, bet as primary). Home WP ≥60% = 62.7% (32/51 — bet $75). Conf 50-59=57-60%, conf 65-69=66.7% (STRONGEST ZONE), conf 60-64=16.7% (WEAK — small sample, caution). Do NOT bet ML at conf<50 or >=70 (25%, 4 games). P9_BAN applies O/U ONLY — ML at 65-69 is ELIGIBLE at $75. P26_INVERSION: if triggered → $37.50 ML only.
+ML BETS (v3.8 — use LIVE EMPIRICAL STATS block for current hit rates): Overall ML ~55.5% (535 graded). PRIMARY ML signals (live-verified): HFCF WP≥68% = 68.4% ML (n=19) · WP gap≥15% = 63.2% ML (n=174) · WP gap≥20% = 64.5% ML (n=110) · UNDER prediction correlation = 62.1% ML (n=140). DEAD ZONES: WP gap<10% = 47.3% ML (coin flip, skip) · conf<50+WP gap<20% = 52.6% (marginal, CONF_ML_GATE blocks) · MCF+no-Slump = 50.0% (ban) · PDCF+conf<45 = 30.0% (catastrophic, skip). Conf 50-54 ML = 58.8% (valid zone). Conf 55-64 ML = 59.3% (valid for ML, O/U dead zone). Do NOT bet ML at conf<50 without WP gap≥20% (CONF_ML_GATE). P9_BAN applies O/U ONLY. Always defer to LIVE EMPIRICAL STATS block hit rates over hardcoded estimates.
 
 VARIANCE NOTE: MLB total SD ≈ 4.5 runs. Only recommend bets with clear structural edges.
 
@@ -932,30 +932,77 @@ app.post("/api/predict", async (req, res) => {
 
     const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : "claude-opus-4-6";
 
-    // ── Compute rolling environment stats for OVER_RATE_GATE (v3.7) ──────────
+    // ── Compute live empirical stats from DB — injected into every prediction ──
     let rollingStatsBlock = "";
     try {
-      const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      const recent5 = db.prepare(`
-        SELECT COUNT(*) as total,
-               SUM(CASE WHEN actual_total > CAST(ou_line AS REAL) THEN 1 ELSE 0 END) as overs
-        FROM predictions
-        WHERE saved_at >= ? AND actual_total IS NOT NULL AND ou_line IS NOT NULL AND ou_line != ''
-      `).get(fiveDaysAgo);
-      const recent7 = db.prepare(`
-        SELECT AVG(actual_total) as avg_total
-        FROM predictions
-        WHERE saved_at >= ? AND actual_total IS NOT NULL
-      `).get(sevenDaysAgo);
-      const overRate5 = recent5.total > 0 ? Math.round((recent5.overs / recent5.total) * 100) : null;
-      const avg7 = recent7.avg_total ? recent7.avg_total.toFixed(1) : null;
-      if (overRate5 !== null || avg7 !== null) {
-        rollingStatsBlock = `\n\nROLLING ENVIRONMENT STATS (auto-computed from graded history — apply OVER_RATE_GATE §3.6 and dynamic May bias §3.9):
-- Rolling 5-day actual OVER rate: ${overRate5 !== null ? overRate5 + "% (n=" + recent5.total + " graded games)" : "insufficient data"}
-- Rolling 7-day avg actual total: ${avg7 !== null ? avg7 + " runs" : "insufficient data"}`;
-      }
-    } catch (_) { /* non-critical — skip if DB query fails */ }
+      const fiveDaysAgo  = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().slice(0,10);
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0,10);
+
+      // Rolling environment (OVER_RATE_GATE + dynamic May bias)
+      const r5 = db.prepare(`SELECT COUNT(*) as n, SUM(CASE WHEN actual_total > CAST(ou_line AS REAL) THEN 1 ELSE 0 END) as ov FROM predictions WHERE game_date >= ? AND actual_total IS NOT NULL AND ou_line IS NOT NULL AND ou_line != ''`).get(fiveDaysAgo);
+      const r7 = db.prepare(`SELECT AVG(actual_total) as avg FROM predictions WHERE game_date >= ? AND actual_total IS NOT NULL`).get(sevenDaysAgo);
+      const overRate5 = r5.n > 0 ? Math.round(r5.ov / r5.n * 100) : null;
+      const avg7 = r7.avg ? (+r7.avg).toFixed(1) : null;
+
+      // Season-to-date empirical stats (live from DB)
+      const tot  = db.prepare(`SELECT COUNT(*) as n, SUM(ml_correct) as ml, SUM(CASE WHEN ou_correct IS NOT NULL THEN 1 ELSE 0 END) as ong, SUM(ou_correct) as ou FROM predictions WHERE ml_correct IS NOT NULL`).get();
+      const mlPct = tot.n > 0 ? (tot.ml / tot.n * 100).toFixed(1) : null;
+      const ouPct = tot.ong > 0 ? (tot.ou / tot.ong * 100).toFixed(1) : null;
+
+      // Confidence zones
+      const c50 = db.prepare(`SELECT COUNT(*) as n, SUM(ml_correct) as ml, SUM(CASE WHEN ou_correct IS NOT NULL THEN 1 ELSE 0 END) as ong, SUM(ou_correct) as ou FROM predictions WHERE confidence_score BETWEEN 50 AND 54 AND ml_correct IS NOT NULL`).get();
+      const c55 = db.prepare(`SELECT COUNT(*) as n, SUM(ml_correct) as ml, SUM(CASE WHEN ou_correct IS NOT NULL THEN 1 ELSE 0 END) as ong, SUM(ou_correct) as ou FROM predictions WHERE confidence_score BETWEEN 55 AND 64 AND ml_correct IS NOT NULL`).get();
+      const cLo = db.prepare(`SELECT COUNT(*) as n, SUM(ml_correct) as ml FROM predictions WHERE confidence_score < 50 AND ml_correct IS NOT NULL`).get();
+
+      // WP gap ML
+      const wpLo = db.prepare(`SELECT COUNT(*) as n, SUM(ml_correct) as ml FROM predictions WHERE ABS(home_win_pct-away_win_pct) < 10 AND ml_correct IS NOT NULL`).get();
+      const wp15 = db.prepare(`SELECT COUNT(*) as n, SUM(ml_correct) as ml FROM predictions WHERE ABS(home_win_pct-away_win_pct) >= 15 AND ml_correct IS NOT NULL`).get();
+      const wp20 = db.prepare(`SELECT COUNT(*) as n, SUM(ml_correct) as ml FROM predictions WHERE ABS(home_win_pct-away_win_pct) >= 20 AND ml_correct IS NOT NULL`).get();
+
+      // Key OU combos
+      const un89 = db.prepare(`SELECT COUNT(*) as n, SUM(ou_correct) as w FROM predictions WHERE CAST(ou_line AS REAL) BETWEEN 8.0 AND 8.99 AND ou_prediction='UNDER' AND ou_correct IS NOT NULL`).get();
+      const ov910 = db.prepare(`SELECT COUNT(*) as n, SUM(ou_correct) as w FROM predictions WHERE CAST(ou_line AS REAL) BETWEEN 9.0 AND 9.99 AND ou_prediction='OVER' AND ou_correct IS NOT NULL`).get();
+      const ovAll = db.prepare(`SELECT COUNT(*) as n, SUM(ou_correct) as w FROM predictions WHERE ou_prediction='OVER' AND ou_correct IS NOT NULL`).get();
+      const unAll = db.prepare(`SELECT COUNT(*) as n, SUM(ou_correct) as w FROM predictions WHERE ou_prediction='UNDER' AND ou_correct IS NOT NULL`).get();
+
+      // Key flags
+      const hfcf = db.prepare(`SELECT COUNT(*) as n, SUM(ml_correct) as ml, SUM(CASE WHEN ou_correct IS NOT NULL THEN 1 ELSE 0 END) as ong, SUM(ou_correct) as ou FROM predictions WHERE MAX(home_win_pct,away_win_pct)>=68 AND ml_correct IS NOT NULL`).get();
+      const pdcf = db.prepare(`SELECT COUNT(*) as n, SUM(ml_correct) as ml, SUM(CASE WHEN ou_correct IS NOT NULL THEN 1 ELSE 0 END) as ong, SUM(ou_correct) as ou FROM predictions WHERE active_flags LIKE '%PDCF%' AND confidence_score<45 AND ml_correct IS NOT NULL`).get();
+      const gvi80ov = db.prepare(`SELECT COUNT(*) as n, SUM(ou_correct) as w FROM predictions WHERE gvi>=80 AND ou_prediction='OVER' AND ou_correct IS NOT NULL`).get();
+
+      const pct = (w, n) => n > 0 ? `${(w/n*100).toFixed(1)}% (n=${n})` : "n/a";
+
+      rollingStatsBlock = `
+
+LIVE EMPIRICAL STATS (auto-computed from ${tot.n} graded games — use these as authoritative hit rates, not the hardcoded estimates in rules):
+
+ROLLING ENVIRONMENT (apply OVER_RATE_GATE §3.6 + dynamic May bias §3.9):
+- Rolling 5-day actual OVER rate: ${overRate5 !== null ? overRate5 + `% (n=${r5.n} graded)` : "insufficient data"}
+- Rolling 7-day avg actual total: ${avg7 !== null ? avg7 + " runs" : "insufficient data"}
+- May bias: ${avg7 && parseFloat(avg7) < 8.5 ? "+1.5 runs (compressed — avg<8.5)" : "+2.0 runs (standard)"}
+
+SEASON-TO-DATE ACCURACY (${tot.n} ML graded, ${tot.ong} OU graded):
+- Overall ML: ${mlPct}% | Overall OU: ${ouPct}%
+- OVER predictions: ${pct(ovAll.w, ovAll.n)} | UNDER predictions: ${pct(unAll.w, unAll.n)}
+
+CONFIDENCE ZONES (use these, not hardcoded estimates):
+- Conf <50 ML: ${pct(cLo.ml, cLo.n)} → gate: require WP gap≥20% or PASS
+- Conf 50-54 ML: ${pct(c50.ml, c50.n)} | OU: ${pct(c50.ou, c50.ong)} ← primary valid O/U zone
+- Conf 55-64 ML: ${pct(c55.ml, c55.n)} | OU: ${pct(c55.ou, c55.ong)} ← O/U dead zone
+
+WP GAP ML ACCURACY:
+- Gap <10%: ${pct(wpLo.ml, wpLo.n)} → skip ML
+- Gap ≥15%: ${pct(wp15.ml, wp15.n)} → primary ML signal
+- Gap ≥20%: ${pct(wp20.ml, wp20.n)} → strongest ML signal
+
+KEY O/U COMBOS:
+- Line 8-9 UNDER: ${pct(un89.w, un89.n)} ← best OU signal
+- Line 9-10 OVER: ${pct(ov910.w, ov910.n)}
+- HFCF (WP≥68%) ML: ${pct(hfcf.ml, hfcf.n)} | OU: ${pct(hfcf.ou, hfcf.ong)}
+- PDCF+conf<45 ML: ${pct(pdcf.ml, pdcf.n)} | OU: ${pct(pdcf.ou, pdcf.ong)} ← PASS BOTH
+- GVI≥80 OVER: ${pct(gvi80ov.w, gvi80ov.n)} ← near coin flip`;
+
+    } catch (_) { /* non-critical */ }
 
     const notesBlock = extraNotes && extraNotes.trim()
       ? `\n\nADDITIONAL CONTEXT FROM USER (treat as high-priority scouting notes — incorporate into your analysis):\n${extraNotes.trim()}`
