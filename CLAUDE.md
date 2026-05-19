@@ -67,11 +67,14 @@ IMPORT_SECRET=mlb2026import  # required to push rows to Railway /api/import
 - Auto-deploys on push to `master`
 - `DB_PATH` env var → `/var/data/predictions.db` (persistent volume)
 - `IMPORT_SECRET` env var → `mlb2026import` (required by `/api/import`)
-- Must run `npm run sync-railway` before every commit — see **Section 11** for the mandatory pre-commit workflow
+- **Pre-commit workflow (mandatory — see Section 11):**
+  1. `npm run push-railway` — push any local-only rows up first
+  2. `npm run sync-railway` — refresh `predictions-export.json` from Railway
+  3. `git add … && git commit && git push`
 
 ---
 
-# MLB Game Predictor — Analytical Framework v3.7
+# MLB Game Predictor — Analytical Framework v3.8
 
 > **Operational protocol for Claude Code.**
 > Do not make any changes until you have 95% confidence in what you need to build. Ask me follow-up questions until you reach that confidence.
@@ -300,7 +303,7 @@ Composite score from 1–100. Start at **50**, apply all applicable adjustments.
 
 ### 3.7 Supporting Flag Definitions
 
-**Heavy Favorite Caution Flag (HFCF):** Either team's final win probability reaches **68% or higher**.
+**Heavy Favorite Confirmation Flag (HFCF — RECLASSIFIED v3.8):** Either team's final win probability reaches **68% or higher**. Previously a caution flag (−20 confidence). **Reclassified as ML CONFIRMATION** — 534-game data: HFCF ML = **85.7% (n=14)**, the single best ML predictor in the dataset. The old −20 deduction was penalising correct predictions. New rule: HFCF active → **ML bet confirmed at $75 (Tier 1)**. Still applies −20 to **O/U only** (OU remains 38.5% in high-WP games — unreliable). Flag: `"HFCF_CONFIRM: WP≥68% — ML Tier 1 $75 (85.7%, n=14). O/U caution −20."`
 
 **Team Meltdown Flag (TMF):** Either team has lost **5 or more consecutive games** entering this matchup.
 > **v2.2 Win Probability Effect:** When TMF fires for the **away team**, reduce the home team's win probability by −3% (TMF team more desperate; regression to mean). When TMF fires for the **home team**, reduce the home team's win probability by −5% (loses home advantage on top of poor form). Apply before final normalization.
@@ -790,6 +793,7 @@ If one team holds a clear advantage, they are the strong favorite.
 
 **Direct Conflict → PDCF Triggered:**
 > ⚠️ **Primary Driver Conflict Flag (PDCF):** Triggered when the road team has a higher TMS AND the home team has an active Home Fortress Flag.
+> **PDCF O/U Block (v3.8):** PDCF + conf < 45 → **both ML and O/U = PASS**. 534-game data: PDCF OU = **32.6%** (n=43), ML = 44.4% — both markets fail simultaneously. The conflict is unresolvable regardless of direction. PDCF + conf ≥ 45 → both markets eligible with standard sizing (marginal). Flag: `"PDCF_OU_BLOCK: conf<45 — ML PASS + O/U PASS (32.6% OU, 44.4% ML — both below breakeven)"`
 
 **PDCF Tiebreaker Hierarchy:**
 
@@ -804,8 +808,10 @@ If one team holds a clear advantage, they are the strong favorite.
 
 - Normalize to sum to exactly 100
 - Cap at maximum **80% / 20%**
-- Check HFCF (≥68%) → flag and apply −20 confidence
+- Check HFCF (≥68%) → **ML CONFIRMED at Tier 1 $75** (85.7% ML, n=14 — reclassified v3.8); apply −20 to O/U only
 - Check MCF (contradicts betting line favorite) → flag and apply −25 confidence
+- **GVI≥80 WP Reduction (v3.8):** When GVI≥80, reduce WP contribution from all PVS-related signals (HVIF, VMF) by 50%. GVI≥80 ML = 49.4% — high GVI environment distorts WP through PVS volatility. Apply: HVIF deduction halved (−10→−5 for WP purposes), VMF halved. GVI still applies to O/U direction unchanged. Flag: `"GVI80_WP_REDUCTION: GVI≥80 — PVS WP bonuses halved (49.4% ML without reduction)"`
+- **Conf<50 ML Gate (v3.8):** Conf < 50 + ML bet → require **WP gap ≥ 20%** to proceed. If WP gap < 20% at conf < 50 → ML = PASS. Evidence: 76% of May 17+ ML losses had conf < 50; conf < 50 without WP gap = 43.6% ML (below breakeven). The no-edge zone (47–53%) catches close games but not 53–60% WP at low confidence. Flag: `"CONF_ML_GATE: conf<50 + WP gap<20% → ML PASS (43.6% without quality advantage)"`
 - **No-Edge Pass Threshold (v2.5):** When the final home win probability falls in the **47–53% range** after all adjustments and normalization, set `ml_edge = "no-edge"`. The ML betting recommendation must be **Pass** — do not force a side. The O/U prediction still runs normally. Empirical basis: close games (45–55% model win%) went 1-for-8 (12.5%) — worse than random, indicating the model has zero edge in this range.
 
 ---
@@ -826,7 +832,8 @@ If one team holds a clear advantage, they are the strong favorite.
 - **Condition 3 — Both Slumping (REVISED THRESHOLD v3.5):** Combined RED (homeRED + awayRED) > **+1.0** when BOTH SPs are trending slumping direction (both RED positive) → **Lean OVER** + WP equalize −8%. *Threshold lowered from "both individually >+1.5" to "combined >+1.0"* — external validation: combined >+1.0 = 54% OVER; prior "both >+1.5" collapsed to 30% (market priced extreme slumping into the line). Escalate to Strong OVER if either team's 15-day wRC+ > 108. Flag: "Both SP Slumping — WP Equalized".
   > **BSS Line Cap (v3.2):** BSS OVER fires only when line ≤ 8.5. Line > 9.0 → −20 confidence, cap at **Lean OVER (🟡 MODERATE RISK — no standard bet)** per §3.12. Flag: `BSS_LINE_CAP`
   > **BSS Line Cap (v3.2):** BSS OVER signal only fires (and escalates to OVER direction) when the **O/U line is ≤ 8.5**. When line > 9.0, the market has already priced in the expected pitching volatility — BSS edge disappears at high lines (41% hit rate at line >9.0). Apply −20 confidence if BSS fires but line > 9.0; output Lean OVER (🟡 MODERATE RISK) per §3.12 Never-Pass Policy — no standard bet placed. Flag: `"BSS_LINE_CAP active — line >9.0, BSS signal suppressed (-20 conf), Lean OVER §3.12"`
-- **Condition 4 — Slumping Home SP + Heat + Hitter's Park (v3.2 NEW):** Home SP is Slumping (RED > +1.5) AND temperature ≥ 75°F AND park classification = Hitter's Park → **Strong OVER** — **87% OVER hit rate**. This combo overrides the April High Confidence Hard Cap: escalate to **High OVER** even in April when all three conditions are confirmed. Mechanism: slumping pitcher + heat-inflated ball carry + offensive park = structural OVER condition. Flag: `"SLUMP+HEAT+PARK: home SP slumping + ≥75°F + hitter park → Strong/High OVER (87%)"`
+- **Condition 4 — Slumping Home SP + Heat + Hitter's Park (v3.2 NEW):** Home SP is Slumping (RED > +1.5) AND temperature ≥ 75°F AND park classification = Hitter's Park → **Strong OVER** — **87% OVER hit rate**.
+- **Condition 5 — Home SP Surging (RED < −1.0) → O/U UNDER lean (v3.8 NEW):** Home SP RED < −1.0 AND ≥5 confirmed starts AND Gate C met (ERA < 2.50) AND GVI < 90 → **Lean UNDER** (64.0% OU in May, n=25). Mechanism: surging home SP suppresses away team scoring → total stays lower. Apply as O/U UNDER lean independently of WP signal (home surge RED is separately a −10 confidence deduction on home ML, now also dual-use as O/U UNDER). Requires: confirmed RED (not RED_thin), no OVER_RATE_GATE suppression in opposite direction. Flag: `"HOME_SURGE_UNDER: home SP RED<−1.0 + Gate C met → O/U UNDER lean (64.0% OU, May n=25)"` This combo overrides the April High Confidence Hard Cap: escalate to **High OVER** even in April when all three conditions are confirmed. Mechanism: slumping pitcher + heat-inflated ball carry + offensive park = structural OVER condition. Flag: `"SLUMP+HEAT+PARK: home SP slumping + ≥75°F + hitter park → Strong/High OVER (87%)"`
 - **Veto (per-condition):**
   - Condition 2 (UNDER) nullified by wind blowing OUT > 15 mph → drop to OU-B
   - Condition 1 (OVER) reinforced by wind blowing OUT > 15 mph → Strong OVER, High confidence
@@ -943,9 +950,9 @@ UNDER at line 8.0–9.0 hits **60.5%** — both ML and O/U above 60% in this win
 Historical: GVI≥65 OVER = 58.9% (viable). **May 4+ reality: 44.9% — below breakeven.** The GVI signal degrades in May because PVS rises with sample size but does not predict today's scoring explosion. **Updated rule:** GVI ≥ 65 → UNDER still hard-banned (0.0%, n=4); ML still skip (50% coin flip). OVER: eligible only when **May+ GVI Catalyst Gate passes** (see OU-E) — Slumping SP, Wind OUT >12mph+temp>65°F, both wRC+>105, or line 9–10. Without catalyst in May+: route to PASS, not OVER.
 > **Flag:** `"R7_GVI65: GVI≥65 — UNDER BANNED (0%). ML skip (50%). OVER: catalyst required in May+ (44.9% without catalyst — below breakeven)."`
 
-**R8 (UPDATED v3.7 — MCF OVER flip added) — MCF active = ML banned + OVER→UNDER direction flip**
-MCF ML ban remains fully active (50% coin flip — never bet ML when MCF fires). **NEW v3.7:** When MCF fires AND model direction is OVER → the market is pricing UNDER (market sees lower scoring than model). **Flip O/U direction to UNDER** and treat as secondary UNDER confirmation. MCF + UNDER = 63.6% OU in May (strongest UNDER signal). MCF + OVER remaining = 41.8% OU in May (market correct). **Rule:** MCF active + OVER prediction → output direction as UNDER (market-implied), escalate UNDER confidence. MCF active + UNDER prediction → escalate UNDER confidence (double confirmation).
-> **Flag:** `"R8_MCF_BAN: MCF active — ML BANNED. OVER direction flipped to UNDER (market pricing suppression, 63.6% May OU)."`
+**R8 (UPDATED v3.8 — MCF refined with WP gap condition) — MCF active = ML banned + refined Slump exception**
+MCF ML ban for GVI-only games remains fully active (43.1% ML — never bet). OVER→UNDER flip retained. **Refined v3.8 (534-game):** MCF + Slumping SP + WP gap ≥ 10% → **ML $75** (54%+ ML — genuine SP-form edge justifies overriding market). MCF + Slumping SP + WP gap < 10% → **ML $37.50** reduced stake (some edge but too close). MCF + no Slumping SP → ML ban maintained. For O/U: MCF active + OVER direction → flip to UNDER. MCF + UNDER → escalate UNDER confidence.
+> **Flag:** `"R8_MCF_REFINED: MCF+Slump+WP≥10% → ML $75 | MCF+Slump+WP<10% → ML $37.50 | MCF+no-slump → ML BANNED. OVER flipped UNDER."`
 
 **R9 (REVISED v3.5, external validated) — Wind OUT standalone = thin OVER lean $25; catalyst = $50**
 External cross-validation confirms Wind OUT standalone = **54–56% OVER** — thin but real edge. Prior "full PASS" was too conservative. **Revised sizing rule:** Wind OUT alone → OVER lean at **$25 minimum stake**. Wind OUT + catalyst (PVS > 15, Slumping SP RED > +1.5, or GVI > 65) → OVER at **standard $50 stake**. Size according to signal strength, never go above standard on wind alone.
@@ -971,9 +978,11 @@ May 8–10: rolling 5-day actual OVER rate hit 36% while model called OVER 84% o
 Conf 50–55 + OVER dropped from 59.3% to **31.2%** in May 4+ — the most reliable confidence zone polluted by directional OVER bias in a compressed scoring environment. Root cause: conf 50–55 + UNDER still hits ~60%+; conf 50–55 + OVER in May = 33% (destructive). **Rule:** In May+, conf 50–55 + OVER direction requires **≥ 2 named O/U signals** (e.g. Slumping SP + Wind OUT, or OU-A + OU-B). Conf 50–55 + UNDER remains eligible with 1 named signal (unchanged). This restores the confidence zone as a reliable UNDER filter without blocking OVER when genuinely supported.
 > **Flag:** `"R16_MAY_CONF_FILTER: May conf 50–55 + OVER — requires 2 named signals (33% with 1 signal only)"`
 
-**R14 (NEW v3.5 — 294-game) — AWAY_ACE_OVERRIDE: surging away SP overrides all home-field adjustments**
-When the **away SP is confirmed Surging (RED < −1.0)** AND the model was routing ML to the home team (due to Home Fortress, WP-Override B, or home-field stacking) → the away ace signal is being overwhelmed. **294-game result: home team lost 9/9 cases in this exact scenario.** Rule: apply **−10% to home WP** when AWAY_ACE_OVERRIDE fires, and route ML to the away team regardless of home-field bonuses. The surging away ace overrides WPB, TMS home advantage, and Home Fortress. Does NOT override WP-Override A (which itself requires a surging SP on one side).
-> **Flag:** `"AWAY_ACE_OVERRIDE: Away SP surging (RED<−1.0) — home WP −10%, route ML away (9/9 failure when overridden)"`
+**R14 (UPGRADED v3.8 — AWAY_ACE_HARD) — Surging away SP (≥5 starts confirmed): flip ML to away + skip all O/U**
+Upgrade from soft override (−10% WP) to hard direction flip. 534-game data: away surge RED<−1.0 + UNDER = **35.0% OU** (consistent loss). Away surge + OVER = **51.7% OU** (near breakeven). Both O/U directions fail — total is genuinely unpredictable when away ace is surging. **Rule (two parts):**
+1. **ML:** When away SP RED < −1.0 AND ≥5 confirmed starts → route ML to **away team unconditionally**. Flip direction if model backs home team. Overrides WPB, TMS home, Home Fortress (not WP-Override A).
+2. **O/U:** When away SP RED < −1.0 AND ≥5 starts → **skip all O/U bets** on that game (both directions unreliable). Use only as ML signal.
+> **Flag:** `"R14_AWAY_ACE_HARD: Away SP surging (RED<−1.0, ≥5 starts) — ML away unconditional. O/U SKIP both directions (35% UNDER, 51.7% OVER — both unreliable)."`
 
 **R13 (NEW v3.5 — external validated) — Platoon Weakness Flag (PWF): lineup 0-for-3+ vs SP handedness = 86% ML**
 Highest alpha ML signal from external cross-validation. When the **batting team is 0-for-3 or worse against the opposing SP's handedness** this season (e.g. team hitting .000 vs LHP and facing a LHP today), back the pitcher's team on ML. **86% ML win rate** — extraordinary hit rate. Add as a **primary ML driver** when present. If PWF + WP-Override A both fire → treat as near-automatic ML bet (dual-override). Apply **+8% WP** to the pitcher's team when PWF detected. Check batting team season wRC+ vs LHP vs RHP split — if either split shows structural weakness (0–3, sub-.150 BA, or wRC+ < 60 vs that handedness), flag it.
@@ -984,17 +993,19 @@ Highest alpha ML signal from external cross-validation. When the **batting team 
 ### Priority Bet Checklist — v3.5 (external cross-validated)
 
 **Tier 1 bets (hit rate ≥60%, n>20) — act on these:**
+- **HFCF active (WP≥68%) → ML Tier 1 $75** — 85.7% ML, n=14 (reclassified v3.8, best single ML signal)
 - **PWF active + any signal → ML 86%** (R14/R13) — highest alpha signal in system
-- **OU-A + OU-B both fire** → highest win-win signal (41.9% BC vs 26.1% BW)
-- **RED mismatch >1.5 between SPs** → biggest single differentiator (+17.6% gap BC vs BW)
-- **Conf 50–55 + named signal + UNDER** → reliable O/U zone (May: UNDER still ~60%+)
-- **MCF active + OVER → flip to UNDER** → 63.6% OU in May (R8 flip, strongest May UNDER signal)
-- **UNDER prediction generally in May** → 63.6% OU (improved from 47.7% — scoring environment compressed)
-- Line 9–10 OVER + ≥1 signal active → **68.8%** (R2) — still valid with catalyst
-- UNDER line 8–9 with Slumping SP flag → **63.6%** (R6 + R11 — improving in May)
+- **WP gap ≥15% ML** → 63.0% (n=173) — primary ML signal
+- **OUA + OUB + OVER** → **57.8% OU (n=109)** — elevated to Tier 1 (v3.8); largest reliable O/U sample
+- **Line 8–9 + UNDER** → **60.6% OU (n=71)** — best O/U combo overall
+- **UNDER prediction + home SP surge RED<−1.0** → 64.0% OU May (v3.8 dual signal)
+- **MCF active + OVER → flip to UNDER** → 63.6% OU in May (R8 flip)
+- **Conf 50–55 + named signal + UNDER** → reliable O/U zone
+- UNDER line 8–9 with Slumping SP flag → **63.6%** (R6 + R11)
 - RCF + OVER (§3.5) → **63.3%** — valid catalyst for OVER_RATE_GATE
 - Slumping SP (home or away) present → **62%+** (R11)
 - GOLDEN_CONDITION triple signal (OU-A + OU-B + RED mismatch >1.5) → gap ≥ 1.5
+- Line 9–10 OVER + ≥1 signal active → **68.8%** (R2) — still valid with catalyst
 
 **Tier 2 bets (hit rate ≥55%, n>10) — act with normal sizing:**
 - AWAY_ACE_OVERRIDE fired → route ML away (R14, 9/9 confirmations)
@@ -1018,6 +1029,10 @@ Highest alpha ML signal from external cross-validation. When the **batting team 
 - **GVI≥65 OVER in May+ without catalyst → 44.9%** (R7/v3.7) — OVER_GVI_CATALYST_FAIL, route to PASS
 - **OVER_RATE_GATE active (5-day rate <42%) + GVI-only OVER → suppressed** (R15/v3.7)
 - **Conf 50–55 + OVER in May with only 1 named signal → 33%** (R16/v3.7) — needs 2 signals
+- **PDCF + conf<45 → both ML and O/U = PASS** (v3.8) — 44.4% ML, 32.6% OU (both markets fail)
+- **Conf<50 + WP gap<20% → ML PASS** (v3.8) — 43.6% ML without quality advantage
+- **GVI≥90 + OVER + line≥9 → hard pass** (v3.8) — 40.9% ML, 45.0% OU (n=22)
+- **Away surge RED<−1.0 + O/U → SKIP all directions** (R14 v3.8) — 35% UNDER, 51.7% OVER (both unreliable)
 
 ---
 
@@ -1029,7 +1044,7 @@ Start at **100 points**. Minimum score: **25**. **April maximum score: 70** — 
 |------|------|-----------|------------------|
 | Primary Driver Conflict Flag | PDCF | −30 | Road team TMS-favored + home team Home Fortress |
 | Model Contradiction Flag | MCF | −25 | Final pick contradicts betting line favorite |
-| Heavy Favorite Caution Flag | HFCF | −20 | Either team win probability ≥ 68% |
+| Heavy Favorite Confirmation | HFCF (v3.8 reclassified) | **ML +Tier1** / O/U −20 | WP≥68% → ML confirmed $75 (85.7%); O/U still penalised −20 (38.5%) |
 | Team Meltdown Flag | TMF | −20 | Either team on 5+ consecutive loss streak |
 | High Volatility Index Flag | HVIF | −15 | GVI > 75 |
 | High-Stakes Game Volatility | HSGV | −15 | Postseason elimination game OR both teams within 1 game of division/WC cutoff |
@@ -1062,6 +1077,11 @@ Start at **100 points**. Minimum score: **25**. **April maximum score: 70** — 
 | OVER Rate Hard Ban | ORHB (v3.7) | −30 | Rolling 5-day actual OVER rate < 38% — OVER requires 2+ primary signals; GVI alone = PASS |
 | GVI OVER Catalyst Fail | OGCF (v3.7) | −20 | May+ game: GVI≥65 OVER with no named catalyst (Slumping SP / Wind+temp / wRC+>105 / line 9–10) — PASS |
 | May Conf OVER Weak | MCOW (v3.7) | −20 | May+ conf 50–55 + OVER with only 1 named signal — requires 2 signals (33% with 1 signal) |
+| PDCF O/U Block | PDCF_OUB (v3.8) | −30 O/U | PDCF active + conf<45 — O/U PASS (32.6% OU, both markets fail simultaneously) |
+| Conf ML Gate | CONF_ML_GATE (v3.8) | ML PASS | conf<50 + WP gap<20% — ML PASS (43.6% ML without quality advantage) |
+| GVI≥80 WP Reduction | GVI80_WPR (v3.8) | WP adj | GVI≥80 — PVS-driven WP bonuses halved; GVI≥90+OVER+line≥9 = hard pass (40.9% ML) |
+| Away Ace O/U Skip | AWAY_ACE_SKIP (v3.8) | O/U PASS | Away SP RED<−1.0 ≥5 starts — skip all O/U directions (35% UNDER, 51.7% OVER — both unreliable) |
+| Home Surge UNDER | HSU (v3.8) | O/U signal | Home SP RED<−1.0 + Gate C — O/U UNDER lean (64.0% OU May, n=25) |
 
 > **Note:** HSGV replaces the postseason-only EGV from v1.0. It applies to high-pressure situations in both regular season and postseason.
 > **Note (v2.7):** HBTF and RAF deductions do not reduce confidence — they trigger hard bans (P7_SKIP issues a warning; P4_VETO, P8_BAN, P6_BAN suppress the bet entirely). Deduction values shown above apply only when the flag fires but no hard ban is in effect (e.g., P7_SKIP in non-bet context).
@@ -1296,6 +1316,7 @@ Dodgers @ Yankees,Cole (NYY),Yamamoto (LAD),54%,46%,7.5,61% (Over)
 
 | Version | Changes |
 |---------|---------|
+| v3.8 | **534-game deep analysis — 8 rule adjustments (2026-05-19).** (1) **HFCF reclassified** — from −20 caution to ML CONFIRMATION Tier 1 $75 (85.7% ML, n=14); O/U still −20 (38.5%); single biggest accuracy lift available. (2) **PDCF blocks O/U (conf<45)** — PDCF + conf<45 = both ML and O/U PASS; OU 32.6% (n=43), ML 44.4% — both markets fail simultaneously; previously only ML was blocked. (3) **Conf<50 ML Gate** — conf<50 + WP gap<20% → ML PASS; 76% of May17+ ML losses had conf<50; 43.6% ML without WP quality advantage. (4) **GVI≥80 WP Reduction** — GVI≥80 → PVS-driven WP bonuses halved; GVI≥90+OVER+line≥9 = hard pass (40.9% ML, 45.0% OU, n=22). (5) **R14 AWAY_ACE_HARD** — upgraded from soft −10% WP to: (a) ML flip to away unconditionally (≥5 starts); (b) O/U SKIP all directions (away surge + UNDER = 35%, + OVER = 51.7% — both unreliable). (6) **OUA+OUB+OVER elevated to Tier 1** — 57.8% OU, n=109 (largest reliable O/U sample; outperforms Golden Condition at n=76). (7) **Home SP RED<−1.0 → O/U UNDER lean (Condition 5 NEW)** — 64.0% OU in May, n=25; converts home surge from pure ML-penalty to dual-use signal. (8) **R8 MCF refined** — MCF+Slump+WP≥10% → ML $75; MCF+Slump+WP<10% → $37.50; MCF+no-Slump → ML ban (43.1%). |
 | v3.7 | **437-game OVER environment collapse correction (2026-05-12). 6 targeted fixes for May OVER misfires.** (1) **OVER_RATE_GATE (R15 NEW)** — rolling 5-day actual OVER rate gate: <44%=−15 conf + RED mismatch >2.0 required; <42%=GVI-only OVER blocked; <38%=2 primary signals required. Root cause: May 8–10 rate=36%, model called OVER 84% — 24/26 BW games had OVER→UNDER misfire. (2) **May+ GVI OVER Catalyst Gate (OU-E updated)** — GVI≥65 OVER in May+ requires Slumping SP RED>+1.5 OR Wind OUT>12mph+temp>65°F OR both wRC+>105 OR line 9–10. GVI from PVS alone = PASS. Evidence: GVI≥65 OVER dropped 56.6%→44.9% in May. (3) **R7 updated** — GVI65+ OVER viable in April (58.9%) but inverted in May without catalyst (44.9%); added catalyst gate to R7 flag output. (4) **R8 MCF flip (NEW)** — MCF active + OVER direction → flip to UNDER (market pricing suppression). MCF+UNDER=63.6% May OU; MCF+OVER remaining=41.8%. (5) **R16 NEW** — May conf 50–55 + OVER requires 2 named signals (was 1); conf 50–55 + OVER + 1 signal only = 33% in May (destructive). (6) **May bias dynamic (§3.9 updated)** — base +2.0 runs; when rolling 7-day avg actual <8.5, reduce to +1.5 runs (model was projecting 0.6 runs too high in May 8–10). 5 new confidence deductions: ORC(−15), ORS(−25), ORHB(−30), OGCF(−20), MCOW(−20). UNDER prediction in May improved to 63.6% (from 47.7%) — system should actively shift toward UNDER in compressed scoring environments. |
 | v3.6 | **Never-Pass O/U Direction Policy (2026-05-05).** §3.12 added: model must always output OVER or UNDER — never bare "PASS." Ban rules and dead zones become risk level escalators (⚫ EXTREME RISK / 🔴 HIGH RISK / 🟡 MODERATE RISK / 🟢 STANDARD) rather than direction eliminators. Step 1 lean hierarchy: GVI≥65→OVER, GVI<35→UNDER, GVI 35–65→subsidiary signals (Slumping SP, wind, park, temperature; May+ default UNDER, April default OVER). Step 2 risk assignment based on which ban rules fired. Step 3 output format always includes direction + risk annotation. Affected rules: OU-E dead zone (GVI 35–65) → HIGH RISK lean; OU-F April no-signal → EXTREME RISK lean; BSS Line Cap → MODERATE RISK lean; R1 → EXTREME RISK lean; R7 GVI<35 UNDER → EXTREME RISK (bet still banned); R12 dead zone → HIGH RISK lean. JSON schema: `ou_prediction` always OVER/UNDER; new fields `ou_risk_level`, `ou_bet_eligible`, `ou_bet_size`. Empirical basis: 50 graded PASS games = 46% OVER / 54% UNDER — useful directional signal suppressed by prior PASS policy. |
 | v1.0 | Initial framework — postseason only |

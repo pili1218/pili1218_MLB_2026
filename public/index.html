@@ -50,7 +50,7 @@
         <div class="globe-stats">
           <div class="globe-stat"><span class="globe-stat-num">3</span><span class="globe-stat-label">AI Models</span></div>
           <div class="globe-stat-divider"></div>
-          <div class="globe-stat"><span class="globe-stat-num">v3.7</span><span class="globe-stat-label">Framework</span></div>
+          <div class="globe-stat"><span class="globe-stat-num">v3.8</span><span class="globe-stat-label">Framework</span></div>
           <div class="globe-stat-divider"></div>
           <div class="globe-stat"><span class="globe-stat-num">MLB</span><span class="globe-stat-label">All Season</span></div>
         </div>
@@ -393,20 +393,32 @@
   <section class="changelog-section">
     <div class="changelog-header" id="changelogToggle">
       <span class="changelog-title">Framework Changelog</span>
-      <span class="changelog-badge">v3.7</span>
+      <span class="changelog-badge">v3.8</span>
       <span class="changelog-chevron" id="changelogChevron">▼</span>
     </div>
     <div class="changelog-body hidden" id="changelogBody">
       <div class="changelog-entry changelog-entry--current">
-        <div class="changelog-version">v3.7 <span class="changelog-date">2026-05-12</span></div>
-        <div class="changelog-desc">437-game OVER environment collapse correction. May 8–10 avg actual total = 7.8 runs while model called OVER 84% of games — 24/26 both-wrong games had OVER→UNDER misfire. GVI≥65 OVER dropped from 56.6% to 44.9% in May. UNDER prediction improved to 63.6%. Six targeted fixes implemented.</div>
+        <div class="changelog-version">v3.8 <span class="changelog-date">2026-05-19</span></div>
+        <div class="changelog-desc">534-game deep analysis — 8 rule adjustments. May 19 complete O/U collapse (0/5, avg GVI=78). HFCF reclassified as ML confirmation. PDCF now blocks O/U. R14 upgraded to hard flip. OUA+OUB+OVER elevated to Tier 1.</div>
         <ul class="changelog-items">
-          <li><strong>OVER_RATE_GATE NEW (R15)</strong> — Rolling 5-day actual OVER rate gate: &lt;44%=caution (−15 conf, RED mismatch &gt;2.0 required); &lt;42%=suppressed (GVI-only OVER blocked); &lt;38%=hard ban (2 primary signals required). Auto-computed from DB and injected into every prediction.</li>
-          <li><strong>May+ GVI Catalyst Gate (R7 updated)</strong> — GVI≥65 OVER in May+ requires a named catalyst: Slumping SP RED&gt;+1.5 · Wind OUT &gt;12mph+temp&gt;65°F · both wRC+&gt;105 · line 9–10. GVI from PVS volatility alone = PASS (44.9% without catalyst — below breakeven).</li>
-          <li><strong>MCF OVER Flip (R8 updated)</strong> — MCF active + OVER direction → flip to UNDER. Market pricing suppression = 63.6% May O/U. MCF + UNDER = escalated confirmation. ML ban unchanged.</li>
-          <li><strong>Conf 50–55 May Filter (R16 NEW)</strong> — May+ conf 50–55 + OVER requires 2 named signals (was 1). Conf 50–55 + OVER with 1 signal = 33% in May. UNDER unchanged at 1 signal.</li>
-          <li><strong>May Bias Dynamic (§3.9)</strong> — Rolling 7-day avg actual &lt;8.5 → reduce May bias from +2.0 to +1.5 runs. Model was projecting 0.6 runs too high in May 8–10.</li>
-          <li><strong>New deductions</strong> — ORC(−15) · ORS(−25) · ORHB(−30) · OGCF(−20) · MCOW(−20)</li>
+          <li><strong>HFCF Reclassified (Adj 1)</strong> — WP≥68%: from −20 caution to ML CONFIRMATION Tier 1 $75 (85.7% ML, n=14). O/U still penalised −20 (38.5%).</li>
+          <li><strong>PDCF Blocks O/U (Adj 2)</strong> — PDCF + conf&lt;45 → both ML and O/U = PASS (32.6% OU, 44.4% ML — both markets fail).</li>
+          <li><strong>Conf&lt;50 ML Gate (Adj 3)</strong> — conf&lt;50 + WP gap&lt;20% → ML PASS. 76% of May17+ ML losses had conf&lt;50; 43.6% ML without quality advantage.</li>
+          <li><strong>GVI≥80 WP Reduction (Adj 4)</strong> — GVI≥80 → PVS-driven WP bonuses halved. GVI≥90+OVER+line≥9 = hard pass (40.9% ML).</li>
+          <li><strong>R14 AWAY_ACE_HARD (Adj 5)</strong> — Away SP RED&lt;−1.0 ≥5 starts: (1) ML → away unconditional; (2) O/U → SKIP both directions (35% UNDER, 51.7% OVER — both unreliable).</li>
+          <li><strong>OUA+OUB+OVER → Tier 1 (Adj 6)</strong> — 57.8% OU, n=109 (largest reliable O/U sample; outperforms Golden Condition).</li>
+          <li><strong>Home Surge → UNDER lean (Adj 7)</strong> — Home SP RED&lt;−1.0 + Gate C → O/U UNDER lean (64.0% OU May, n=25). Dual-use signal.</li>
+          <li><strong>R8 MCF Refined (Adj 8)</strong> — MCF+Slump+WP≥10% → ML $75; MCF+Slump+WP&lt;10% → $37.50; MCF+no-Slump → ML ban (43.1%).</li>
+        </ul>
+      </div>
+      <div class="changelog-entry changelog-entry--prev">
+        <div class="changelog-version">v3.7 <span class="changelog-date">2026-05-12</span></div>
+        <div class="changelog-desc">437-game OVER environment collapse correction. OVER_RATE_GATE, May+ GVI catalyst gate, MCF OVER flip, conf 50–55 May filter, dynamic May bias.</div>
+        <ul class="changelog-items">
+          <li><strong>OVER_RATE_GATE NEW (R15)</strong> — Rolling 5-day actual OVER rate gate with 4 thresholds.</li>
+          <li><strong>May+ GVI Catalyst Gate</strong> — GVI≥65 OVER in May+ requires named catalyst.</li>
+          <li><strong>MCF OVER Flip (R8)</strong> — MCF + OVER → flip to UNDER (63.6% May OU).</li>
+          <li><strong>R16 NEW</strong> — Conf 50–55 + OVER May requires 2 signals.</li>
         </ul>
       </div>
       <div class="changelog-entry changelog-entry--prev">
