@@ -8,15 +8,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function loadPatterns() {
   try {
-    const [res, flagRes] = await Promise.all([
+    const [res, flagRes, statsRes] = await Promise.all([
       fetch("/api/pattern-analysis"),
       fetch("/api/flag-stats"),
+      fetch("/api/stats"),
     ]);
-    const data    = await res.json();
+    const data     = await res.json();
     const flagData = await flagRes.json();
+    const stats    = await statsRes.json();
     if (!res.ok) throw new Error(data.error);
 
     window._patternData = data;
+
+    // Update subtitle with live graded count
+    const gradedCount = stats.graded || 0;
+    const subtitleEl = document.getElementById("patternIndexSubtitle");
+    if (subtitleEl && gradedCount > 0) {
+      subtitleEl.textContent = `Live hit rates from all ${gradedCount} graded games vs framework expected rates · Green = outperforming · Red = underperforming`;
+    }
 
     document.getElementById("loadingState").style.display  = "none";
     document.getElementById("patternsContent").style.display = "block";
