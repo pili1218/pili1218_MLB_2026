@@ -290,6 +290,7 @@ function renderRunningAccuracy(json) {
   const windows = [
     { label: "Last 5",  ml: json.last5_ml,  ou: json.last5_ou  },
     { label: "Last 10", ml: json.last10_ml, ou: json.last10_ou },
+    { label: "Last 15", ml: json.last15_ml, ou: json.last15_ou },
     { label: "All",     ml: json.ml_accuracy, ou: json.ou_accuracy },
   ];
 

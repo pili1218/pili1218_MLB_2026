@@ -302,7 +302,7 @@ Add a "data_sources" object at the end of the JSON listing which fields were fil
 
 Return ONLY valid JSON with no markdown, no explanation, just the raw JSON object.`;
 
-const PREDICT_SYSTEM = `You are the MLB Game Predictor AI v3.8 with deep knowledge of MLB statistics, player profiles, and team performance. You handle both Regular Season and Postseason games.
+const PREDICT_SYSTEM = `You are the MLB Game Predictor AI v3.9 with deep knowledge of MLB statistics, player profiles, and team performance. You handle both Regular Season and Postseason games.
 
 ## STEP 0 — FILL MISSING DATA BEFORE ANALYSIS
 
@@ -349,7 +349,13 @@ Determine from the game data whether this is Regular Season or Postseason. Look 
 
 **RED:** Avg ERA last 3 starts minus season ERA. Per-start ERA = (earned_runs/innings)*9. Flag RED<-1.0 = "Surging", RED>+1.5 = "Slumping".
 MINIMUM STARTS GATE: If pitcher has <3 confirmed regular-season MLB starts this season, set RED=0, mark RED_unavailable. WP-Override A cannot fire. No knowledge-fill exceptions.
-SINGLE SP RED_UNAVAILABLE BAN (NEW — 15-rule analysis, v3.6): When RED_unavailable fires on EITHER starting pitcher (not just both), suppress O/U bet — output Lean [direction] ⚫ EXTREME RISK, no bet. 294-game data: RED missing on either SP = present in 26.1% of both-wrong games vs only 4.8% of both-correct games — the largest directional gap of any single flag (−21.2%). 40.5% of staked losses had RED missing on at least one SP. ML still eligible if conf in zone. Per §3.12 Never-Pass: direction is always shown (use GVI-based lean from §3.12 Step 1), but ou_bet_eligible=false. Flag: SINGLE_RED_UNAV — "RED_unavailable on [home/away] SP — Lean [direction] ⚫ EXTREME RISK, no bet (26.1% BW vs 4.8% BC, §3.12)".
+SINGLE SP RED_UNAVAILABLE — DIRECTION-SPLIT RULE (v3.9 — 534-game empirical): When RED_unavailable fires on EITHER starting pitcher (not just both), apply the following direction-split logic:
+- OVER direction: output Lean OVER ⚫ EXTREME RISK, no bet. Empirical: 26.1% of both-wrong games had SINGLE_RED_UNAV present vs 4.8% of both-correct — OVER without RED data = flying blind, systematically wrong.
+- UNDER direction: output Lean UNDER 🔴 HIGH RISK, $25 lean eligible. Empirical: SINGLE_RED_UNAV + UNDER = 56.5% UNDER hit rate (n=23, above breakeven). Mechanism: missing RED on one SP means the model lacks a key OVER catalyst; the absence of an identified OVER signal biases toward UNDER staying, not exploding. The 26.1%/4.8% gap was driven by OVER misfires, not UNDER misfires.
+Summary: SINGLE_RED_UNAV never permits a standard O/U bet. But for UNDER direction, it is elevated from ⚫ EXTREME RISK to 🔴 HIGH RISK (max $25 lean) — a real but modest edge. OVER remains fully suppressed.
+ML still eligible if conf in zone. Per §3.12 Never-Pass: direction always shown.
+Flag (OVER): SINGLE_RED_UNAV_OVER — "RED_unavailable on [home/away] SP — Lean OVER ⚫ EXTREME RISK, no bet (OVER with missing RED = systematic misfire)".
+Flag (UNDER): SINGLE_RED_UNAV_UNDER — "RED_unavailable on [home/away] SP — Lean UNDER 🔴 HIGH RISK, max $25 (56.5% UNDER n=23, above breakeven)".
 RED THIN BLEND (v3.2): If pitcher has 3-5 confirmed starts, compute RED_blended = RED×0.5 + PVS_direction×0.5 where PVS_direction=+1.0 if PVS>15, -1.0 if PVS<8. Tag as RED_thin. Full RED weight at 6+ starts.
 If RCF active (xFIP > ERA by >=1.20), substitute xFIP for ERA in all §4 calculations.
 BOTH XFIP BLIND (v3.2, updated v3.6): If BOTH SPs have estimated xFIP AND both have <3 confirmed starts → output Lean [direction] ⚫ EXTREME RISK, no bet (per §3.12 Never-Pass). Direction determined by GVI: GVI≥65=Lean OVER, GVI<35=Lean UNDER, GVI 35-65=use park/temperature/wind as subsidiary lean. Set ou_bet_eligible=false. Flag "BOTH_XFIP_BLIND".
@@ -433,7 +439,8 @@ R8 (UPDATED v3.8 — MCF refined with WP gap): MCF + GVI-only (no Slumping SP) �
 R9 (REVISED — v3.5, external validated): Wind OUT standalone = 54-56% OVER edge — thin but real. Use as OVER lean at $25 minimum stake only (not full pass). Wind OUT + catalyst (PVS>15, Slumping SP RED>+1.5, or GVI>65) = OVER at standard $50 stake. External cross-validation confirms 54% standalone — prior "full PASS" was too conservative. Size according to signal strength. Flag: R9_WIND_CATALYST (catalyst present → $50) / R9_WIND_LEAN (standalone → $25).
 R10 (confirmed — v3.4 clarified): Conf 60-64 = O/U sweet spot (63.6%, n=11). ML at conf 60-64 = 33.3% (TRAP — skip ML). R10 is O/U ONLY. When conf 60-64: bet O/U, skip ML. Flag: R10_CONF_ZONE.
 R11 (NEW — v3.4): Slumping SP (RED>+1.5) in ANY position (home or away) = O/U power signal. Away slumping: 62.5% O/U (n=24). Home slumping: 61.9% O/U (n=21). Elevates O/U accuracy +20pp. Add as primary O/U signal — independently justifies O/U bet. Combine with R6 for UNDER 8-9 + Slumping (elite setup). Flag: R11_SLUMPING_SP.
-R12 (EXTENDED — v3.5, v3.6 UPDATED): Conf 55-65 = structural O/U dead zone. EXTENDED from 55-60 to 55-65. Treat conf 55-65 as 🔴 HIGH RISK for O/U: output Lean [direction] 🔴 HIGH RISK, max $25 lean — no standard O/U bet. Set ou_risk_level="HIGH RISK", ou_bet_eligible=false. R10 is retired. ML at conf 55-65 still eligible. Valid standard O/U betting zone is conf 50-55 only. Per §3.12 Never-Pass: ou_prediction always set to OVER or UNDER (never PASS). Flag: R12_DEAD_ZONE. Reminder: conf 25, 35, 40, 42 are all below 50 — Lean [direction] 🔴 HIGH RISK for O/U.
+R12 (EXTENDED — v3.5, v3.6 UPDATED, v3.9 EXCEPTION): Conf 55-65 = structural O/U dead zone. EXTENDED from 55-60 to 55-65. Treat conf 55-65 as 🔴 HIGH RISK for O/U: output Lean [direction] 🔴 HIGH RISK, max $25 lean — no standard O/U bet. Set ou_risk_level="HIGH RISK", ou_bet_eligible=false. R10 is retired. ML at conf 55-65 still eligible. Valid standard O/U betting zone is conf 50-55 only. Per §3.12 Never-Pass: ou_prediction always set to OVER or UNDER (never PASS). Flag: R12_DEAD_ZONE. Reminder: conf 25, 35, 40, 42 are all below 50 — Lean [direction] 🔴 HIGH RISK for O/U.
+R12 UNDER LIFT EXCEPTION (v3.9 — 534-game empirical): When ALL of: (a) conf 60-64, (b) ou_prediction=UNDER, (c) line 8.0-8.99, (d) at least one named O/U signal active (R11 Slumping SP OR OU-A fired OR R6 active) → override R12 dead zone: set ou_bet_eligible=true, ou_bet_size="$25", ou_risk_level="MODERATE RISK". Empirical basis: UNDER conf 60-64 line 8-9 = 66.7% (n=15), UNDER conf 55-65 line 8-9 = 66.7% (n=15) — the dead zone extension was driven by OVER behaviour; UNDER at this combo has genuine edge. Flag: R12_UNDER_LIFT — "R12 dead zone bypassed: UNDER conf 60-64 + line 8-9 + named signal → $25 bet (66.7%, n=15)". OVER stays fully blocked in the dead zone regardless of line.
 R14 (UPGRADED v3.8 — AWAY_ACE_HARD): Away SP RED<−1.0 AND >=5 confirmed starts → TWO hard rules:
 (1) ML: route to AWAY team unconditionally. Flip direction if model was backing home. CRITICAL: also update the home_win_pct and away_win_pct fields in the JSON output to reflect the R14 adjustment — subtract 10 from home_win_pct, add 10 to away_win_pct, then normalize to sum to 100. This ensures the displayed win probability is consistent with the ML recommendation (away team should show HIGHER WP when R14 fires). Example: if §4 gave home=52/away=48, output home=42/away=58 after R14.
 (2) O/U: SKIP all O/U bets on this game — away surge + UNDER = 35.0% OU (consistent loss), away surge + OVER = 51.7% OU (near breakeven) — both unreliable. Use R14 for ML direction only.
@@ -441,7 +448,7 @@ Flag: R14_AWAY_ACE_HARD — "Away SP RED<−1.0 ≥5 starts: ML=AWAY uncondition
 R15 (NEW v3.7 — 437-game): OVER_RATE_GATE — rolling 5-day actual OVER rate <42% = suppress GVI-only OVER bets. May 8–10: rate=36%, model called OVER 84% of slates, OVER accuracy collapsed to 41.8%. Root cause: GVI/PVS mechanics calibrated on April data fire at same rate in May but scoring environment compressed. Apply thresholds per OVER_RATE_GATE instruction above. UNDER accuracy improved to 63.6% in May — shift staking toward UNDER when gate is active. Flag: R15_OVER_RATE.
 R16 (NEW v3.7 — 437-game): Conf 50-55 + OVER in May requires 2 named signals. Conf 50-55 + OVER dropped from 59.3% to 31.2% in May — reliable zone polluted by directional OVER bias in compressed environment. Conf 50-55 + UNDER still ~60%+. RULE: May+, conf 50-55 + OVER direction requires ≥2 named O/U signals (e.g. Slumping SP + Wind OUT, or OU-A + OU-B). Conf 50-55 + UNDER remains eligible with 1 named signal. Flag: R16_MAY_CONF_FILTER — "May conf 50-55 + OVER: 2 signals required (33% with 1 signal only)."
 R13 (NEW — v3.5, external validated): Platoon Weakness Flag (PWF) — if the BATTING team is 0-for-3 or worse vs the opposing SP's handedness this season → 86% ML win rate for the pitcher's team. This is the highest alpha ML signal in cross-validation. Add PWF as a PRIMARY ML driver when present. If PWF + WP-Override A both fire → treat as near-automatic ML bet (dual-override). Check batting team season wRC+ vs LHP or vs RHP (whichever matches the opposing SP). When detected, apply +8% WP to the pitcher's team. Flag: PWF_MATCH — "Platoon Weakness: [batting team] 0-for-season vs [handedness] → ML [pitcher team] (86% hit rate)".
-PRIORITY CHECKLIST v3.8 — Tier 1 (≥60%): HFCF active (WP≥68%) → ML Tier 1 $75 (85.7% ML, n=14 — reclassified v3.8, best single ML signal) · R13 PWF + any signal (86% ML) · WP gap≥15% ML (63.0%, n=173 — primary ML signal) · OUA+OUB+OVER = 57.8% OU (n=109) — Tier 1 O/U (v3.8) · Line 8-9+UNDER = 60.6% OU (n=71) · Home SP surge RED<-1.0 + Gate C → O/U UNDER lean (64.0% May OU, n=25 — NEW v3.8 Condition 5) · MCF + OVER → flip to UNDER (63.6% May OU) · UNDER line 8-9 + Slumping SP (63.6%) · RCF+OVER (63.3%) · R11 Slumping SP present (62%+) · GOLDEN_CONDITION (OU-A+OU-B+RED mismatch>1.5, gap≥1.5). Tier 2 (≥55%): R4 WPA ML (63%) · R7 GVI65 OVER WITH catalyst (58.9%) · R9 Wind OUT+catalyst OVER (56%). Hard skips (always show lean direction per §3.12, suppress bet): HFCF O/U (38.5% — bet blocked, ML confirmed) · PDCF+conf<45 → both ML+O/U PASS (44.4% ML, 32.6% OU) · Conf<50+WP gap<20% → ML PASS (43.6%) · R14 away surge → O/U SKIP all directions (35/51.7% unreliable) · GVI≥90+OVER+line≥9 → hard pass (40.9% ML, 45.0% OU) · R1 no signal (16.3%) · R12 conf 55-65 dead zone · GVI<35+UNDER (7/7 failure) · SINGLE_RED_UNAV · R5 PVS>15+OVER removed (38-40%) · MCF+no-slump ML BAN (43.1%) · TMS≥15+OU-A HALVE stake · line 7-8 UNDER (34.5%) · GVI≥65 OVER May+ without catalyst (44.9%, PASS) · OVER_RATE_GATE <42% GVI-only OVER suppressed · Conf 50-55+OVER May with 1 signal only (33%, needs 2).
+PRIORITY CHECKLIST v3.8 — Tier 1 (≥60%): HFCF active (WP≥68%) → ML Tier 1 $75 (85.7% ML, n=14 — reclassified v3.8, best single ML signal) · R13 PWF + any signal (86% ML) · WP gap≥15% ML (63.0%, n=173 — primary ML signal) · OUA+OUB+OVER = 57.8% OU (n=109) — Tier 1 O/U (v3.8) · Line 8-9+UNDER = 60.6% OU (n=71) · Home SP surge RED<-1.0 + Gate C → O/U UNDER lean (64.0% May OU, n=25 — NEW v3.8 Condition 5) · MCF + OVER → flip to UNDER (63.6% May OU) · UNDER line 8-9 + Slumping SP (63.6%) · RCF+OVER (63.3%) · R11 Slumping SP present (62%+) · GOLDEN_CONDITION (OU-A+OU-B+RED mismatch>1.5, gap≥1.5). Tier 2 (≥55%): R4 WPA ML (63%) · R7 GVI65 OVER WITH catalyst (58.9%) · R9 Wind OUT+catalyst OVER (56%). Hard skips (always show lean direction per §3.12, suppress bet): HFCF O/U (38.5% — bet blocked, ML confirmed) · PDCF+conf<45 → both ML+O/U PASS (44.4% ML, 32.6% OU) · Conf<50+WP gap<20% → ML PASS (43.6%) · R14 away surge → O/U SKIP all directions (35/51.7% unreliable) · GVI≥90+OVER+line≥9 → hard pass (40.9% ML, 45.0% OU) · R1 no signal (16.3%) · R12 conf 55-65 dead zone · GVI<35+UNDER (7/7 failure) · SINGLE_RED_UNAV+OVER → ⚫ EXTREME RISK no bet (systematic OVER misfire) · SINGLE_RED_UNAV+UNDER → 🔴 HIGH RISK $25 lean eligible (56.5% UNDER n=23 — above breakeven) · R5 PVS>15+OVER removed (38-40%) · MCF+no-slump ML BAN (43.1%) · TMS≥15+OU-A HALVE stake · line 7-8 UNDER (34.5%) · GVI≥65 OVER May+ without catalyst (44.9%, PASS) · OVER_RATE_GATE <42% GVI-only OVER suppressed · Conf 50-55+OVER May with 1 signal only (33%, needs 2).
 
 **GVI (v3.2):** Start 50. Adjustments: +15 per pitcher PVS>15; -15 per pitcher ERA/xFIP<2.50; -8 per pitcher ERA/xFIP 2.50-3.00; +10 per team 30-day wRC+>110; +10 wind OUT 8-15mph; +20 wind OUT >15mph; -10 wind IN >8mph; -10 temp<50F; -15 temp≥85F; +8 hitter's park; -8 pitcher's park; +5 batter-friendly ump; -5 pitcher-friendly ump; -5 per team with elite defense; +5 if postseason OR both teams in active race.
 APRIL GVI ADJUSTMENTS: -5 if April 1-14; additional -5 if April 1-14 AND line>8.0; additional -5 if April AND OVER signal active.
@@ -563,8 +570,8 @@ ML BET TRACK:
 
 ## §3.12 NEVER-PASS O/U DIRECTION POLICY (v3.6)
 ou_prediction MUST ALWAYS be "OVER" or "UNDER" — never "PASS". Assign ou_risk_level and ou_bet_eligible based on which ban/suppression rules fired:
-- ⚫ EXTREME RISK (ou_bet_eligible=false, ou_bet_size="$0"): SINGLE_RED_UNAV, R1 no-signal, BOTH_XFIP_BLIND, P4_VETO, P19_PIT, GVI<35+UNDER, MCF+ML
-- 🔴 HIGH RISK (ou_bet_eligible=false, ou_bet_size="$0" or max $25): R12 dead zone (conf 55-65), DUAL_PVS_SKIP, BOTH_RED_UNAVAIL, HIGH_LINE_OVER_BAN (April ≥9.5), GVI dead zone (35-65) as sole basis, P23_dual_lhp_over_ban (route to UNDER), conf<50
+- ⚫ EXTREME RISK (ou_bet_eligible=false, ou_bet_size="$0"): SINGLE_RED_UNAV+OVER direction, R1 no-signal, BOTH_XFIP_BLIND, P4_VETO, P19_PIT, GVI<35+UNDER, MCF+ML
+- 🔴 HIGH RISK (ou_bet_eligible=false, ou_bet_size="$0" or max $25): SINGLE_RED_UNAV+UNDER direction ($25 lean eligible — 56.5% UNDER n=23 above breakeven), R12 dead zone (conf 55-65), DUAL_PVS_SKIP, BOTH_RED_UNAVAIL, HIGH_LINE_OVER_BAN (April ≥9.5), GVI dead zone (35-65) as sole basis, P23_dual_lhp_over_ban (route to UNDER), conf<50
 - 🟡 MODERATE RISK (ou_bet_eligible=false for standard, $25 lean): gap 1.0-1.9 runs, BSS_LINE_CAP, P9_BAN (conf≥65 O/U), DH G2 UNDER
 - 🟢 STANDARD (ou_bet_eligible=true): all gates pass, primary signal active, gap≥2.0
 
@@ -613,6 +620,71 @@ COMBO BET: When ML predicted winner = Under direction (both point same team winn
 
 COMBINED: Set betting_recommendation = "[ML track] + [OVER track] + [Under track]" prioritising highest-conviction bet. If OVER and Under both active, output the higher-conviction one only.
 SLATE CAP (v3.3): Max 5 bets per day total. Rank by confidence; pick top 5.
+
+## COMBO SIGNAL EVALUATION (v3.9 — top10_combos)
+
+After completing all §3–§6 analysis, evaluate the named combinations below using already-computed values. Output matched signals in combo_hits[] and fade_signals[] arrays. Unmatched = omit. Both arrays may be empty.
+
+HELPER BOOLEANS (derive from computed fields):
+- home_pred = (home_win_pct > away_win_pct)
+- conf_50_55 = (confidence_score >= 50 AND confidence_score <= 55)
+- tmf_active = any "Meltdown" or "TMF" string in active_flags
+- tmf_away = tmf_active AND "Away" or "away team" mentioned alongside TMF in active_flags
+- home_fortress = any "Fortress" or "Home Fortress" string in active_flags
+- dome = venue is an indoor/dome stadium (Tropicana Field, Rogers Centre, Minute Maid Park, T-Mobile Park, loanDepot park, Globe Life Field, Chase Field retractable, American Family Field retractable — treat retractable-roof closed as dome)
+- oa_fired = "OU-A" or "WP-Override A" appears in active_overrides
+- ob_fired = "OU-B" appears in active_overrides
+- wpa_fired = "WP-Override A fired" in active_overrides
+- hfcf_active = "HFCF" in active_flags
+- mcf_active = "MCF" in confidence_deductions or active_flags
+- slumping_sp = (home_red > 1.5 OR away_red > 1.5)
+- slumping_away = (away_red > 1.5)
+- golden_cond = "GOLDEN_CONDITION" in active_flags
+- rcf_away = "Regression Risk (Away SP)" in active_flags
+- pvs_any_over15 = (home_pvs > 15 OR away_pvs > 15)
+- dhvp_active = "DHVP" or "Dual High-Variance" in active_flags or confidence_deductions
+- wpb_fired = "WP-Override B" in active_overrides
+- red_mismatch = ABS(home_red - away_red)
+- away_surge = (away_red < -1.0 AND away_red is confirmed RED, not RED_unavailable)
+- wp_gap = ABS(home_win_pct - away_win_pct)
+
+ML COMBO SIGNALS — add code to combo_hits[] when ALL conditions met:
+MC1: home_pred AND conf_50_55 AND tmf_away → hit rate 100% ML n=14, O/U 77%
+MC2: home_fortress AND conf_50_55 AND tmf_active → hit rate 93% ML n=14, O/U 85% (CROWN JEWEL — both above 84%)
+MC3: home_fortress AND (home_tms > away_tms) AND dome → hit rate 94% ML n=18
+MC4: (home_tms > away_tms) AND tmf_active AND dome → hit rate 93% ML n=15, O/U 36% hard skip
+MC5: home_pred AND wpa_fired AND (ou_prediction == "UNDER") → hit rate 92% ML n=13
+MC6: wp_gap >= 20 AND wpa_fired AND (ou_prediction == "UNDER") → hit rate 92% ML n=13
+MC7: wpa_fired AND oa_fired AND (ou_prediction == "UNDER") → hit rate 92% ML n=13
+MC8: hfcf_active AND oa_fired AND (ou_prediction == "UNDER") → hit rate 92% ML n=12
+MC9: home_fortress AND conf_50_55 AND dome → hit rate 92% ML n=12
+MC10: home_pred AND home_fortress AND dome → hit rate 91% ML n=22, O/U 63% (best large-n)
+
+O/U COMBO SIGNALS — add code to combo_hits[] when ALL conditions met:
+OC1: home_fortress AND (ou_prediction == "UNDER") AND tmf_active → hit rate 93% OU n=14 (best O/U combo)
+OC2: home_fortress AND conf_50_55 AND tmf_active → hit rate 85% OU n=13, ML 93% (same as MC2 — CROWN JEWEL)
+OC3: slumping_sp AND home_fortress AND tmf_active → hit rate 83% OU n=12
+OC4: (CAST(ou_line AS FLOAT) >= 8.0 AND CAST(ou_line AS FLOAT) <= 9.0) AND dhvp_active AND mcf_active → hit rate 81% OU n=16, skip ML
+OC5: home_fortress AND red_mismatch > 1.5 AND tmf_active → hit rate 79% OU n=14, ML 80%
+OC6: tmf_active AND home_fortress → hit rate 71% OU n=35, ML 68% (main recurring large-n anchor)
+OC7: tmf_active AND conf_50_55 → hit rate 70% OU n=20, ML 82%
+OC8: oa_fired AND (ou_prediction == "UNDER") AND tmf_active → hit rate 77% OU n=17
+OC9: oa_fired AND conf_50_55 AND tmf_active → hit rate 77% OU n=13, ML 86%
+OC10: home_fortress AND ob_fired AND tmf_active → hit rate 76% OU n=25, ML 70%
+
+FADE SIGNALS — add code to fade_signals[] when ALL conditions met. These indicate the model's direction may be WRONG and the OPPOSITE bet is empirically favored:
+FD1: gvi >= 80 AND (away_surge OR home_red < -1.0) → Fade ML to OTHER team (83% fade rate n=12)
+FD2: slumping_away AND (away_pvs > 15) AND (ou_prediction == "OVER") → Fade OVER to UNDER (82% n=11)
+FD3: golden_cond AND away_surge → Fade home ML to AWAY team (75% n=24)
+FD4: rcf_away AND away_surge → Fade to AWAY ML, skip O/U (72% n=25)
+FD5: (away_surge OR home_red < -1.0) AND wp_gap < 10 → Fade ML to OTHER team + OVER $50 (72% n=25)
+FD6: tmf_active AND dome AND (ou_prediction == "UNDER") → Follow ML; flip UNDER to OVER bet (79% n=14)
+FD7: ob_fired AND away_surge AND (home_win_pct > away_win_pct) → Fade home ML to AWAY team, skip O/U (69% n=45★ — largest sample)
+FD8: gvi >= 90 AND (away_win_pct > home_win_pct) → Fade away ML to HOME team, skip O/U (69% n=16)
+FD9: wpb_fired AND pvs_any_over15 AND (ou_prediction == "UNDER") → Follow ML; flip UNDER to OVER (74% n=19)
+FD10: red_mismatch > 1.5 AND mcf_active → Fade model's ML pick to OTHER team, skip O/U (68% n=22)
+
+NOTE: MC2 and OC2 share the same three conditions — if they both fire, output BOTH codes. OC6 is the 2-flag version of the fortress+TMF combination; it will fire whenever OC1/OC2 fire too (it is the base signal). Include all matching codes even if some overlap.
 
 ## OUTPUT SCHEMA
 
@@ -667,6 +739,8 @@ Return ONLY valid JSON. No markdown. No preamble. null for unavailable fields.
     "gates_passed": ["A","B","C","D","E"],
     "pattern_tier": "Pattern A or Pattern B or Strong Under or Standard or null"
   },
+  "combo_hits": ["MC2","OC2","OC6"],
+  "fade_signals": ["FD3","FD7"],
   "export_string": "Away @ Home,Home SP (HOME),Away SP (AWAY),52%,48%,7.5,61% (Over)",
   "data_sources": {
     "extracted_from_image": ["list of fields taken directly from image data"],
@@ -1014,7 +1088,7 @@ KEY O/U COMBOS:
     // ── Pass 1: initial prediction ──────────────────────────────────────────
     let messages = [{
       role: "user",
-      content: `Apply the MLB Game Predictor v3.8 framework to this extracted game data. Fill any missing fields from your knowledge base first, then return the complete JSON prediction:\n\n${JSON.stringify(gameData, null, 2)}${rollingStatsBlock}${notesBlock}`,
+      content: `Apply the MLB Game Predictor v3.9 framework to this extracted game data. Fill any missing fields from your knowledge base first, then return the complete JSON prediction:\n\n${JSON.stringify(gameData, null, 2)}${rollingStatsBlock}${notesBlock}`,
     }];
 
     let parsed, issues, pass = 0;
@@ -1142,12 +1216,13 @@ app.post("/api/result/:id", (req, res) => {
     const predictedWinner = pred.home_win_pct >= pred.away_win_pct ? pred.home_team : pred.away_team;
     const ml_correct = (actualWinner === predictedWinner) ? 1 : 0;
 
-    // Determine O/U result
+    // Determine O/U result — only grade if prediction was a real directional call
     const ouLine = parseFloat(pred.ou_line);
+    const isDirectionalOU = pred.ou_prediction === 'OVER' || pred.ou_prediction === 'UNDER';
     let ou_result = null, ou_correct = null;
     if (!isNaN(ouLine)) {
-      ou_result   = total > ouLine ? "OVER" : total < ouLine ? "UNDER" : "PUSH";
-      ou_correct  = ou_result === "PUSH" ? null : (ou_result === pred.ou_prediction ? 1 : 0);
+      ou_result  = total > ouLine ? "OVER" : total < ouLine ? "UNDER" : "PUSH";
+      ou_correct = (isDirectionalOU && ou_result !== "PUSH") ? (ou_result === pred.ou_prediction ? 1 : 0) : null;
     }
 
     updateActualResult.run({
@@ -1259,7 +1334,7 @@ app.get("/api/flag-stats", (_req, res) => {
       { code:"PWF_MATCH",          label:"R13 · Platoon Weakness Flag",   desc:"Batting team 0-for-3+ vs SP handedness this season → ML 86% for pitcher's team. Highest alpha ML signal. Apply +8% WP. If PWF+WPA both fire = near-automatic ML.", expected_ml:86.0, type:"rule", patterns:["PWF_MATCH","Platoon Weakness","PWF"] },
       { code:"AWAY_ACE_OVERRIDE",  label:"R14 · Away Ace Override [NEW v3.5]", desc:"Away SP RED<−1.0 (surging) while model routes ML to home team → 9/9 failure. Apply −10% to home WP, flip ML to away. Surging away ace overrides all home-field adjustments.", expected_ml:100.0, type:"rule", patterns:["AWAY_ACE_OVERRIDE","Away SP surging","R14","away.*RED.*-1","surging away"] },
       // ── New v3.5 signals ──────────────────────────────────────────────────────
-      { code:"SINGLE_RED_UNAV",    label:"Single SP RED_unavailable [NEW]", desc:"RED missing on EITHER SP → O/U PASS. 26.1% of both-wrong vs 4.8% both-correct games (−21.2% gap — most extreme of any flag). Flying blind = systematic wrong direction.", type:"rule", patterns:["SINGLE_RED_UNAV","RED_unavailable","RED unavailable","Early-Season RED Unreliable"] },
+      { code:"SINGLE_RED_UNAV",    label:"Single SP RED_unavailable [v3.9 split]", desc:"RED missing on EITHER SP: OVER → ⚫ EXTREME RISK no bet (systematic OVER misfire, 26.1% BW vs 4.8% BC). UNDER → 🔴 HIGH RISK $25 lean eligible (56.5% UNDER n=23). Direction split added v3.9.", type:"rule", patterns:["SINGLE_RED_UNAV","SINGLE_RED_UNAV_OVER","SINGLE_RED_UNAV_UNDER","RED_unavailable","RED unavailable","Early-Season RED Unreliable"] },
       { code:"GOLDEN_CONDITION",   label:"Golden Condition [NEW v3.5]",   desc:"OU-A + OU-B + RED mismatch >1.5 all fire → gap threshold drops to 1.5 runs. Appears in 42% of both-correct games. Triple signal = highest-quality bet setup.", type:"rule", patterns:["GOLDEN_CONDITION"] },
       { code:"TMS_OUA_TOXIC",      label:"TMS≥15 + OU-A Toxic Combo",     desc:"TMS diff≥15 AND OU-A fire together → halve O/U stake. NOT a double-confirmation. Appears in 20.3% of both-wrong vs 12.9% both-correct. Market has priced the momentum.", type:"rule", patterns:["TMS_OUA_TOXIC","TMS.*OU-A","TMS diff.*15"] },
       { code:"TMS_DIFF_BOOST",     label:"TMS Diff Boost [REMOVED v3.5]", desc:"REMOVED. Was +2% WP at TMS diff>15. 294-game reality: 50% ML (coin flip), 39% O/U (below breakeven). Do not apply any WP boost for TMS differential.", expected_ml:50.0, type:"flag", patterns:["TMS_DIFF_BOOST"] },
@@ -1404,18 +1479,18 @@ app.get("/api/stats", (_req, res) => {
     const total    = db.prepare("SELECT COUNT(*) as n FROM predictions").get().n;
     const graded   = db.prepare("SELECT COUNT(*) as n FROM predictions WHERE ml_correct IS NOT NULL").get().n;
     const mlWins   = db.prepare("SELECT COUNT(*) as n FROM predictions WHERE ml_correct = 1").get().n;
-    const ouGraded = db.prepare("SELECT COUNT(*) as n FROM predictions WHERE ou_correct IS NOT NULL").get().n;
-    const ouWins   = db.prepare("SELECT COUNT(*) as n FROM predictions WHERE ou_correct = 1").get().n;
+    const ouGraded = db.prepare("SELECT COUNT(*) as n FROM predictions WHERE ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER')").get().n;
+    const ouWins   = db.prepare("SELECT COUNT(*) as n FROM predictions WHERE ou_correct = 1 AND ou_prediction IN ('OVER','UNDER')").get().n;
 
     // Accuracy by confidence tier (use subquery to avoid GROUP BY alias issue in SQLite)
     const byTier = db.prepare(`
       SELECT tier,
              COUNT(*) as total,
              SUM(ml_correct) as ml_wins,
-             SUM(CASE WHEN ou_correct IS NOT NULL THEN 1 ELSE 0 END) as ou_graded,
-             SUM(CASE WHEN ou_correct = 1 THEN 1 ELSE 0 END) as ou_wins
+             SUM(CASE WHEN ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER') THEN 1 ELSE 0 END) as ou_graded,
+             SUM(CASE WHEN ou_correct = 1 AND ou_prediction IN ('OVER','UNDER') THEN 1 ELSE 0 END) as ou_wins
       FROM (
-        SELECT ml_correct, ou_correct,
+        SELECT ml_correct, ou_correct, ou_prediction,
           CASE
             WHEN confidence_score >= 70 THEN 'High'
             WHEN confidence_score >= 50 THEN 'Moderate'
@@ -1432,8 +1507,8 @@ app.get("/api/stats", (_req, res) => {
       SELECT season_type,
              COUNT(*) as total,
              SUM(CASE WHEN ml_correct = 1 THEN 1 ELSE 0 END) as ml_wins,
-             SUM(CASE WHEN ou_correct = 1 THEN 1 ELSE 0 END) as ou_wins,
-             SUM(CASE WHEN ou_correct IS NOT NULL THEN 1 ELSE 0 END) as ou_graded
+             SUM(CASE WHEN ou_correct = 1 AND ou_prediction IN ('OVER','UNDER') THEN 1 ELSE 0 END) as ou_wins,
+             SUM(CASE WHEN ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER') THEN 1 ELSE 0 END) as ou_graded
       FROM predictions
       WHERE ml_correct IS NOT NULL
       GROUP BY season_type
@@ -1441,7 +1516,7 @@ app.get("/api/stats", (_req, res) => {
 
     // Running accuracy (chronological — for trend tracking)
     const gradedOrdered = db.prepare(`
-      SELECT ml_correct, ou_correct
+      SELECT ml_correct, ou_correct, ou_prediction
       FROM predictions
       WHERE ml_correct IS NOT NULL
       ORDER BY saved_at ASC
@@ -1452,18 +1527,22 @@ app.get("/api/stats", (_req, res) => {
     gradedOrdered.forEach((r, i) => {
       mlW += r.ml_correct;
       runningML.push(+(mlW / (i + 1) * 100).toFixed(1));
-      if (r.ou_correct !== null) {
+      const isRealOU = r.ou_correct !== null && (r.ou_prediction === 'OVER' || r.ou_prediction === 'UNDER');
+      if (isRealOU) {
         ouW += r.ou_correct;
         ouN++;
         runningOU.push(+(ouW / ouN * 100).toFixed(1));
       }
     });
 
-    // Last-5 and last-10 windows
+    // Last-5, last-10, last-15 windows (O/U: directional predictions only)
+    const ouOrdered = gradedOrdered.filter(r => r.ou_correct !== null && (r.ou_prediction === 'OVER' || r.ou_prediction === 'UNDER'));
     const last5ML  = runningML.length >= 1 ? +(gradedOrdered.slice(-5).reduce((s, r) => s + r.ml_correct, 0) / Math.min(5, gradedOrdered.length) * 100).toFixed(1) : null;
     const last10ML = runningML.length >= 1 ? +(gradedOrdered.slice(-10).reduce((s, r) => s + r.ml_correct, 0) / Math.min(10, gradedOrdered.length) * 100).toFixed(1) : null;
-    const last5OU  = (() => { const s = gradedOrdered.filter(r => r.ou_correct !== null).slice(-5); return s.length ? +(s.reduce((a, r) => a + r.ou_correct, 0) / s.length * 100).toFixed(1) : null; })();
-    const last10OU = (() => { const s = gradedOrdered.filter(r => r.ou_correct !== null).slice(-10); return s.length ? +(s.reduce((a, r) => a + r.ou_correct, 0) / s.length * 100).toFixed(1) : null; })();
+    const last15ML = runningML.length >= 1 ? +(gradedOrdered.slice(-15).reduce((s, r) => s + r.ml_correct, 0) / Math.min(15, gradedOrdered.length) * 100).toFixed(1) : null;
+    const last5OU  = ouOrdered.length ? +(ouOrdered.slice(-5).reduce((a, r) => a + r.ou_correct, 0) / Math.min(5, ouOrdered.length) * 100).toFixed(1) : null;
+    const last10OU = ouOrdered.length ? +(ouOrdered.slice(-10).reduce((a, r) => a + r.ou_correct, 0) / Math.min(10, ouOrdered.length) * 100).toFixed(1) : null;
+    const last15OU = ouOrdered.length ? +(ouOrdered.slice(-15).reduce((a, r) => a + r.ou_correct, 0) / Math.min(15, ouOrdered.length) * 100).toFixed(1) : null;
 
     // Last 10 graded
     const recent = db.prepare(`
@@ -1492,8 +1571,10 @@ app.get("/api/stats", (_req, res) => {
       running_ou: runningOU,
       last5_ml: last5ML,
       last10_ml: last10ML,
+      last15_ml: last15ML,
       last5_ou: last5OU,
       last10_ou: last10OU,
+      last15_ou: last15OU,
       recent: recent,
     });
   } catch (err) {
@@ -1672,8 +1753,8 @@ app.get("/api/pattern-analysis", (_req, res) => {
       total:     db.prepare("SELECT COUNT(*) as n FROM predictions").get().n,
       graded:    db.prepare("SELECT COUNT(*) as n FROM predictions WHERE ml_correct IS NOT NULL").get().n,
       ml_wins:   db.prepare("SELECT COUNT(*) as n FROM predictions WHERE ml_correct = 1").get().n,
-      ou_graded: db.prepare("SELECT COUNT(*) as n FROM predictions WHERE ou_correct IS NOT NULL").get().n,
-      ou_wins:   db.prepare("SELECT COUNT(*) as n FROM predictions WHERE ou_correct = 1").get().n,
+      ou_graded: db.prepare("SELECT COUNT(*) as n FROM predictions WHERE ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER')").get().n,
+      ou_wins:   db.prepare("SELECT COUNT(*) as n FROM predictions WHERE ou_correct = 1 AND ou_prediction IN ('OVER','UNDER')").get().n,
     };
 
     const byConfidence = db.prepare(`
@@ -1688,8 +1769,8 @@ app.get("/api/pattern-analysis", (_req, res) => {
         END as bucket,
         COUNT(*) as total,
         COALESCE(SUM(ml_correct),0) as ml_wins,
-        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL THEN 1 ELSE 0 END),0) as ou_graded,
-        COALESCE(SUM(ou_correct),0) as ou_wins
+        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER') THEN 1 ELSE 0 END),0) as ou_graded,
+        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER') THEN ou_correct ELSE 0 END),0) as ou_wins
       FROM predictions WHERE ml_correct IS NOT NULL GROUP BY bucket
     `).all();
 
@@ -1707,7 +1788,7 @@ app.get("/api/pattern-analysis", (_req, res) => {
         COALESCE(SUM(ou_correct),0) as ou_wins,
         MIN(CAST(ou_line AS REAL)) as min_line
       FROM predictions
-      WHERE ou_correct IS NOT NULL AND ou_line IS NOT NULL AND ou_line != ''
+      WHERE ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER') AND ou_line IS NOT NULL AND ou_line != ''
       GROUP BY line_range, ou_prediction ORDER BY min_line
     `).all();
 
@@ -1716,8 +1797,8 @@ app.get("/api/pattern-analysis", (_req, res) => {
         strftime('%Y-%m', COALESCE(game_date, saved_at)) as month,
         COUNT(*) as total,
         COALESCE(SUM(ml_correct),0) as ml_wins,
-        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL THEN 1 ELSE 0 END),0) as ou_graded,
-        COALESCE(SUM(ou_correct),0) as ou_wins
+        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER') THEN 1 ELSE 0 END),0) as ou_graded,
+        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER') THEN ou_correct ELSE 0 END),0) as ou_wins
       FROM predictions WHERE ml_correct IS NOT NULL
       GROUP BY month ORDER BY month
     `).all();
@@ -1738,13 +1819,13 @@ app.get("/api/pattern-analysis", (_req, res) => {
 
     const byDirection = db.prepare(`
       SELECT ou_prediction, COUNT(*) as total, COALESCE(SUM(ou_correct),0) as ou_wins
-      FROM predictions WHERE ou_correct IS NOT NULL AND ou_prediction IS NOT NULL
+      FROM predictions WHERE ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER')
       GROUP BY ou_prediction
     `).all();
 
     const byOUTier = db.prepare(`
       SELECT ou_confidence, COUNT(*) as total, COALESCE(SUM(ou_correct),0) as ou_wins
-      FROM predictions WHERE ou_correct IS NOT NULL AND ou_confidence IS NOT NULL
+      FROM predictions WHERE ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER') AND ou_confidence IS NOT NULL
       GROUP BY ou_confidence
     `).all();
 
@@ -1765,7 +1846,7 @@ app.get("/api/pattern-analysis", (_req, res) => {
     `).all();
 
     const trend = db.prepare(`
-      SELECT game_date, saved_at, ml_correct, ou_correct, confidence_score, home_win_pct, away_win_pct
+      SELECT game_date, saved_at, ml_correct, ou_correct, ou_prediction, confidence_score, home_win_pct, away_win_pct
       FROM predictions WHERE ml_correct IS NOT NULL
       ORDER BY COALESCE(game_date, saved_at) ASC
     `).all();
@@ -1788,8 +1869,8 @@ app.get("/api/pattern-analysis", (_req, res) => {
         END as matchup,
         COUNT(*) as total,
         COALESCE(SUM(ml_correct),0) as ml_wins,
-        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL THEN 1 ELSE 0 END),0) as ou_graded,
-        COALESCE(SUM(ou_correct),0) as ou_wins
+        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER') THEN 1 ELSE 0 END),0) as ou_graded,
+        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER') THEN ou_correct ELSE 0 END),0) as ou_wins
       FROM predictions WHERE ml_correct IS NOT NULL AND home_starter IS NOT NULL AND away_starter IS NOT NULL
       GROUP BY matchup ORDER BY total DESC
     `).all();
@@ -1807,8 +1888,8 @@ app.get("/api/pattern-analysis", (_req, res) => {
         CASE WHEN gvi IS NULL THEN 99 WHEN gvi < 35 THEN 0 WHEN gvi < 50 THEN 1 WHEN gvi < 65 THEN 2 WHEN gvi < 80 THEN 3 ELSE 4 END as ord,
         COUNT(*) as total,
         COALESCE(SUM(ml_correct),0) as ml_wins,
-        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL THEN 1 ELSE 0 END),0) as ou_graded,
-        COALESCE(SUM(ou_correct),0) as ou_wins
+        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER') THEN 1 ELSE 0 END),0) as ou_graded,
+        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER') THEN ou_correct ELSE 0 END),0) as ou_wins
       FROM predictions WHERE ml_correct IS NOT NULL
       GROUP BY gvi_bucket ORDER BY ord
     `).all();
@@ -1829,7 +1910,7 @@ app.get("/api/pattern-analysis", (_req, res) => {
         COALESCE(SUM(ou_correct),0) as ou_wins,
         MIN(CAST(ou_line AS REAL)) as min_line
       FROM predictions
-      WHERE ou_correct IS NOT NULL AND ou_line IS NOT NULL AND ou_line != '' AND CAST(ou_line AS REAL) >= 7.0
+      WHERE ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER') AND ou_line IS NOT NULL AND ou_line != '' AND CAST(ou_line AS REAL) >= 7.0
       GROUP BY line_bucket, ou_prediction ORDER BY min_line
     `).all();
 
@@ -1837,8 +1918,8 @@ app.get("/api/pattern-analysis", (_req, res) => {
       SELECT season_type,
         COUNT(*) as total,
         COALESCE(SUM(ml_correct),0) as ml_wins,
-        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL THEN 1 ELSE 0 END),0) as ou_graded,
-        COALESCE(SUM(ou_correct),0) as ou_wins
+        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER') THEN 1 ELSE 0 END),0) as ou_graded,
+        COALESCE(SUM(CASE WHEN ou_correct IS NOT NULL AND ou_prediction IN ('OVER','UNDER') THEN ou_correct ELSE 0 END),0) as ou_wins
       FROM predictions WHERE ml_correct IS NOT NULL AND season_type IS NOT NULL
       GROUP BY season_type
     `).all();

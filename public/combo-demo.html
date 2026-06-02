@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Combo Signal Demo</title>
+<style>
+:root {
+  --bg1:#0d1117;--bg3:#161b22;--border:#30363d;
+  --text1:#e6edf3;--text2:#8b949e;--text3:#484f58;
+  --green:#3fb950;--blue:#378ADD;--red:#e24b4a;--gold:#ef9f27;
+  --font-mono:'SFMono-Regular',Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg1);color:var(--text1);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:32px;max-width:860px;margin:0 auto}
+h2{font-size:1rem;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:10px}
+.pb{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:16px}
+.pb-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:12px}
+
+/* combo chips */
+.combo-wrap{display:flex;flex-direction:column;gap:10px}
+.combo-group{display:flex;flex-direction:column;gap:6px}
+.combo-group-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em}
+.combo-group-label.ml-label{color:var(--green)}
+.combo-group-label.ou-label{color:var(--blue)}
+.combo-group-label.fade-label{color:var(--red)}
+.combo-chips{display:flex;flex-wrap:wrap;gap:6px}
+.combo-chip{display:flex;align-items:center;gap:5px;padding:4px 9px;border-radius:6px;background:var(--cc);border:1px solid var(--cb);cursor:default}
+.combo-code{font-family:var(--font-mono);font-size:.72rem;font-weight:700;color:var(--cl);flex-shrink:0}
+.combo-title{font-size:.72rem;font-weight:500;color:var(--text1)}
+.combo-pct{font-size:.67rem;color:var(--text3);margin-left:2px;flex-shrink:0}
+
+/* example flag chips */
+.flags-wrap{display:flex;flex-wrap:wrap;gap:8px}
+.flag-chip{font-size:.78rem;font-weight:600;font-family:var(--font-mono);padding:3px 9px;border-radius:4px;border:1px solid}
+.note{font-size:.8rem;color:var(--text2);margin-top:8px;line-height:1.6;background:rgba(239,159,39,.06);border:1px solid rgba(239,159,39,.2);border-radius:6px;padding:10px 12px}
+.note b{color:var(--gold)}
+</style>
+</head>
+<body>
+
+<h2>Combo &amp; Fade Signal Display — Live Demo</h2>
+
+<!-- SCENARIO 1: Crown Jewel fires -->
+<div class="pb">
+  <div class="pb-label">Scenario A — Crown Jewel + Fade Signals</div>
+  <div class="combo-wrap">
+
+    <div class="combo-group">
+      <div class="combo-group-label fade-label">⚠ Fade Signals Active — model direction may be reversed</div>
+      <div class="combo-chips">
+        <div class="combo-chip" style="--cc:rgba(226,75,74,.1);--cb:rgba(226,75,74,.25);--cl:#e24b4a" title="Fade home ML → bet AWAY team. Skip O/U. (n=45 most reliable)">
+          <span class="combo-code">FD7</span>
+          <span class="combo-title">OU-B + Away surge RED + model HOME ★</span>
+          <span class="combo-pct">69% n=45</span>
+        </div>
+        <div class="combo-chip" style="--cc:rgba(226,75,74,.1);--cb:rgba(226,75,74,.25);--cl:#e24b4a" title="Follow ML. Flip UNDER → bet OVER instead.">
+          <span class="combo-code">FD6</span>
+          <span class="combo-title">TMF + Dome + model UNDER</span>
+          <span class="combo-pct">79% n=14</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="combo-group">
+      <div class="combo-group-label ml-label">ML Combos</div>
+      <div class="combo-chips">
+        <div class="combo-chip" style="--cc:rgba(63,185,80,.1);--cb:rgba(63,185,80,.25);--cl:#3fb950" title="CROWN JEWEL — ML 93% + O/U 85% simultaneously">
+          <span class="combo-code">MC2</span>
+          <span class="combo-title">Home Fortress + Conf 50–55 + TMF ⭐</span>
+          <span class="combo-pct">93% n=14</span>
+        </div>
+        <div class="combo-chip" style="--cc:rgba(63,185,80,.1);--cb:rgba(63,185,80,.25);--cl:#3fb950" title="ML 91% n=22 · O/U 63% — best large-n">
+          <span class="combo-code">MC10</span>
+          <span class="combo-title">Home pred + Home Fortress + Dome</span>
+          <span class="combo-pct">91% n=22</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="combo-group">
+      <div class="combo-group-label ou-label">O/U Combos</div>
+      <div class="combo-chips">
+        <div class="combo-chip" style="--cc:rgba(55,138,221,.1);--cb:rgba(55,138,221,.25);--cl:#378ADD" title="O/U 93% n=14 — best O/U combo overall">
+          <span class="combo-code">OC1</span>
+          <span class="combo-title">Home Fortress + UNDER + TMF</span>
+          <span class="combo-pct">93% n=14</span>
+        </div>
+        <div class="combo-chip" style="--cc:rgba(55,138,221,.1);--cb:rgba(55,138,221,.25);--cl:#378ADD" title="CROWN JEWEL — O/U 85% + ML 93% simultaneously">
+          <span class="combo-code">OC2</span>
+          <span class="combo-title">Home Fortress + Conf 50–55 + TMF ⭐</span>
+          <span class="combo-pct">85% n=13</span>
+        </div>
+        <div class="combo-chip" style="--cc:rgba(55,138,221,.1);--cb:rgba(55,138,221,.25);--cl:#378ADD" title="O/U 71% n=35 · ML 68% — main recurring combo">
+          <span class="combo-code">OC6</span>
+          <span class="combo-title">TMF + Home Fortress (anchor)</span>
+          <span class="combo-pct">71% n=35</span>
+        </div>
+        <div class="combo-chip" style="--cc:rgba(55,138,221,.1);--cb:rgba(55,138,221,.25);--cl:#378ADD" title="O/U 77% n=13 · ML 86% both above 77%">
+          <span class="combo-code">OC9</span>
+          <span class="combo-title">OU-A + Conf 50–55 + TMF</span>
+          <span class="combo-pct">77% n=13</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="note">
+    <b>FD7 fires</b> (away ace surging + OU-B + model backs home) → override: bet AWAY ML, skip O/U.<br>
+    <b>FD6 fires</b> (TMF + Dome + model UNDER) → flip O/U: bet OVER instead of UNDER.<br>
+    <b>MC2 / OC2</b> = Crown Jewel: same 3 conditions, both ML 93% <i>and</i> O/U 85% simultaneously.
+  </div>
+</div>
+
+<!-- SCENARIO 2: ML-only clean signal -->
+<div class="pb">
+  <div class="pb-label">Scenario B — ML-only clean setup (no fades, no O/U combos)</div>
+  <div class="combo-wrap">
+    <div class="combo-group">
+      <div class="combo-group-label ml-label">ML Combos</div>
+      <div class="combo-chips">
+        <div class="combo-chip" style="--cc:rgba(63,185,80,.1);--cb:rgba(63,185,80,.25);--cl:#3fb950" title="ML 94% n=18 (largest high-rate n)">
+          <span class="combo-code">MC3</span>
+          <span class="combo-title">Home Fortress + TMS home higher + Dome</span>
+          <span class="combo-pct">94% n=18</span>
+        </div>
+        <div class="combo-chip" style="--cc:rgba(63,185,80,.1);--cb:rgba(63,185,80,.25);--cl:#3fb950" title="ML 93% n=15 · skip O/U (36%)">
+          <span class="combo-code">MC4</span>
+          <span class="combo-title">TMS home higher + TMF + Dome</span>
+          <span class="combo-pct">93% n=15</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note"><b>MC4 fires:</b> O/U accuracy is only 36% in this combo — hard skip O/U, ML $75 only.</div>
+</div>
+
+<!-- SCENARIO 3: No combos — section hidden -->
+<div class="pb">
+  <div class="pb-label">Scenario C — No combos matched (section hidden)</div>
+  <div style="color:var(--text3);font-size:.85rem;font-style:italic">The Combo &amp; Fade Signals block is hidden entirely when combo_hits and fade_signals are both empty arrays.</div>
+</div>
+
+</body>
+</html>

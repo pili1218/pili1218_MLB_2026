@@ -133,6 +133,7 @@ function renderCharts(data) {
   chartConfidence(data.byConfidence, d);
   chartWP(data.byWP, d);
   chartTrend(data.trend, d);
+  chartOUTrend(data.trend, d);
   chartOUTier(data.byOUTier, d);
   chartHomeAway(data.homeAway, d);
   // Section 3 — O/U lines
@@ -245,14 +246,22 @@ function chartDirection(data, d) {
 
 function chartTrend(trend, d) {
   if (trend.length < 5) return;
-  const W = Math.min(10, Math.floor(trend.length / 2));
-  const points=[], breakeven=[];
-  for (let i = W-1; i < trend.length; i++) {
-    const slice = trend.slice(i-W+1, i+1);
-    points.push(+(slice.filter(g=>g.ml_correct===1).length/W*100).toFixed(1));
+  const W10 = Math.min(10, Math.floor(trend.length / 2));
+  const W15 = Math.min(15, Math.floor(trend.length / 2));
+  // Build 10-game series (starts at index W10-1)
+  const pts10 = [], pts15 = [], breakeven = [];
+  const maxLen = trend.length;
+  for (let i = W10 - 1; i < maxLen; i++) {
+    pts10.push(+(trend.slice(i - W10 + 1, i + 1).filter(g => g.ml_correct === 1).length / W10 * 100).toFixed(1));
     breakeven.push(52.4);
   }
-  const labels = points.map((_,i) => `G${i+W}`);
+  // 15-game series — pad with null until it starts
+  const pad15 = W15 - W10;
+  for (let i = W15 - 1; i < maxLen; i++) {
+    pts15.push(+(trend.slice(i - W15 + 1, i + 1).filter(g => g.ml_correct === 1).length / W15 * 100).toFixed(1));
+  }
+  const pts15padded = [...Array(pad15).fill(null), ...pts15];
+  const labels = pts10.map((_, i) => `G${i + W10}`);
 
   destroyChart('trend');
   _charts.trend = new Chart(document.getElementById('chartTrend'), {
@@ -261,8 +270,8 @@ function chartTrend(trend, d) {
       labels,
       datasets: [
         {
-          label: `${W}-Game Rolling ML %`,
-          data: points,
+          label: '10-Game Rolling ML %',
+          data: pts10,
           borderColor: '#22c55e',
           backgroundColor: 'rgba(34,197,94,0.07)',
           tension: 0.35,
@@ -272,10 +281,22 @@ function chartTrend(trend, d) {
           borderWidth: 2,
         },
         {
+          label: '15-Game Rolling ML %',
+          data: pts15padded,
+          borderColor: '#86efac',
+          backgroundColor: 'transparent',
+          tension: 0.35,
+          fill: false,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          borderWidth: 1.5,
+          borderDash: [4, 3],
+        },
+        {
           label: 'Breakeven 52.4%',
           data: breakeven,
           borderColor: '#f5c518',
-          borderDash: [6,4],
+          borderDash: [6, 4],
           borderWidth: 1.5,
           pointRadius: 0,
           fill: false,
@@ -284,18 +305,88 @@ function chartTrend(trend, d) {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels:{ boxWidth:12, padding:14 } } },
+      plugins: { legend: { labels: { boxWidth: 12, padding: 14 } } },
       scales: {
-        y: { min:0, max:100, ticks:{ callback: v=>v+'%' }, grid:{ color:d.gridColor } },
-        x: { grid:{ display:false }, ticks:{ maxTicksLimit:10, font:{size:10} } }
+        y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: d.gridColor } },
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+function chartOUTrend(trend, d) {
+  const ouGraded = trend.filter(g => g.ou_correct !== null && (g.ou_prediction === 'OVER' || g.ou_prediction === 'UNDER'));
+  if (ouGraded.length < 5) return;
+  const W10 = Math.min(10, Math.floor(ouGraded.length / 2));
+  const W15 = Math.min(15, Math.floor(ouGraded.length / 2));
+  const pts10 = [], pts15 = [], breakeven = [];
+  for (let i = W10 - 1; i < ouGraded.length; i++) {
+    pts10.push(+(ouGraded.slice(i - W10 + 1, i + 1).filter(g => g.ou_correct === 1).length / W10 * 100).toFixed(1));
+    breakeven.push(52.4);
+  }
+  for (let i = W15 - 1; i < ouGraded.length; i++) {
+    pts15.push(+(ouGraded.slice(i - W15 + 1, i + 1).filter(g => g.ou_correct === 1).length / W15 * 100).toFixed(1));
+  }
+  const pad15 = W15 - W10;
+  const pts15padded = [...Array(pad15).fill(null), ...pts15];
+  const labels = pts10.map((_, i) => `G${i + W10}`);
+
+  destroyChart('outrend');
+  _charts.outrend = new Chart(document.getElementById('chartOUTrend'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '10-Game Rolling O/U %',
+          data: pts10,
+          borderColor: '#6366f1',
+          backgroundColor: 'rgba(99,102,241,0.07)',
+          tension: 0.35,
+          fill: true,
+          pointRadius: 2.5,
+          pointHoverRadius: 5,
+          borderWidth: 2,
+        },
+        {
+          label: '15-Game Rolling O/U %',
+          data: pts15padded,
+          borderColor: '#a5b4fc',
+          backgroundColor: 'transparent',
+          tension: 0.35,
+          fill: false,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          borderWidth: 1.5,
+          borderDash: [4, 3],
+        },
+        {
+          label: 'Breakeven 52.4%',
+          data: breakeven,
+          borderColor: '#f5c518',
+          borderDash: [6, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { boxWidth: 12, padding: 14 } } },
+      scales: {
+        y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: d.gridColor } },
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 10 } } }
       }
     }
   });
 }
 
 function chartOUTier(data, d) {
-  const ORDER = ['Low','Moderate','High'];
-  const rows  = ORDER.map(t => data.find(r => r.ou_confidence===t) || {ou_confidence:t,total:0,ou_wins:0});
+  const ORDER  = ['Low','Lean','Moderate','High'];
+  const COLORS = ['rgba(58,143,224,0.7)','rgba(249,115,22,0.7)','rgba(245,197,24,0.7)','rgba(34,197,94,0.7)'];
+  const BORDER = ['#3a8fe0','#f97316','#f5c518','#22c55e'];
+  const rows   = ORDER.map(t => data.find(r => r.ou_confidence===t) || {ou_confidence:t,total:0,ou_wins:0});
   const vals   = rows.map(r => pct(r.ou_wins, r.total));
   const counts = rows.map(r => r.total);
 
@@ -307,8 +398,8 @@ function chartOUTier(data, d) {
       datasets: [{
         label: 'O/U Hit Rate',
         data: vals,
-        backgroundColor: ['rgba(58,143,224,0.7)','rgba(245,197,24,0.7)','rgba(34,197,94,0.7)'],
-        borderColor: ['#3a8fe0','#f5c518','#22c55e'],
+        backgroundColor: COLORS,
+        borderColor: BORDER,
         borderWidth: 1.5,
         borderRadius: 7,
         barThickness: 44,

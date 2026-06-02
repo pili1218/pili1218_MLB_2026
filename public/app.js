@@ -578,6 +578,7 @@ function showPrediction(data) {
   renderBetStrategy(data);
   renderMetrics(data);
   renderFlags(data);
+  renderCombos(data);
   renderNarrative(data);
   renderExport(data);
 
@@ -688,6 +689,88 @@ function renderFlags(data) {
         : "var(--gold)";
     return `<span class="flag-chip" style="color:${color};border-color:${color}25;background:${color}0a">${escapeHtml(f)}</span>`;
   }).join("");
+}
+
+function renderCombos(data) {
+  const el = document.getElementById("comboSection");
+  const block = document.getElementById("comboBlock");
+  if (!el) return;
+
+  const COMBO_META = {
+    MC1:  { label:"MC1", type:"ml",   pct:"100%", n:14,  title:"Home pred + Conf 50–55 + TMF",               tip:"ML 100% n=14 · O/U 77%" },
+    MC2:  { label:"MC2", type:"ml",   pct:"93%",  n:14,  title:"Home Fortress + Conf 50–55 + TMF ⭐",         tip:"CROWN JEWEL — ML 93% + O/U 85% simultaneously" },
+    MC3:  { label:"MC3", type:"ml",   pct:"94%",  n:18,  title:"Home Fortress + TMS home higher + Dome",       tip:"ML 94% n=18 (largest high-rate n)" },
+    MC4:  { label:"MC4", type:"ml",   pct:"93%",  n:15,  title:"TMS home higher + TMF + Dome",                tip:"ML 93% n=15 · skip O/U (36%)" },
+    MC5:  { label:"MC5", type:"ml",   pct:"92%",  n:13,  title:"Home pred + WP-Override A + UNDER",           tip:"ML 92% n=13 · O/U 58% secondary" },
+    MC6:  { label:"MC6", type:"ml",   pct:"92%",  n:13,  title:"WP gap ≥20% + WP-Override A + UNDER",         tip:"ML 92% n=13 · skip O/U (46%)" },
+    MC7:  { label:"MC7", type:"ml",   pct:"92%",  n:13,  title:"WP-Override A + OU-A + UNDER",                tip:"ML 92% n=13 · skip O/U (50%)" },
+    MC8:  { label:"MC8", type:"ml",   pct:"92%",  n:12,  title:"HFCF + OU-A + UNDER",                        tip:"ML 92% n=12 · O/U 55%" },
+    MC9:  { label:"MC9", type:"ml",   pct:"92%",  n:12,  title:"Home Fortress + Conf 50–55 + Dome",           tip:"ML 92% n=12 · O/U 58%" },
+    MC10: { label:"MC10",type:"ml",   pct:"91%",  n:22,  title:"Home pred + Home Fortress + Dome",            tip:"ML 91% n=22 · O/U 63% — best large-n" },
+    OC1:  { label:"OC1", type:"ou",   pct:"93%",  n:14,  title:"Home Fortress + UNDER + TMF",                 tip:"O/U 93% n=14 — best O/U combo overall" },
+    OC2:  { label:"OC2", type:"ou",   pct:"85%",  n:13,  title:"Home Fortress + Conf 50–55 + TMF ⭐",         tip:"CROWN JEWEL — O/U 85% + ML 93% simultaneously" },
+    OC3:  { label:"OC3", type:"ou",   pct:"83%",  n:12,  title:"Slumping SP + Home Fortress + TMF",           tip:"O/U 83% n=12 · skip ML (57%)" },
+    OC4:  { label:"OC4", type:"ou",   pct:"81%",  n:16,  title:"Line 8–9 + DHVP + MCF",                      tip:"O/U 81% n=16 · skip ML (MCF ban)" },
+    OC5:  { label:"OC5", type:"ou",   pct:"79%",  n:14,  title:"Home Fortress + RED mismatch + TMF",          tip:"O/U 79% n=14 · ML 80% both above 78%" },
+    OC6:  { label:"OC6", type:"ou",   pct:"71%",  n:35,  title:"TMF + Home Fortress (anchor)",                tip:"O/U 71% n=35 · ML 68% — main recurring combo" },
+    OC7:  { label:"OC7", type:"ou",   pct:"70%",  n:20,  title:"TMF + Conf 50–55",                           tip:"O/U 70% n=20 · ML 82%" },
+    OC8:  { label:"OC8", type:"ou",   pct:"77%",  n:17,  title:"OU-A + UNDER + TMF",                         tip:"O/U 77% n=17 · skip ML (59%)" },
+    OC9:  { label:"OC9", type:"ou",   pct:"77%",  n:13,  title:"OU-A + Conf 50–55 + TMF",                    tip:"O/U 77% n=13 · ML 86% both above 77%" },
+    OC10: { label:"OC10",type:"ou",   pct:"76%",  n:25,  title:"Home Fortress + OU-B + TMF",                  tip:"O/U 76% n=25 · ML 70%" },
+    FD1:  { label:"FD1", type:"fade", pct:"83%",  n:12,  title:"Surge SP + GVI≥80",                          tip:"Fade ML → bet OTHER team. Skip O/U." },
+    FD2:  { label:"FD2", type:"fade", pct:"82%",  n:11,  title:"Slump Away SP + PVS>15 + model OVER",         tip:"Fade OVER → bet UNDER instead. Skip ML." },
+    FD3:  { label:"FD3", type:"fade", pct:"75%",  n:24,  title:"Golden Condition + Away surge RED",           tip:"Fade home ML → bet AWAY team. Skip O/U." },
+    FD4:  { label:"FD4", type:"fade", pct:"72%",  n:25,  title:"RCF active + Away surge RED",                 tip:"Fade home ML → bet AWAY team. Skip O/U." },
+    FD5:  { label:"FD5", type:"fade", pct:"72%",  n:25,  title:"Surge SP + WP gap <10%",                     tip:"Fade ML → bet OTHER team + OVER $50." },
+    FD6:  { label:"FD6", type:"fade", pct:"79%",  n:14,  title:"TMF + Dome + model UNDER",                   tip:"Follow ML. Flip UNDER → bet OVER instead." },
+    FD7:  { label:"FD7", type:"fade", pct:"69%",  n:45,  title:"OU-B + Away surge RED + model HOME ★",        tip:"Fade home ML → bet AWAY team. Skip O/U. (n=45 most reliable)" },
+    FD8:  { label:"FD8", type:"fade", pct:"69%",  n:16,  title:"GVI≥90 + Away prediction",                   tip:"Fade away ML → bet HOME team. Skip O/U." },
+    FD9:  { label:"FD9", type:"fade", pct:"74%",  n:19,  title:"WPB + PVS>15 + model UNDER",                 tip:"Follow ML. Flip UNDER → bet OVER instead." },
+    FD10: { label:"FD10",type:"fade", pct:"68%",  n:22,  title:"RED mismatch + MCF ban",                     tip:"Fade model's ML pick → bet OTHER team. Skip O/U." }
+  };
+
+  const combos  = (data.combo_hits   || []).filter(c => COMBO_META[c]);
+  const fades   = (data.fade_signals || []).filter(c => COMBO_META[c]);
+  const all     = [...combos, ...fades];
+
+  if (all.length === 0) {
+    if (block) block.style.display = "none";
+    return;
+  }
+  if (block) block.style.display = "";
+
+  const mlHits  = combos.filter(c => COMBO_META[c].type === "ml");
+  const ouHits  = combos.filter(c => COMBO_META[c].type === "ou");
+  const fdHits  = fades;
+
+  function chipHTML(codes, bgColor, labelColor) {
+    return codes.map(code => {
+      const m = COMBO_META[code];
+      return `<div class="combo-chip" style="--cc:${bgColor};--cl:${labelColor}" title="${escapeHtml(m.tip)}">
+        <span class="combo-code">${escapeHtml(m.label)}</span>
+        <span class="combo-title">${escapeHtml(m.title)}</span>
+        <span class="combo-pct">${escapeHtml(m.pct)} n=${m.n}</span>
+      </div>`;
+    }).join("");
+  }
+
+  let html = '<div class="combo-wrap">';
+
+  if (fdHits.length) {
+    html += `<div class="combo-group"><div class="combo-group-label fade-label">⚠ Fade Signals Active — model direction may be reversed</div>`;
+    html += `<div class="combo-chips">${chipHTML(fdHits, "rgba(226,75,74,.1)", "#e24b4a")}</div></div>`;
+  }
+  if (mlHits.length) {
+    html += `<div class="combo-group"><div class="combo-group-label ml-label">ML Combos</div>`;
+    html += `<div class="combo-chips">${chipHTML(mlHits, "rgba(63,185,80,.1)", "#3fb950")}</div></div>`;
+  }
+  if (ouHits.length) {
+    html += `<div class="combo-group"><div class="combo-group-label ou-label">O/U Combos</div>`;
+    html += `<div class="combo-chips">${chipHTML(ouHits, "rgba(55,138,221,.1)", "#378ADD")}</div></div>`;
+  }
+
+  html += "</div>";
+  el.innerHTML = html;
 }
 
 function renderBetStrategy(data) {

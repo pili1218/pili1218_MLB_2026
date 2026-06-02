@@ -50,7 +50,7 @@
         <div class="globe-stats">
           <div class="globe-stat"><span class="globe-stat-num">3</span><span class="globe-stat-label">AI Models</span></div>
           <div class="globe-stat-divider"></div>
-          <div class="globe-stat"><span class="globe-stat-num">v3.8</span><span class="globe-stat-label">Framework</span></div>
+          <div class="globe-stat"><span class="globe-stat-num">v3.9</span><span class="globe-stat-label">Framework</span></div>
           <div class="globe-stat-divider"></div>
           <div class="globe-stat"><span class="globe-stat-num">MLB</span><span class="globe-stat-label">All Season</span></div>
         </div>
@@ -356,6 +356,12 @@
           <div id="flagsSection" class="flags-wrap"></div>
         </div>
 
+        <!-- Combo & Fade Signals -->
+        <div class="pb" id="comboBlock">
+          <div class="pb-label">Combo &amp; Fade Signals</div>
+          <div id="comboSection"></div>
+        </div>
+
         <!-- Narrative -->
         <div class="pb">
           <div class="pb-label">Analysis Narrative</div>
@@ -393,11 +399,22 @@
   <section class="changelog-section">
     <div class="changelog-header" id="changelogToggle">
       <span class="changelog-title">Framework Changelog</span>
-      <span class="changelog-badge">v3.8</span>
+      <span class="changelog-badge">v3.9</span>
       <span class="changelog-chevron" id="changelogChevron">▼</span>
     </div>
     <div class="changelog-body hidden" id="changelogBody">
       <div class="changelog-entry changelog-entry--current">
+        <div class="changelog-version">v3.9 <span class="changelog-date">2026-05-31</span></div>
+        <div class="changelog-desc">Combo &amp; Fade Signal Indicator System — 20 named ML/O/U combo codes (MC1–MC10, OC1–OC10) and 10 fade/reversal codes (FD1–FD10) evaluated post-analysis and surfaced as colored chips in the UI. Crown Jewel (MC2/OC2) highlights simultaneous 93% ML + 85% O/U conditions. Naming convention avoids conflict with R1–R16 rule flags.</div>
+        <ul class="changelog-items">
+          <li><strong>MC1–MC10 (ML Combos)</strong> — 10 multi-condition ML combo signals; MC2 Crown Jewel fires when Home Fortress + conf 50–55 + TMF all active (93% ML, 85% O/U simultaneously).</li>
+          <li><strong>OC1–OC10 (O/U Combos)</strong> — 10 multi-condition O/U combo signals; OC6 (TMF + Home Fortress) is the main recurring anchor (71% OU, n=35).</li>
+          <li><strong>FD1–FD10 (Fade Signals)</strong> — 10 reversal/override signals rendered in red as warnings; FD7 (OU-B + Away surge + model backs home) is highest-n (69%, n=45).</li>
+          <li><strong>UI combo chips</strong> — Fade signals shown first in red, ML combos in green, O/U combos in blue; block hidden entirely when no combos match.</li>
+          <li><strong>JSON schema</strong> — New fields: combo_hits[] and fade_signals[].</li>
+        </ul>
+      </div>
+      <div class="changelog-entry changelog-entry--prev">
         <div class="changelog-version">v3.8 <span class="changelog-date">2026-05-19</span></div>
         <div class="changelog-desc">534-game deep analysis — 8 rule adjustments. May 19 complete O/U collapse (0/5, avg GVI=78). HFCF reclassified as ML confirmation. PDCF now blocks O/U. R14 upgraded to hard flip. OUA+OUB+OVER elevated to Tier 1.</div>
         <ul class="changelog-items">

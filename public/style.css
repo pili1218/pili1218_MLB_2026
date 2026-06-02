@@ -1313,6 +1313,52 @@ body {
 }
 .btn-history:hover { border-color: var(--gold); color: var(--gold); }
 
+/* ─── Combo & Fade Signals ──────────────────────────────────────────────── */
+.combo-wrap { display: flex; flex-direction: column; gap: 10px; }
+
+.combo-group { display: flex; flex-direction: column; gap: 6px; }
+
+.combo-group-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+.combo-group-label.ml-label    { color: #3fb950; }
+.combo-group-label.ou-label    { color: #378ADD; }
+.combo-group-label.fade-label  { color: #e24b4a; }
+
+.combo-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.combo-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: var(--cc, rgba(55,138,221,.08));
+  border: 1px solid color-mix(in srgb, var(--cl, #378ADD) 25%, transparent);
+  cursor: default;
+}
+.combo-code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--cl, #378ADD);
+  flex-shrink: 0;
+}
+.combo-title {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text1, #e6edf3);
+}
+.combo-pct {
+  font-size: 0.67rem;
+  color: var(--text3, #7d8590);
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
 /* ─── Save Block ────────────────────────────────────────────────────────── */
 .save-block { background: var(--bg3); }
 
