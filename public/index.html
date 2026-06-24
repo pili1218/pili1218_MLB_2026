@@ -29,6 +29,12 @@
           Analyzer
         </a>
         <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
+        <a href="/combos" class="nav-tab">
+          <svg viewBox="0 0 20 20" fill="currentColor" class="nav-icon">
+            <path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/>
+          </svg>
+          Combos
+        </a>
         <a href="/history" class="nav-tab" id="historyNavTab">
           <svg viewBox="0 0 20 20" fill="currentColor" class="nav-icon">
             <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
@@ -50,7 +56,7 @@
         <div class="globe-stats">
           <div class="globe-stat"><span class="globe-stat-num">3</span><span class="globe-stat-label">AI Models</span></div>
           <div class="globe-stat-divider"></div>
-          <div class="globe-stat"><span class="globe-stat-num">v3.9</span><span class="globe-stat-label">Framework</span></div>
+          <div class="globe-stat"><span class="globe-stat-num">v3.10</span><span class="globe-stat-label">Framework</span></div>
           <div class="globe-stat-divider"></div>
           <div class="globe-stat"><span class="globe-stat-num">MLB</span><span class="globe-stat-label">All Season</span></div>
         </div>
@@ -399,11 +405,23 @@
   <section class="changelog-section">
     <div class="changelog-header" id="changelogToggle">
       <span class="changelog-title">Framework Changelog</span>
-      <span class="changelog-badge">v3.9</span>
+      <span class="changelog-badge">v3.10</span>
       <span class="changelog-chevron" id="changelogChevron">▼</span>
     </div>
     <div class="changelog-body hidden" id="changelogBody">
       <div class="changelog-entry changelog-entry--current">
+        <div class="changelog-version">v3.10 <span class="changelog-date">2026-06-21</span></div>
+        <div class="changelog-desc">931-game empirical refresh — all 30 combo/fade codes (MC1–MC10, OC1–OC10, FD1–FD10) re-derived from the larger dataset, plus a brand-new Team Signal system: 30 team-specific flag correlations surfaced as chips alongside the combo/fade indicators.</div>
+        <ul class="changelog-items">
+          <li><strong>MC1–MC10 refreshed</strong> — top combo is now UNDER + Conf 50–55 + TMF (93.3% ML, n=15), both ML and O/U (78.6%) elite simultaneously.</li>
+          <li><strong>OC1–OC10 refreshed</strong> — OC9 (OU-B + Conf 50–55 + TMF) is the new large-n anchor at 74.3% OU, n=35★, with 71.1% ML alongside it.</li>
+          <li><strong>FD1–FD10 refreshed</strong> — all 10 fade signals now share a confirmed surging away SP as the common ingredient; FD5 (RED mismatch + OU-B + Away surge, n=41★) is the largest-sample, highest-confidence fade.</li>
+          <li><strong>Team Signal Table (NEW)</strong> — 30 teams mapped to their single strongest empirical flag correlation (e.g. Texas Rangers + Golden Condition = 91.7% ML, n=12). Surfaced as purple chips via new <code>team_signals[]</code> array.</li>
+          <li><strong>Combos reference page</strong> — added "Top 10 teams" and "All 30 teams" tabs at <code>/combos</code> mirroring the new team-correlation data.</li>
+          <li><strong>JSON schema</strong> — new field: <code>team_signals[]</code> (format <code>"ABBR:flagname"</code>).</li>
+        </ul>
+      </div>
+      <div class="changelog-entry changelog-entry--prev">
         <div class="changelog-version">v3.9 <span class="changelog-date">2026-05-31</span></div>
         <div class="changelog-desc">Combo &amp; Fade Signal Indicator System — 20 named ML/O/U combo codes (MC1–MC10, OC1–OC10) and 10 fade/reversal codes (FD1–FD10) evaluated post-analysis and surfaced as colored chips in the UI. Crown Jewel (MC2/OC2) highlights simultaneous 93% ML + 85% O/U conditions. Naming convention avoids conflict with R1–R16 rule flags.</div>
         <ul class="changelog-items">

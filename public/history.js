@@ -673,8 +673,8 @@ function buildFlags(r) {
     [/VCB|Venue Cold UNDER/i,              'VCB'],
     [/ENV_BLOCK|Environmental Block/i,     'ENV_BLOCK'],
     [/EST_HIGH|Estimate Too High/i,        'EST_HIGH'],
-    [/WP.Override A/i,                     'WPOvr-A'],
-    [/WP.Override B/i,                     'WPOvr-B'],
+    [/WP.Override A(?!: NOT)/i,            'WPOvr-A'],
+    [/WP.Override B(?!: NOT)/i,            'WPOvr-B'],
     [/Surging.*Home SP|Home SP.*Surging/i, 'SURGE-H'],
     [/Surging.*Away SP|Away SP.*Surging/i, 'SURGE-A'],
     [/Slumping.*Home SP|Home SP.*Slumping/i,'SLUMP-H'],
@@ -683,7 +683,7 @@ function buildFlags(r) {
     [/High Volatility.*Away|Away.*PVS/i,   'HVOL-A'],
     [/DH G2|Doubleheader/i,                'DH-G2'],
     [/Wind.*Ace Veto/i,                    'W-ACE✗'],
-    [/Home Fortress/i,                     'FORTRESS'],
+    [/Home Fortress Flag|FORTRESS\+TMF|FTMF_MATCH/i,  'FORTRESS'],
     [/Division Race/i,                     'DIV-RACE'],
     [/Wild Card Race/i,                    'WC-RACE'],
     [/Elimination Game/i,                  'ELIM'],
@@ -847,8 +847,30 @@ function buildRules(r) {
   }).join('');
 }
 
+function mlPickFromRec(rec, homeTeam, awayTeam) {
+  // Extract team name after "ML $XX " in betting_recommendation
+  // Stop at (, +, —, or end of string
+  if (!rec) return null;
+  const m = rec.match(/\bML\s+\$\d+\s+([\w ]+?)(?:\s*[(+]|$)/i);
+  if (!m) return null;
+  const pick = m[1].trim().toLowerCase();
+  const homeWords = (homeTeam || '').toLowerCase().split(' ').filter(w => w.length > 3);
+  const awayWords = (awayTeam  || '').toLowerCase().split(' ').filter(w => w.length > 3);
+  const hitHome = homeWords.some(w => pick.includes(w));
+  const hitAway = awayWords.some(w => pick.includes(w));
+  if (hitAway && !hitHome) return awayTeam;
+  if (hitHome && !hitAway) return homeTeam;
+  return null;
+}
+
 function renderRow(r) {
-  const predWinner = r.home_win_pct >= r.away_win_pct ? r.home_team : r.away_team;
+  // When WPs are equal (integer rounding tie after R14 etc.) use ML rec text as tiebreaker
+  let predWinner;
+  if (r.home_win_pct !== r.away_win_pct) {
+    predWinner = r.home_win_pct > r.away_win_pct ? r.home_team : r.away_team;
+  } else {
+    predWinner = mlPickFromRec(r.betting_recommendation, r.home_team, r.away_team) || r.home_team;
+  }
   const predWinPct = Math.max(r.home_win_pct || 0, r.away_win_pct || 0);
 
   const actualStr = r.actual_home_score != null

@@ -697,41 +697,84 @@ function renderCombos(data) {
   if (!el) return;
 
   const COMBO_META = {
-    MC1:  { label:"MC1", type:"ml",   pct:"100%", n:14,  title:"Home pred + Conf 50–55 + TMF",               tip:"ML 100% n=14 · O/U 77%" },
-    MC2:  { label:"MC2", type:"ml",   pct:"93%",  n:14,  title:"Home Fortress + Conf 50–55 + TMF ⭐",         tip:"CROWN JEWEL — ML 93% + O/U 85% simultaneously" },
-    MC3:  { label:"MC3", type:"ml",   pct:"94%",  n:18,  title:"Home Fortress + TMS home higher + Dome",       tip:"ML 94% n=18 (largest high-rate n)" },
-    MC4:  { label:"MC4", type:"ml",   pct:"93%",  n:15,  title:"TMS home higher + TMF + Dome",                tip:"ML 93% n=15 · skip O/U (36%)" },
-    MC5:  { label:"MC5", type:"ml",   pct:"92%",  n:13,  title:"Home pred + WP-Override A + UNDER",           tip:"ML 92% n=13 · O/U 58% secondary" },
-    MC6:  { label:"MC6", type:"ml",   pct:"92%",  n:13,  title:"WP gap ≥20% + WP-Override A + UNDER",         tip:"ML 92% n=13 · skip O/U (46%)" },
-    MC7:  { label:"MC7", type:"ml",   pct:"92%",  n:13,  title:"WP-Override A + OU-A + UNDER",                tip:"ML 92% n=13 · skip O/U (50%)" },
-    MC8:  { label:"MC8", type:"ml",   pct:"92%",  n:12,  title:"HFCF + OU-A + UNDER",                        tip:"ML 92% n=12 · O/U 55%" },
-    MC9:  { label:"MC9", type:"ml",   pct:"92%",  n:12,  title:"Home Fortress + Conf 50–55 + Dome",           tip:"ML 92% n=12 · O/U 58%" },
-    MC10: { label:"MC10",type:"ml",   pct:"91%",  n:22,  title:"Home pred + Home Fortress + Dome",            tip:"ML 91% n=22 · O/U 63% — best large-n" },
-    OC1:  { label:"OC1", type:"ou",   pct:"93%",  n:14,  title:"Home Fortress + UNDER + TMF",                 tip:"O/U 93% n=14 — best O/U combo overall" },
-    OC2:  { label:"OC2", type:"ou",   pct:"85%",  n:13,  title:"Home Fortress + Conf 50–55 + TMF ⭐",         tip:"CROWN JEWEL — O/U 85% + ML 93% simultaneously" },
-    OC3:  { label:"OC3", type:"ou",   pct:"83%",  n:12,  title:"Slumping SP + Home Fortress + TMF",           tip:"O/U 83% n=12 · skip ML (57%)" },
-    OC4:  { label:"OC4", type:"ou",   pct:"81%",  n:16,  title:"Line 8–9 + DHVP + MCF",                      tip:"O/U 81% n=16 · skip ML (MCF ban)" },
-    OC5:  { label:"OC5", type:"ou",   pct:"79%",  n:14,  title:"Home Fortress + RED mismatch + TMF",          tip:"O/U 79% n=14 · ML 80% both above 78%" },
-    OC6:  { label:"OC6", type:"ou",   pct:"71%",  n:35,  title:"TMF + Home Fortress (anchor)",                tip:"O/U 71% n=35 · ML 68% — main recurring combo" },
-    OC7:  { label:"OC7", type:"ou",   pct:"70%",  n:20,  title:"TMF + Conf 50–55",                           tip:"O/U 70% n=20 · ML 82%" },
-    OC8:  { label:"OC8", type:"ou",   pct:"77%",  n:17,  title:"OU-A + UNDER + TMF",                         tip:"O/U 77% n=17 · skip ML (59%)" },
-    OC9:  { label:"OC9", type:"ou",   pct:"77%",  n:13,  title:"OU-A + Conf 50–55 + TMF",                    tip:"O/U 77% n=13 · ML 86% both above 77%" },
-    OC10: { label:"OC10",type:"ou",   pct:"76%",  n:25,  title:"Home Fortress + OU-B + TMF",                  tip:"O/U 76% n=25 · ML 70%" },
-    FD1:  { label:"FD1", type:"fade", pct:"83%",  n:12,  title:"Surge SP + GVI≥80",                          tip:"Fade ML → bet OTHER team. Skip O/U." },
-    FD2:  { label:"FD2", type:"fade", pct:"82%",  n:11,  title:"Slump Away SP + PVS>15 + model OVER",         tip:"Fade OVER → bet UNDER instead. Skip ML." },
-    FD3:  { label:"FD3", type:"fade", pct:"75%",  n:24,  title:"Golden Condition + Away surge RED",           tip:"Fade home ML → bet AWAY team. Skip O/U." },
-    FD4:  { label:"FD4", type:"fade", pct:"72%",  n:25,  title:"RCF active + Away surge RED",                 tip:"Fade home ML → bet AWAY team. Skip O/U." },
-    FD5:  { label:"FD5", type:"fade", pct:"72%",  n:25,  title:"Surge SP + WP gap <10%",                     tip:"Fade ML → bet OTHER team + OVER $50." },
-    FD6:  { label:"FD6", type:"fade", pct:"79%",  n:14,  title:"TMF + Dome + model UNDER",                   tip:"Follow ML. Flip UNDER → bet OVER instead." },
-    FD7:  { label:"FD7", type:"fade", pct:"69%",  n:45,  title:"OU-B + Away surge RED + model HOME ★",        tip:"Fade home ML → bet AWAY team. Skip O/U. (n=45 most reliable)" },
-    FD8:  { label:"FD8", type:"fade", pct:"69%",  n:16,  title:"GVI≥90 + Away prediction",                   tip:"Fade away ML → bet HOME team. Skip O/U." },
-    FD9:  { label:"FD9", type:"fade", pct:"74%",  n:19,  title:"WPB + PVS>15 + model UNDER",                 tip:"Follow ML. Flip UNDER → bet OVER instead." },
-    FD10: { label:"FD10",type:"fade", pct:"68%",  n:22,  title:"RED mismatch + MCF ban",                     tip:"Fade model's ML pick → bet OTHER team. Skip O/U." }
+    // ── ML Combos (931-game) ──────────────────────────────────────────────────
+    MC1:  { label:"MC1",  type:"ml",   pct:"93%",  n:15,  title:"UNDER + Conf 50–55 + TMF",                    tip:"ML 93.3% n=15 · TOP combo — both ML and O/U (78.6%) elite here. Bet ML $75 + UNDER $75 full stake." },
+    MC2:  { label:"MC2",  type:"ml",   pct:"93%",  n:14,  title:"Home pred + GVI<35 + Dome",                   tip:"ML 92.9% n=14 · suppressed scoring + dome neutrality. O/U unclear (42.9%) — skip O/U." },
+    MC3:  { label:"MC3",  type:"ml",   pct:"92%",  n:13,  title:"Slumping SP + WP-Override A + UNDER",         tip:"ML 92.3% n=13 · double-confirmed SP quality gap. ML $75 + UNDER $37.50." },
+    MC4:  { label:"MC4",  type:"ml",   pct:"90%",  n:19,  title:"Home pred + WP-Override A + UNDER",           tip:"ML 89.5% n=19 · largest 89%+ sample. O/U solid at 61.1%. ML $75 + UNDER $50." },
+    MC5:  { label:"MC5",  type:"ml",   pct:"90%",  n:19,  title:"OU-A fired + WP-Override A + UNDER",          tip:"ML 89.5% n=19 · SP mismatch confirmed by two independent signals. UNDER $37.50 secondary." },
+    MC6:  { label:"MC6",  type:"ml",   pct:"89%",  n:18,  title:"WP gap ≥20% + WP-Override A + UNDER",         tip:"ML 88.9% n=18 · large WP gap validates WPA signal. ML $75 only, skip O/U." },
+    MC7:  { label:"MC7",  type:"ml",   pct:"87%",  n:15,  title:"Home pred + WP-Override A + Line 8–9",        tip:"ML 86.7% n=15 · AND 66.7% O/U — both markets strong. ML $75 + O/U direction $50." },
+    MC8:  { label:"MC8",  type:"ml",   pct:"87%",  n:15,  title:"Home Fortress + WP-Override A + UNDER",       tip:"ML 86.7% n=15 · O/U 64.3%. ML $75 + UNDER $50." },
+    MC9:  { label:"MC9",  type:"ml",   pct:"84%",  n:19,  title:"WP-Override A + RED mismatch + UNDER",        tip:"ML 84.2% n=19 · AND 66.7% O/U — best-balanced large-n combo. ML $75 + UNDER $50." },
+    MC10: { label:"MC10", type:"ml",   pct:"86%",  n:14,  title:"Home pred + Heavy Favorite + UNDER",          tip:"ML 85.7% n=14 · AND 66.7% O/U. ML $75 + UNDER $50." },
+    // ── O/U Combos (931-game) ────────────────────────────────────────────────
+    OC1:  { label:"OC1",  type:"ou",   pct:"85%",  n:13,  title:"Conf 50–55 + GVI<35 + RCF",                   tip:"O/U 84.6% n=13 · ML weak (53.8%) — skip ML. O/U direction $75 only." },
+    OC2:  { label:"OC2",  type:"ou",   pct:"84%",  n:25,  title:"Conf 50–55 + Dome + RCF",                     tip:"O/U 84.0% n=25 · AND 69.2% ML — best dual-market large-n combo. O/U $75 + ML $75." },
+    OC3:  { label:"OC3",  type:"ou",   pct:"80%",  n:15,  title:"Heavy Favorite + Conf 50–55 + TMF",           tip:"O/U 80.0% n=15 · ML 62.5%. O/U $75 + ML $37.50." },
+    OC4:  { label:"OC4",  type:"ou",   pct:"79%",  n:19,  title:"Heavy Favorite + Line 8–9 + TMF",             tip:"O/U 78.9% n=19 · ML poor (45.0%) — pure O/U play. Skip ML." },
+    OC5:  { label:"OC5",  type:"ou",   pct:"79%",  n:14,  title:"Heavy Favorite + Dome + RCF",                 tip:"O/U 78.6% n=14 · ML 52.9% — coin flip, skip ML." },
+    OC6:  { label:"OC6",  type:"ou",   pct:"78%",  n:18,  title:"Heavy Favorite + RED mismatch + TMF",         tip:"O/U 77.8% n=18 · ML weak (50.0%). O/U direction $75 only." },
+    OC7:  { label:"OC7",  type:"ou",   pct:"77%",  n:13,  title:"Heavy Favorite + TMS home higher + Conf 50–55", tip:"O/U 76.9% n=13 · ML solid at 64.3%. O/U $75 + ML $50." },
+    OC8:  { label:"OC8",  type:"ou",   pct:"77%",  n:17,  title:"WP gap ≥20% + UNDER + Conf 55–65",            tip:"O/U 76.5% n=17 · AND 70.6% ML — both markets above 70%. O/U $75 + ML $50." },
+    OC9:  { label:"OC9",  type:"ou",   pct:"74%",  n:35,  title:"OU-B active + Conf 50–55 + TMF ★",            tip:"O/U 74.3% n=35★ largest sample · AND 71.1% ML — highest-confidence recurring bet. O/U $75 + ML $75." },
+    OC10: { label:"OC10", type:"ou",   pct:"75%",  n:20,  title:"TMF + Dome + RCF",                            tip:"O/U 75.0% n=20 · ML weak (54.5%). O/U direction $75 only." },
+    // ── Fade Signals (931-game) — all share away_surge (Away RED<-1.0) as the common ingredient ──
+    FD1:  { label:"FD1",  type:"fade", pct:"89%",  n:18,  title:"OU-A fired + Surging Away SP",                tip:"STRONGEST fade in dataset (88.9%). Model backs HOME only 11.1% correct. Bet AWAY team ML $75. Skip O/U (38.9%)." },
+    FD2:  { label:"FD2",  type:"fade", pct:"87%",  n:15,  title:"WP gap ≥20% + OU-B + Away surge",             tip:"87% fade (n=15). Model backs HOME on stale WP gap (13.3% correct). Bet AWAY $75. Skip O/U (40.0%)." },
+    FD3:  { label:"FD3",  type:"fade", pct:"83%",  n:18,  title:"OU-B + RCF active + Away surge",              tip:"83% fade (n=18). Model backs HOME (16.7% correct). Bet AWAY $75. Skip O/U (44.4%)." },
+    FD4:  { label:"FD4",  type:"fade", pct:"81%",  n:21,  title:"OU-A fired + RCF active + Away surge",        tip:"81% fade (n=21). Model backs HOME (19.0% correct) — repeatable at this sample size. Bet AWAY $75. Skip O/U (47.6%)." },
+    FD5:  { label:"FD5",  type:"fade", pct:"76%",  n:41,  title:"RED mismatch>1.5 + OU-B + Away surge ★",      tip:"Largest sample fade (n=41★), highest-confidence. Model backs HOME (24.4% correct). Bet AWAY $75. Skip O/U (47.5%)." },
+    FD6:  { label:"FD6",  type:"fade", pct:"77%",  n:31,  title:"Golden Condition + Away surge",               tip:"77% fade (n=31). Model backs HOME (22.6% correct). Bet AWAY $75. Skip O/U (41.9%)." },
+    FD7:  { label:"FD7",  type:"fade", pct:"75%",  n:16,  title:"Home pred + OU-A fired + Away surge",         tip:"75% fade (n=16). Model backs HOME (25.0% correct). Bet AWAY $75. Skip O/U (31.2%)." },
+    FD8:  { label:"FD8",  type:"fade", pct:"75%",  n:16,  title:"Home Fortress + OU-B + Away surge",           tip:"75% fade (n=16). Model backs HOME on fortress reputation (25.0% correct). Bet AWAY $75. Skip O/U (46.7%)." },
+    FD9:  { label:"FD9",  type:"fade", pct:"76%",  n:29,  title:"OU-A fired + Line 8–9 + Away surge",          tip:"76% fade (n=29) · a reliable repeatable pattern. Model backs HOME (24.1% correct). Bet AWAY $75. Skip O/U (42.9%)." },
+    FD10: { label:"FD10", type:"fade", pct:"77%",  n:13,  title:"Line 8–9 + RCF active + Away surge",          tip:"77% fade (n=13). Model backs HOME (23.1% correct). Bet AWAY $75. O/U borderline (61.5%) — optional small stake." }
   };
 
-  const combos  = (data.combo_hits   || []).filter(c => COMBO_META[c]);
-  const fades   = (data.fade_signals || []).filter(c => COMBO_META[c]);
-  const all     = [...combos, ...fades];
+  // ── Team-specific signal correlations (931-game, min n=8 per flag) ─────────
+  const TEAM_META = {
+    TEX: { name:"Texas Rangers",        flag:"Golden Condition", pct:"92%", n:12, ou:"66.7%" },
+    LAD: { name:"Los Angeles Dodgers",  flag:"TMF active",       pct:"89%", n:9,  ou:"44.4%" },
+    NYM: { name:"New York Mets",        flag:"GVI<35",           pct:"88%", n:8,  ou:"42.9%" },
+    KC:  { name:"Kansas City Royals",   flag:"UNDER pred",        pct:"87%", n:15, ou:"75.0%" },
+    ATH: { name:"Athletics",            flag:"Conf 50–55",       pct:"86%", n:14, ou:"69.2%" },
+    MIA: { name:"Miami Marlins",        flag:"Home pred",        pct:"84%", n:32, ou:"35.7%" },
+    CWS: { name:"Chicago White Sox",    flag:"UNDER pred",        pct:"83%", n:18, ou:"35.3%" },
+    NYY: { name:"New York Yankees",     flag:"TMF active",       pct:"80%", n:10, ou:"55.6%" },
+    TB:  { name:"Tampa Bay Rays",       flag:"RCF active",       pct:"79%", n:19, ou:"44.4%" },
+    DET: { name:"Detroit Tigers",       flag:"Conf 50–55",       pct:"77%", n:13, ou:"61.5%" },
+    MIL: { name:"Milwaukee Brewers",    flag:"RCF active",       pct:"77%", n:13, ou:"50.0%" },
+    STL: { name:"St. Louis Cardinals",  flag:"Home Fortress",    pct:"77%", n:13, ou:"58.3%" },
+    ARI: { name:"Arizona Diamondbacks", flag:"WP-Override B",    pct:"75%", n:8,  ou:"42.9%" },
+    BAL: { name:"Baltimore Orioles",    flag:"WP-Override B",    pct:"75%", n:8,  ou:"37.5%" },
+    MIN: { name:"Minnesota Twins",      flag:"Dome",             pct:"75%", n:8,  ou:"25.0%" },
+    PHI: { name:"Philadelphia Phillies",flag:"Home SP surging",  pct:"75%", n:8,  ou:"62.5%" },
+    SEA: { name:"Seattle Mariners",     flag:"GVI<35",           pct:"75%", n:8,  ou:"75.0%" },
+    CIN: { name:"Cincinnati Reds",      flag:"UNDER pred",        pct:"73%", n:15, ou:"42.9%" },
+    COL: { name:"Colorado Rockies",     flag:"Home Fortress",    pct:"71%", n:14, ou:"50.0%" },
+    BOS: { name:"Boston Red Sox",       flag:"Away pred",        pct:"71%", n:38, ou:"60.6%" },
+    CLE: { name:"Cleveland Guardians",  flag:"Dome",             pct:"70%", n:10, ou:"44.4%" },
+    SF:  { name:"San Francisco Giants", flag:"Dome",             pct:"70%", n:10, ou:"55.6%" },
+    HOU: { name:"Houston Astros",       flag:"Surging SP",       pct:"67%", n:9,  ou:"77.8%" },
+    TOR: { name:"Toronto Blue Jays",    flag:"Conf 50–55",       pct:"65%", n:17, ou:"60.0%" },
+    SD:  { name:"San Diego Padres",     flag:"Home Fortress",    pct:"64%", n:14, ou:"50.0%" },
+    CHC: { name:"Chicago Cubs",         flag:"WP gap ≥20%",      pct:"64%", n:11, ou:"36.4%" },
+    PIT: { name:"Pittsburgh Pirates",   flag:"GVI<35",           pct:"63%", n:8,  ou:"25.0%" },
+    WAS: { name:"Washington Nationals", flag:"Golden Condition", pct:"62%", n:13, ou:"69.2%" },
+    ATL: { name:"Atlanta Braves",       flag:"GVI≥65",           pct:"60%", n:25, ou:"35.0%" },
+    LAA: { name:"Los Angeles Angels",   flag:"PDCF active",      pct:"58%", n:12, ou:"50.0%" },
+  };
+
+  function parseArr(v) {
+    if (Array.isArray(v)) return v;
+    if (typeof v === 'string' && v) { try { return JSON.parse(v); } catch(e) {} }
+    return [];
+  }
+  const combos  = parseArr(data.combo_hits).filter(c => COMBO_META[c]);
+  const fades   = parseArr(data.fade_signals).filter(c => COMBO_META[c]);
+  const teams   = parseArr(data.team_signals).filter(t => TEAM_META[(t || "").split(":")[0]]);
+  const all     = [...combos, ...fades, ...teams];
 
   if (all.length === 0) {
     if (block) block.style.display = "none";
@@ -754,6 +797,18 @@ function renderCombos(data) {
     }).join("");
   }
 
+  function teamChipHTML(codes, bgColor, labelColor) {
+    return codes.map(code => {
+      const [abbr] = code.split(":");
+      const m = TEAM_META[abbr];
+      return `<div class="combo-chip" style="--cc:${bgColor};--cl:${labelColor}" title="${escapeHtml(m.name)} + ${escapeHtml(m.flag)} → O/U ${escapeHtml(m.ou)} (n=${m.n})">
+        <span class="combo-code">${escapeHtml(abbr)}</span>
+        <span class="combo-title">${escapeHtml(m.flag)}</span>
+        <span class="combo-pct">${escapeHtml(m.pct)} n=${m.n}</span>
+      </div>`;
+    }).join("");
+  }
+
   let html = '<div class="combo-wrap">';
 
   if (fdHits.length) {
@@ -767,6 +822,10 @@ function renderCombos(data) {
   if (ouHits.length) {
     html += `<div class="combo-group"><div class="combo-group-label ou-label">O/U Combos</div>`;
     html += `<div class="combo-chips">${chipHTML(ouHits, "rgba(55,138,221,.1)", "#378ADD")}</div></div>`;
+  }
+  if (teams.length) {
+    html += `<div class="combo-group"><div class="combo-group-label" style="color:#7F77DD">Team Signals</div>`;
+    html += `<div class="combo-chips">${teamChipHTML(teams, "rgba(127,119,221,.1)", "#7F77DD")}</div></div>`;
   }
 
   html += "</div>";
@@ -892,6 +951,79 @@ function normalizeGameData(data) {
   if (!data || typeof data !== "object") return data;
   // Already flat — home_team is a plain string, starters and team_stats present
   if (typeof data.home_team === "string" && data.home_team && data.starters && data.team_stats) return data;
+
+  // ── game_metadata / teams schema (e.g. sportsdata-style deep JSON) ─────────
+  if (data.game_metadata || (data.teams && (data.teams.home_team || data.teams.away_team))) {
+    const gm  = data.game_metadata || {};
+    const tms = data.teams || {};
+    const ht  = tms.home_team || {};
+    const at  = tms.away_team || {};
+    const bl  = data.betting_lines || {};
+    const hSP = ht.starting_pitcher || {};
+    const aSP = at.starting_pitcher || {};
+    const hL10 = ht.last_10_games || {};
+    const aL10 = at.last_10_games || {};
+    const wRaw = gm.weather || data.weather || {};
+
+    function spFromNested(sp) {
+      const ss = sp.season_stats || {};
+      return {
+        name:                sp.name || "",
+        handedness:          sp.throwing_hand || sp.handedness || "",
+        era:                 String(ss.era != null ? ss.era : (sp.era != null ? sp.era : "")),
+        whip:                String(ss.whip != null ? ss.whip : (sp.whip != null ? sp.whip : "")),
+        win_loss:            ss.wins != null ? `${ss.wins}-${ss.losses}` : "",
+        strikeouts:          String(ss.strikeouts ?? ""),
+        innings_pitched:     String(ss.innings_pitched ?? ""),
+        batting_avg_against: String(ss.opponent_batting_avg ?? ss.batting_avg_against ?? ""),
+        walks:               String(ss.walks ?? ""),
+        recent_games:        sp.recent_game_logs || sp.recent_games || [],
+      };
+    }
+
+    return normalizeGameData({
+      game_date:  gm.game_date  || gm.date  || "",
+      game_time:  gm.game_time  || gm.time  || "",
+      venue:      gm.venue      || gm.venue_name || gm.venue_type || data.venue || "",
+      home_team:  ht.name || ht.abbreviation || "",
+      away_team:  at.name || at.abbreviation || "",
+      weather: {
+        condition:   wRaw.condition   || "",
+        temperature: wRaw.temperature_f ? `${wRaw.temperature_f}°F` : (wRaw.temperature || ""),
+        wind_speed:  wRaw.wind_speed  || wRaw.wind || "",
+        precipitation_chance_pct: wRaw.precipitation_chance_pct ?? "",
+      },
+      betting: {
+        over_under: String(bl.over_under ?? bl.total ?? ""),
+        line:       String(bl.moneyline ?? bl.run_line ?? bl.spread ?? bl.line ?? ""),
+      },
+      starters: { home: spFromNested(hSP), away: spFromNested(aSP) },
+      team_stats: {
+        home: {
+          batting_avg:  ht.team_batting_splits?.this_season?.avg ?? "",
+          on_base_pct:  ht.team_batting_splits?.this_season?.obp ?? "",
+          avg_runs:     ht.season_avg_runs_scored ?? "",
+          recent_form:  ht.overall_record || "",
+          home_record:  ht.home_record || "",
+          last_10:      hL10.record || "",
+          streak:       ht.streak || "",
+        },
+        away: {
+          batting_avg:  at.team_batting_splits?.this_season?.avg ?? "",
+          on_base_pct:  at.team_batting_splits?.this_season?.obp ?? "",
+          avg_runs:     at.season_avg_runs_scored ?? "",
+          recent_form:  at.overall_record || "",
+          away_record:  at.away_record || "",
+          last_10:      aL10.record || "",
+          streak:       at.streak || "",
+        },
+      },
+      lineups: {
+        home: ht.expected_lineup || [],
+        away: at.expected_lineup || [],
+      },
+    });
+  }
 
   const gi = data.game_info || {};
 

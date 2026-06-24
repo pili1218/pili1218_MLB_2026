@@ -61,12 +61,26 @@ db.exec(`
     actual_total      REAL,
     ml_result         TEXT,
     ou_result         TEXT,
+    combo_hits        TEXT,
+    fade_signals      TEXT,
+    team_signals      TEXT,
     -- Regression columns (auto-computed on save)
     ml_correct        INTEGER,
     ou_correct        INTEGER,
     notes             TEXT
   );
 `);
+
+// ─── Idempotent column migration (CREATE TABLE IF NOT EXISTS won't add columns to an existing table) ──
+(function migrateColumns() {
+  const existing = new Set(db.prepare("PRAGMA table_info(predictions)").all().map(c => c.name));
+  for (const col of ["combo_hits", "fade_signals", "team_signals"]) {
+    if (!existing.has(col)) {
+      db.exec(`ALTER TABLE predictions ADD COLUMN ${col} TEXT`);
+      console.log(`[DB] Migrated: added missing column "${col}"`);
+    }
+  }
+})();
 
 // ─── Auto-seed from bundled export on first run (restores data after Railway redeploy) ──
 (function seedIfEmpty() {
@@ -88,7 +102,8 @@ db.exec(`
         active_flags, active_overrides, betting_recommendation,
         key_driver, reasoning, export_string, full_prediction,
         actual_winner, actual_home_score, actual_away_score, actual_total,
-        ml_result, ou_result, ml_correct, ou_correct, notes
+        ml_result, ou_result, ml_correct, ou_correct, notes,
+        combo_hits, fade_signals, team_signals
       ) VALUES (
         @id, @saved_at, @game_date, @season_type, @home_team, @away_team,
         @home_starter, @away_starter, @home_win_pct, @away_win_pct,
@@ -98,11 +113,14 @@ db.exec(`
         @active_flags, @active_overrides, @betting_recommendation,
         @key_driver, @reasoning, @export_string, @full_prediction,
         @actual_winner, @actual_home_score, @actual_away_score, @actual_total,
-        @ml_result, @ou_result, @ml_correct, @ou_correct, @notes
+        @ml_result, @ou_result, @ml_correct, @ou_correct, @notes,
+        @combo_hits, @fade_signals, @team_signals
       )
     `);
     const seedAll = db.transaction((records) => {
-      for (const r of records) seedStmt.run(r);
+      for (const r of records) {
+        seedStmt.run({ combo_hits: null, fade_signals: null, team_signals: null, ...r });
+      }
     });
     seedAll(rows);
     const newest = rows.length ? rows.reduce((a, b) => (a.saved_at > b.saved_at ? a : b), rows[0]) : null;
@@ -120,7 +138,8 @@ const insertPrediction = db.prepare(`
     gvi, home_tms, away_tms, home_pms, away_pms,
     home_pvs, away_pvs, home_red, away_red, pdcf_active,
     active_flags, active_overrides, betting_recommendation,
-    key_driver, reasoning, export_string, full_prediction
+    key_driver, reasoning, export_string, full_prediction,
+    combo_hits, fade_signals, team_signals
   ) VALUES (
     @saved_at, @game_date, @season_type, @home_team, @away_team,
     @home_starter, @away_starter, @home_win_pct, @away_win_pct,
@@ -128,7 +147,8 @@ const insertPrediction = db.prepare(`
     @gvi, @home_tms, @away_tms, @home_pms, @away_pms,
     @home_pvs, @away_pvs, @home_red, @away_red, @pdcf_active,
     @active_flags, @active_overrides, @betting_recommendation,
-    @key_driver, @reasoning, @export_string, @full_prediction
+    @key_driver, @reasoning, @export_string, @full_prediction,
+    @combo_hits, @fade_signals, @team_signals
   )
 `);
 
@@ -170,15 +190,16 @@ async function callClaude(params, attempt = 1) {
     return await client.messages.create(params);
   } catch (err) {
     const isOverloaded = err.status === 529 || err.message?.includes("overloaded");
-    if (isOverloaded && attempt < 3) {
-      const delay = attempt * 3000; // 3s, 6s
-      console.warn(`[Claude] Overloaded (attempt ${attempt}/3) — retrying in ${delay / 1000}s...`);
+    const isTransient500 = err.status === 500 && err.error?.type === "api_error";
+    const shouldRetry = (isOverloaded || isTransient500) && attempt < 3;
+    if (shouldRetry) {
+      const delay = attempt * 3000;
+      console.warn(`[Claude] ${isOverloaded ? "Overloaded" : "Server error 500"} (attempt ${attempt}/3) — retrying in ${delay / 1000}s...`);
       await new Promise(r => setTimeout(r, delay));
       return callClaude(params, attempt + 1);
     }
-    if (isOverloaded) {
-      err.message = "Anthropic API is overloaded — please try again in a moment.";
-    }
+    if (isOverloaded) err.message = "Anthropic API is overloaded — please try again in a moment.";
+    if (isTransient500) err.message = "Anthropic API returned a server error — please try again.";
     throw err;
   }
 }
@@ -302,7 +323,7 @@ Add a "data_sources" object at the end of the JSON listing which fields were fil
 
 Return ONLY valid JSON with no markdown, no explanation, just the raw JSON object.`;
 
-const PREDICT_SYSTEM = `You are the MLB Game Predictor AI v3.9 with deep knowledge of MLB statistics, player profiles, and team performance. You handle both Regular Season and Postseason games.
+const PREDICT_SYSTEM = `You are the MLB Game Predictor AI v3.10 with deep knowledge of MLB statistics, player profiles, and team performance. You handle both Regular Season and Postseason games.
 
 ## STEP 0 — FILL MISSING DATA BEFORE ANALYSIS
 
@@ -621,15 +642,15 @@ COMBO BET: When ML predicted winner = Under direction (both point same team winn
 COMBINED: Set betting_recommendation = "[ML track] + [OVER track] + [Under track]" prioritising highest-conviction bet. If OVER and Under both active, output the higher-conviction one only.
 SLATE CAP (v3.3): Max 5 bets per day total. Rank by confidence; pick top 5.
 
-## COMBO SIGNAL EVALUATION (v3.9 — top10_combos)
+## COMBO SIGNAL EVALUATION (v3.10 — 931-game empirical update)
 
-After completing all §3–§6 analysis, evaluate the named combinations below using already-computed values. Output matched signals in combo_hits[] and fade_signals[] arrays. Unmatched = omit. Both arrays may be empty.
+After completing all §3–§6 analysis, evaluate the named combinations below using already-computed values. Output matched signals in combo_hits[], fade_signals[], and team_signals[] arrays. Unmatched = omit. All three arrays may be empty.
 
 HELPER BOOLEANS (derive from computed fields):
 - home_pred = (home_win_pct > away_win_pct)
+- away_pred = (away_win_pct > home_win_pct)
 - conf_50_55 = (confidence_score >= 50 AND confidence_score <= 55)
 - tmf_active = any "Meltdown" or "TMF" string in active_flags
-- tmf_away = tmf_active AND "Away" or "away team" mentioned alongside TMF in active_flags
 - home_fortress = any "Fortress" or "Home Fortress" string in active_flags
 - dome = venue is an indoor/dome stadium (Tropicana Field, Rogers Centre, Minute Maid Park, T-Mobile Park, loanDepot park, Globe Life Field, Chase Field retractable, American Family Field retractable — treat retractable-roof closed as dome)
 - oa_fired = "OU-A" or "WP-Override A" appears in active_overrides
@@ -639,54 +660,100 @@ HELPER BOOLEANS (derive from computed fields):
 - mcf_active = "MCF" in confidence_deductions or active_flags
 - slumping_sp = (home_red > 1.5 OR away_red > 1.5)
 - slumping_away = (away_red > 1.5)
+- surge_sp = (home_red < -1.0 OR away_red < -1.0)
+- home_surge = (home_red < -1.0 AND home_red is confirmed RED, not RED_unavailable)
 - golden_cond = "GOLDEN_CONDITION" in active_flags
-- rcf_away = "Regression Risk (Away SP)" in active_flags
+- rcf_active = "Regression Risk" in active_flags (either home or away SP)
 - pvs_any_over15 = (home_pvs > 15 OR away_pvs > 15)
 - dhvp_active = "DHVP" or "Dual High-Variance" in active_flags or confidence_deductions
 - wpb_fired = "WP-Override B" in active_overrides
+- pdcf_active = pdcf_active field is true OR "PDCF" in active_flags
 - red_mismatch = ABS(home_red - away_red)
 - away_surge = (away_red < -1.0 AND away_red is confirmed RED, not RED_unavailable)
+- tms_away_hi = (away_tms > home_tms)
 - wp_gap = ABS(home_win_pct - away_win_pct)
+- wp_hi = (wp_gap >= 20)
+- gvi_lo35 = (gvi < 35)
+- gvi_hi65 = (gvi >= 65)
+- line_8_9 = (ou_line numeric value >= 8.0 AND <= 9.0)
 
 ML COMBO SIGNALS — add code to combo_hits[] when ALL conditions met:
-MC1: home_pred AND conf_50_55 AND tmf_away → hit rate 100% ML n=14, O/U 77%
-MC2: home_fortress AND conf_50_55 AND tmf_active → hit rate 93% ML n=14, O/U 85% (CROWN JEWEL — both above 84%)
-MC3: home_fortress AND (home_tms > away_tms) AND dome → hit rate 94% ML n=18
-MC4: (home_tms > away_tms) AND tmf_active AND dome → hit rate 93% ML n=15, O/U 36% hard skip
-MC5: home_pred AND wpa_fired AND (ou_prediction == "UNDER") → hit rate 92% ML n=13
-MC6: wp_gap >= 20 AND wpa_fired AND (ou_prediction == "UNDER") → hit rate 92% ML n=13
-MC7: wpa_fired AND oa_fired AND (ou_prediction == "UNDER") → hit rate 92% ML n=13
-MC8: hfcf_active AND oa_fired AND (ou_prediction == "UNDER") → hit rate 92% ML n=12
-MC9: home_fortress AND conf_50_55 AND dome → hit rate 92% ML n=12
-MC10: home_pred AND home_fortress AND dome → hit rate 91% ML n=22, O/U 63% (best large-n)
+MC1: (ou_prediction == "UNDER") AND conf_50_55 AND tmf_active → 93.3% ML n=15 [TOP — ML $75 + UNDER $75, both full stake]
+MC2: home_pred AND gvi_lo35 AND dome → 92.9% ML n=14 [ML $75 only. Skip O/U (42.9%)]
+MC3: slumping_sp AND wpa_fired AND (ou_prediction == "UNDER") → 92.3% ML n=13 [ML $75 + UNDER $37.50]
+MC4: home_pred AND wpa_fired AND (ou_prediction == "UNDER") → 89.5% ML n=19, O/U 61.1% [ML $75 + UNDER $50 — largest 89%+ sample]
+MC5: oa_fired AND wpa_fired AND (ou_prediction == "UNDER") → 89.5% ML n=19 [ML $75. UNDER $37.50 secondary]
+MC6: wp_hi AND wpa_fired AND (ou_prediction == "UNDER") → 88.9% ML n=18 [ML $75 only. Skip O/U]
+MC7: home_pred AND wpa_fired AND line_8_9 → 86.7% ML n=15, O/U 66.7% [ML $75 + O/U direction $50 — both markets strong]
+MC8: home_fortress AND wpa_fired AND (ou_prediction == "UNDER") → 86.7% ML n=15, O/U 64.3% [ML $75 + UNDER $50]
+MC9: wpa_fired AND red_mismatch > 1.5 AND (ou_prediction == "UNDER") → 84.2% ML n=19, O/U 66.7% [ML $75 + UNDER $50 — best-balanced large-n]
+MC10: home_pred AND hfcf_active AND (ou_prediction == "UNDER") → 85.7% ML n=14, O/U 66.7% [ML $75 + UNDER $50]
 
 O/U COMBO SIGNALS — add code to combo_hits[] when ALL conditions met:
-OC1: home_fortress AND (ou_prediction == "UNDER") AND tmf_active → hit rate 93% OU n=14 (best O/U combo)
-OC2: home_fortress AND conf_50_55 AND tmf_active → hit rate 85% OU n=13, ML 93% (same as MC2 — CROWN JEWEL)
-OC3: slumping_sp AND home_fortress AND tmf_active → hit rate 83% OU n=12
-OC4: (CAST(ou_line AS FLOAT) >= 8.0 AND CAST(ou_line AS FLOAT) <= 9.0) AND dhvp_active AND mcf_active → hit rate 81% OU n=16, skip ML
-OC5: home_fortress AND red_mismatch > 1.5 AND tmf_active → hit rate 79% OU n=14, ML 80%
-OC6: tmf_active AND home_fortress → hit rate 71% OU n=35, ML 68% (main recurring large-n anchor)
-OC7: tmf_active AND conf_50_55 → hit rate 70% OU n=20, ML 82%
-OC8: oa_fired AND (ou_prediction == "UNDER") AND tmf_active → hit rate 77% OU n=17
-OC9: oa_fired AND conf_50_55 AND tmf_active → hit rate 77% OU n=13, ML 86%
-OC10: home_fortress AND ob_fired AND tmf_active → hit rate 76% OU n=25, ML 70%
+OC1: conf_50_55 AND gvi_lo35 AND rcf_active → 84.6% OU n=13, ML 53.8% [O/U $75 only. Skip ML]
+OC2: conf_50_55 AND dome AND rcf_active → 84.0% OU n=25, ML 69.2% [O/U $75 + ML $75 — best dual-market large-n]
+OC3: hfcf_active AND conf_50_55 AND tmf_active → 80.0% OU n=15, ML 62.5% [O/U $75 + ML $37.50]
+OC4: hfcf_active AND line_8_9 AND tmf_active → 78.9% OU n=19, ML 45.0% [O/U $75 only. Skip ML — pure O/U play]
+OC5: hfcf_active AND dome AND rcf_active → 78.6% OU n=14, ML 52.9% [O/U $75. Skip ML — coin flip]
+OC6: hfcf_active AND red_mismatch > 1.5 AND tmf_active → 77.8% OU n=18, ML 50.0% [O/U $75 only]
+OC7: hfcf_active AND tms_away_hi AND conf_50_55 → 76.9% OU n=13, ML 64.3% [O/U $75 + ML $50]
+OC8: wp_hi AND (ou_prediction == "UNDER") AND (confidence_score >= 55 AND confidence_score <= 65) → 76.5% OU n=17, ML 70.6% [O/U $75 + ML $50 — both markets above 70%]
+OC9: ob_fired AND conf_50_55 AND tmf_active → 74.3% OU n=35★ largest sample, ML 71.1% [O/U $75 + ML $75 — highest-confidence recurring bet]
+OC10: tmf_active AND dome AND rcf_active → 75.0% OU n=20, ML 54.5% [O/U $75 only. Skip ML]
 
-FADE SIGNALS — add code to fade_signals[] when ALL conditions met. These indicate the model's direction may be WRONG and the OPPOSITE bet is empirically favored:
-FD1: gvi >= 80 AND (away_surge OR home_red < -1.0) → Fade ML to OTHER team (83% fade rate n=12)
-FD2: slumping_away AND (away_pvs > 15) AND (ou_prediction == "OVER") → Fade OVER to UNDER (82% n=11)
-FD3: golden_cond AND away_surge → Fade home ML to AWAY team (75% n=24)
-FD4: rcf_away AND away_surge → Fade to AWAY ML, skip O/U (72% n=25)
-FD5: (away_surge OR home_red < -1.0) AND wp_gap < 10 → Fade ML to OTHER team + OVER $50 (72% n=25)
-FD6: tmf_active AND dome AND (ou_prediction == "UNDER") → Follow ML; flip UNDER to OVER bet (79% n=14)
-FD7: ob_fired AND away_surge AND (home_win_pct > away_win_pct) → Fade home ML to AWAY team, skip O/U (69% n=45★ — largest sample)
-FD8: gvi >= 90 AND (away_win_pct > home_win_pct) → Fade away ML to HOME team, skip O/U (69% n=16)
-FD9: wpb_fired AND pvs_any_over15 AND (ou_prediction == "UNDER") → Follow ML; flip UNDER to OVER (74% n=19)
-FD10: red_mismatch > 1.5 AND mcf_active → Fade model's ML pick to OTHER team, skip O/U (68% n=22)
+FADE SIGNALS — add code to fade_signals[] when ALL conditions met. These indicate the model's direction may be WRONG. NOTE: all FD codes assume home_pred is true (model currently backs home) — fading flips the pick to AWAY:
+FD1: oa_fired AND away_surge → 88.9% fade n=18 [STRONGEST — Fade ML to AWAY $75. Skip O/U (38.9%)]
+FD2: wp_hi AND ob_fired AND away_surge → 86.7% fade n=15 [Fade ML to AWAY $75. Skip O/U (40.0%)]
+FD3: ob_fired AND rcf_active AND away_surge → 83.3% fade n=18 [Fade ML to AWAY $75. Skip O/U (44.4%)]
+FD4: oa_fired AND rcf_active AND away_surge → 81.0% fade n=21 [Fade ML to AWAY $75. Skip O/U (47.6%)]
+FD5: red_mismatch > 1.5 AND ob_fired AND away_surge → 75.6% fade n=41★ largest sample — highest-confidence fade [Fade ML to AWAY $75. Skip O/U (47.5%)]
+FD6: golden_cond AND away_surge → 77.4% fade n=31 [Fade ML to AWAY $75. Skip O/U (41.9%)]
+FD7: home_pred AND oa_fired AND away_surge → 75.0% fade n=16 [Fade ML to AWAY $75. Skip O/U (31.2%)]
+FD8: home_fortress AND ob_fired AND away_surge → 75.0% fade n=16 [Fade ML to AWAY $75. Skip O/U (46.7%)]
+FD9: oa_fired AND line_8_9 AND away_surge → 75.9% fade n=29 [Fade ML to AWAY $75. Skip O/U (42.9%)]
+FD10: line_8_9 AND rcf_active AND away_surge → 76.9% fade n=13 [Fade ML to AWAY $75. O/U borderline 61.5% — optional small stake]
 
-NOTE: MC2 and OC2 share the same three conditions — if they both fire, output BOTH codes. OC6 is the 2-flag version of the fortress+TMF combination; it will fire whenever OC1/OC2 fire too (it is the base signal). Include all matching codes even if some overlap.
+NOTE: All 10 fade signals here share away_surge as the common ingredient — confirming a surging away SP is the single strongest "model is about to be wrong" tell in the 931-game dataset (consistent with R14_AWAY_ACE_HARD). Output every matching code even when overlapping (e.g. FD1 and FD7 can both fire on the same game).
+
+## TEAM SIGNAL TABLE (NEW v3.10 — 931-game team-specific flag correlations, min n=8 per flag)
+
+For home_team and away_team, match the team to its row below by name or abbreviation. If that team's associated flag condition (using the helper booleans above) is currently active in this game, add "ABBR:flagname" to team_signals[] (e.g. "TEX:golden"). Evaluate both teams independently — either, both, or neither may match. team_signals[] may be empty. A team's listed flag is its single strongest empirical ML correlate league-wide; OU% shown is the O/U hit rate within that same subset (informational, not a separate trigger).
+
+Team (Abbr) — flag — ML% (n) | OU%:
+TEX — golden_cond — 91.7% (n=12) | OU 66.7%
+LAD — tmf_active — 88.9% (n=9) | OU 44.4%
+NYM — gvi_lo35 — 87.5% (n=8) | OU 42.9%
+KC — ou_prediction=="UNDER" — 86.7% (n=15) | OU 75.0%
+ATH — conf_50_55 — 85.7% (n=14) | OU 69.2%
+MIA — home_pred — 84.4% (n=32, largest team sample) | OU 35.7%
+CWS — ou_prediction=="UNDER" — 83.3% (n=18) | OU 35.3%
+NYY — tmf_active — 80.0% (n=10) | OU 55.6%
+TB — rcf_active — 78.9% (n=19) | OU 44.4%
+DET — conf_50_55 — 76.9% (n=13) | OU 61.5%
+MIL — rcf_active — 76.9% (n=13) | OU 50.0%
+STL — home_fortress — 76.9% (n=13) | OU 58.3%
+ARI — wpb_fired — 75.0% (n=8) | OU 42.9%
+BAL — wpb_fired — 75.0% (n=8) | OU 37.5%
+MIN — dome — 75.0% (n=8) | OU 25.0%
+PHI — home_surge — 75.0% (n=8) | OU 62.5%
+SEA — gvi_lo35 — 75.0% (n=8) | OU 75.0%
+CIN — ou_prediction=="UNDER" — 73.3% (n=15) | OU 42.9%
+COL — home_fortress — 71.4% (n=14) | OU 50.0%
+BOS — away_pred — 71.1% (n=38, large sample) | OU 60.6%
+CLE — dome — 70.0% (n=10) | OU 44.4%
+SF — dome — 70.0% (n=10) | OU 55.6%
+HOU — surge_sp — 66.7% (n=9) | OU 77.8%
+TOR — conf_50_55 — 64.7% (n=17) | OU 60.0%
+SD — home_fortress — 64.3% (n=14) | OU 50.0%
+CHC — wp_hi — 63.6% (n=11) | OU 36.4%
+PIT — gvi_lo35 — 62.5% (n=8) | OU 25.0%
+WAS — golden_cond — 61.5% (n=13) | OU 69.2%
+ATL — gvi_hi65 — 60.0% (n=25) | OU 35.0%
+LAA — pdcf_active — 58.3% (n=12) | OU 50.0% [weakest team-flag correlation in the dataset — no flag breaks 60% for the Angels]
 
 ## OUTPUT SCHEMA
+
+**CRITICAL — ou_prediction must match betting direction:** If your betting_recommendation recommends OVER (e.g. Pattern D OVER, Primary: OVER $75), you MUST set ou_prediction="OVER". If it recommends UNDER, set ou_prediction="UNDER". These two fields must NEVER contradict each other. Pattern D/E/F/G overrides the initial OU-A/B directional lean — update ou_prediction accordingly before writing the JSON.
 
 Return ONLY valid JSON. No markdown. No preamble. null for unavailable fields.
 
@@ -741,6 +808,7 @@ Return ONLY valid JSON. No markdown. No preamble. null for unavailable fields.
   },
   "combo_hits": ["MC2","OC2","OC6"],
   "fade_signals": ["FD3","FD7"],
+  "team_signals": ["TEX:golden_cond"],
   "export_string": "Away @ Home,Home SP (HOME),Away SP (AWAY),52%,48%,7.5,61% (Over)",
   "data_sources": {
     "extracted_from_image": ["list of fields taken directly from image data"],
@@ -859,6 +927,55 @@ function verifyPrediction(data) {
   if (!isNaN(apms) && apms < 100)         issues.push(`away_pms (${apms}) is below the baseline of 100`);
 
   return issues;
+}
+
+// Auto-correct ou_prediction when it contradicts the primary O/U bet direction
+// in betting_recommendation. The model sometimes sets ou_prediction from OU-A/B
+// analysis then flips direction in Pattern D/E/F/G without updating the JSON field.
+function reconcileOuDirection(data) {
+  const rec = (data.betting_recommendation || "").toUpperCase();
+  if (!rec) return;
+
+  // Detect primary O/U bet direction from recommendation text
+  const overSignals  = [/\bPATTERN\s+[A-H]\s+OVER\b/, /\bPRIMARY[:\s]+OVER\b/, /\bOVER\s+\d+(?:\.\d+)?\s+\$\d+/, /\bOVER\s+\$\d+/];
+  const underSignals = [/\bPATTERN\s+[A-H]\s+UNDER\b/, /\bPRIMARY[:\s]+UNDER\b/, /\bUNDER\s+\d+(?:\.\d+)?\s+\$\d+/, /\bUNDER\s+\$\d+/];
+
+  const recommendsOver  = overSignals.some(r => r.test(rec));
+  const recommendsUnder = underSignals.some(r => r.test(rec));
+
+  if (recommendsOver && !recommendsUnder && data.ou_prediction === "UNDER") {
+    console.log("[predict] reconcileOuDirection: correcting ou_prediction UNDER→OVER to match betting_recommendation");
+    data.ou_prediction = "OVER";
+    if (Number(data.ou_over_pct) < 50) data.ou_over_pct = 61;
+  } else if (recommendsUnder && !recommendsOver && data.ou_prediction === "OVER") {
+    console.log("[predict] reconcileOuDirection: correcting ou_prediction OVER→UNDER to match betting_recommendation");
+    data.ou_prediction = "UNDER";
+    if (Number(data.ou_over_pct) > 50) data.ou_over_pct = 39;
+  }
+}
+
+// Auto-correct win probabilities when R14_AWAY_ACE_HARD fires but the model
+// forgot the mandated home -10% / away +10% adjustment (§3.11 R14). Without
+// this, the WP bar shows the home team leading while ML recommends away —
+// a visible contradiction between the win probability and the bet pick.
+function reconcileR14WinProbability(data) {
+  const text = `${data.betting_recommendation || ""} ${(data.active_flags || []).join(" ")}`.toUpperCase();
+  if (!text.includes("R14_AWAY_ACE_HARD") && !text.includes("AWAY_ACE_HARD") && !text.includes("AWAY_ACE_OVERRIDE")) return;
+
+  let hp = Number(data.home_win_pct);
+  let ap = Number(data.away_win_pct);
+  if (isNaN(hp) || isNaN(ap)) return;
+
+  // R14 routes ML to the away team — away_win_pct must exceed home_win_pct.
+  if (ap <= hp) {
+    console.log(`[predict] reconcileR14WinProbability: correcting WP (home:${hp}/away:${ap}) — R14 requires away > home`);
+    hp -= 10;
+    ap += 10;
+    hp = Math.max(20, Math.min(80, hp));
+    ap = 100 - hp;
+    data.home_win_pct = hp;
+    data.away_win_pct = ap;
+  }
 }
 
 const MAX_VERIFY_PASSES = 3;
@@ -1088,7 +1205,7 @@ KEY O/U COMBOS:
     // ── Pass 1: initial prediction ──────────────────────────────────────────
     let messages = [{
       role: "user",
-      content: `Apply the MLB Game Predictor v3.9 framework to this extracted game data. Fill any missing fields from your knowledge base first, then return the complete JSON prediction:\n\n${JSON.stringify(gameData, null, 2)}${rollingStatsBlock}${notesBlock}`,
+      content: `Apply the MLB Game Predictor v3.10 framework to this extracted game data. Fill any missing fields from your knowledge base first, then return the complete JSON prediction:\n\n${JSON.stringify(gameData, null, 2)}${rollingStatsBlock}${notesBlock}`,
     }];
 
     let parsed, issues, pass = 0;
@@ -1116,6 +1233,8 @@ KEY O/U COMBOS:
         continue;
       }
 
+      reconcileOuDirection(parsed);
+      reconcileR14WinProbability(parsed);
       issues = verifyPrediction(parsed);
       console.log(`[predict] Pass ${pass} — ${issues.length} issue(s):`, issues);
 
@@ -1183,6 +1302,9 @@ app.post("/api/save-prediction", (req, res) => {
       reasoning:             prediction.reasoning || null,
       export_string:         prediction.export_string || null,
       full_prediction:       JSON.stringify(prediction),
+      combo_hits:            JSON.stringify(prediction.combo_hits || []),
+      fade_signals:          JSON.stringify(prediction.fade_signals || []),
+      team_signals:          JSON.stringify(prediction.team_signals || []),
     };
 
     const info = insertPrediction.run(row);
@@ -1603,7 +1725,8 @@ app.post("/api/import", (req, res) => {
         active_flags, active_overrides, betting_recommendation,
         key_driver, reasoning, export_string, full_prediction,
         actual_winner, actual_home_score, actual_away_score, actual_total,
-        ml_result, ou_result, ml_correct, ou_correct, notes
+        ml_result, ou_result, ml_correct, ou_correct, notes,
+        combo_hits, fade_signals, team_signals
       ) VALUES (
         @id, @saved_at, @game_date, @season_type, @home_team, @away_team,
         @home_starter, @away_starter, @home_win_pct, @away_win_pct,
@@ -1613,14 +1736,15 @@ app.post("/api/import", (req, res) => {
         @active_flags, @active_overrides, @betting_recommendation,
         @key_driver, @reasoning, @export_string, @full_prediction,
         @actual_winner, @actual_home_score, @actual_away_score, @actual_total,
-        @ml_result, @ou_result, @ml_correct, @ou_correct, @notes
+        @ml_result, @ou_result, @ml_correct, @ou_correct, @notes,
+        @combo_hits, @fade_signals, @team_signals
       )
     `);
 
     const importAll = db.transaction((rows) => {
       let inserted = 0;
       for (const row of rows) {
-        const result = importRow.run(row);
+        const result = importRow.run({ combo_hits: null, fade_signals: null, team_signals: null, ...row });
         inserted += result.changes;
       }
       return inserted;
@@ -1932,6 +2056,10 @@ app.get("/api/pattern-analysis", (_req, res) => {
 
 app.get("/patterns", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "patterns.html"));
+});
+
+app.get("/combos", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "combos.html"));
 });
 
 app.get("/", (_req, res) => {
