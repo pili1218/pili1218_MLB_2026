@@ -64,6 +64,8 @@ db.exec(`
     combo_hits        TEXT,
     fade_signals      TEXT,
     team_signals      TEXT,
+    team_combo_signals TEXT,
+    bw_signals        TEXT,
     -- Regression columns (auto-computed on save)
     ml_correct        INTEGER,
     ou_correct        INTEGER,
@@ -74,7 +76,7 @@ db.exec(`
 // ─── Idempotent column migration (CREATE TABLE IF NOT EXISTS won't add columns to an existing table) ──
 (function migrateColumns() {
   const existing = new Set(db.prepare("PRAGMA table_info(predictions)").all().map(c => c.name));
-  for (const col of ["combo_hits", "fade_signals", "team_signals"]) {
+  for (const col of ["combo_hits", "fade_signals", "team_signals", "team_combo_signals", "bw_signals"]) {
     if (!existing.has(col)) {
       db.exec(`ALTER TABLE predictions ADD COLUMN ${col} TEXT`);
       console.log(`[DB] Migrated: added missing column "${col}"`);
@@ -103,7 +105,7 @@ db.exec(`
         key_driver, reasoning, export_string, full_prediction,
         actual_winner, actual_home_score, actual_away_score, actual_total,
         ml_result, ou_result, ml_correct, ou_correct, notes,
-        combo_hits, fade_signals, team_signals
+        combo_hits, fade_signals, team_signals, team_combo_signals, bw_signals
       ) VALUES (
         @id, @saved_at, @game_date, @season_type, @home_team, @away_team,
         @home_starter, @away_starter, @home_win_pct, @away_win_pct,
@@ -114,12 +116,12 @@ db.exec(`
         @key_driver, @reasoning, @export_string, @full_prediction,
         @actual_winner, @actual_home_score, @actual_away_score, @actual_total,
         @ml_result, @ou_result, @ml_correct, @ou_correct, @notes,
-        @combo_hits, @fade_signals, @team_signals
+        @combo_hits, @fade_signals, @team_signals, @team_combo_signals, @bw_signals
       )
     `);
     const seedAll = db.transaction((records) => {
       for (const r of records) {
-        seedStmt.run({ combo_hits: null, fade_signals: null, team_signals: null, ...r });
+        seedStmt.run({ combo_hits: null, fade_signals: null, team_signals: null, team_combo_signals: null, bw_signals: null, ...r });
       }
     });
     seedAll(rows);
@@ -139,7 +141,7 @@ const insertPrediction = db.prepare(`
     home_pvs, away_pvs, home_red, away_red, pdcf_active,
     active_flags, active_overrides, betting_recommendation,
     key_driver, reasoning, export_string, full_prediction,
-    combo_hits, fade_signals, team_signals
+    combo_hits, fade_signals, team_signals, team_combo_signals, bw_signals
   ) VALUES (
     @saved_at, @game_date, @season_type, @home_team, @away_team,
     @home_starter, @away_starter, @home_win_pct, @away_win_pct,
@@ -148,7 +150,7 @@ const insertPrediction = db.prepare(`
     @home_pvs, @away_pvs, @home_red, @away_red, @pdcf_active,
     @active_flags, @active_overrides, @betting_recommendation,
     @key_driver, @reasoning, @export_string, @full_prediction,
-    @combo_hits, @fade_signals, @team_signals
+    @combo_hits, @fade_signals, @team_signals, @team_combo_signals, @bw_signals
   )
 `);
 
@@ -182,7 +184,10 @@ const upload = multer({
   },
 });
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Explicit timeout so the SDK doesn't refuse large max_tokens non-streaming requests
+// (it throws "Streaming is strongly recommended..." if it has to guess and max_tokens
+// implies a worst-case runtime over 10 minutes; an explicit timeout bypasses that guess).
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: 20 * 60 * 1000 });
 
 // Retry wrapper for 529 overloaded errors — up to 3 attempts with exponential backoff
 async function callClaude(params, attempt = 1) {
@@ -202,6 +207,14 @@ async function callClaude(params, attempt = 1) {
     if (isTransient500) err.message = "Anthropic API returned a server error — please try again.";
     throw err;
   }
+}
+
+// Extract text from a Claude response — finds the first text block regardless of position
+// (newer models like claude-sonnet-5 may prepend thinking/other blocks before the text block)
+function extractResponseText(message) {
+  const block = message.content.find(b => b.type === "text");
+  if (!block) throw new Error("Claude returned no text content block");
+  return block.text.trim();
 }
 
 const JSON_TEMPLATE = `{
@@ -323,7 +336,15 @@ Add a "data_sources" object at the end of the JSON listing which fields were fil
 
 Return ONLY valid JSON with no markdown, no explanation, just the raw JSON object.`;
 
-const PREDICT_SYSTEM = `You are the MLB Game Predictor AI v3.10 with deep knowledge of MLB statistics, player profiles, and team performance. You handle both Regular Season and Postseason games.
+const PREDICT_SYSTEM = `You are the MLB Game Predictor AI v3.16 with deep knowledge of MLB statistics, player profiles, and team performance. You handle both Regular Season and Postseason games.
+
+## §3.13 STRUCTURAL BASE-RATE CORRECTION (v3.14 — 1229-game full-season audit, HIGHEST PRIORITY)
+Full-season audit (n=1124 graded games): the model predicted OVER on 70.1% of all games while actual outcomes were 49.6% OVER / 50.4% UNDER — a +20.5pp structural over-prediction bias present ALL SEASON, not just recent weeks. This means OVER_RATE_GATE (below) must be treated as a PERMANENT correction, not a rolling-window emergency patch:
+- Every OVER lean requires a named, independently-verified catalyst (Slumping SP RED>+1.5, confirmed Wind OUT>12mph+temp>65F, both offenses wRC+>105, or line 9.0-10.0) — in ANY month, not just May+. GVI≥65 or OU-B alone are NOT sufficient justification for a standard OVER bet.
+- In the GVI 35-65 dead zone and the R1/OU-F no-signal case, when no other signal is present, default lean is UNDER regardless of month (the April-OVER-default assumption is retired at the base-rate level; named April signals like HIGH_LINE_LEAN remain valid since they have their own evidence).
+- OU-B (environmental signal) is currently measuring 50.2% OU at n=620 (the largest sample in the framework) — treat as requiring a second independent signal before it justifies a standard bet, not as sufficient on its own.
+- Dome games are currently measuring 44.0% O/U at n=284 (below breakeven) — treat P20_dome_over and P21_dome_under_ban as reduced-confidence pending investigation; do not stack dome alone with GVI to justify High confidence.
+Flag when this correction changes the outcome: "BASE_RATE_CORRECTION: season OVER bias +20.5pp (70.1% predicted vs 49.6% actual, n=1124) — permanent correction applied".
 
 ## STEP 0 — FILL MISSING DATA BEFORE ANALYSIS
 
@@ -438,8 +459,8 @@ P16_home_wp70 (v3.3): Home team final WP ≥70% → bet ML home unconditionally 
 P17_home_wp65 (v3.3): Home team final WP 65-69% → bet ML home as primary $75 (68.8% hit rate, 11/16 games).
 P18_was_home_over (v3.3): WAS home (Nationals Park) AND OVER → Pattern G OVER $75 (100% hit rate, 4 games, avg 12.2 runs). Never UNDER at WAS home unless temp<45F + both confirmed aces.
 P19_pit_home_skip (v3.3): PIT home (PNC Park) AND any O/U bet → PERMANENTLY BANNED (0% hit rate, 0/4 games). Wind variance = totals 2 to 21. ML PIT home only. Incorporated in P8_BAN Trigger C.
-P20_dome_over (v3.3): Dome stadium AND OVER → valid signal (67% hit rate, 6/9 games). Dome removes weather suppression.
-P21_dome_under_ban (v3.3): Dome stadium AND UNDER AND NOT both SPs confirmed ≥4 starts + ERA<2.50 → BANNED (37% hit rate, 10/27 games). Exception: both confirmed aces → route to P1.
+P20_dome_over (v3.3, ⚠️ RE-TEST v3.14): Dome stadium AND OVER → originally 67% hit rate (6/9 games, small sample). 1229-game audit: combined dome O/U across all dome games (n=284) now reads 44.0% — below breakeven, a large enough sample to suggest a possible sign/direction error in how the dome flag is being applied. Treat as reduced-confidence pending investigation — do not stack with GVI alone for High confidence.
+P21_dome_under_ban (v3.3, ⚠️ RE-TEST v3.14): Dome stadium AND UNDER AND NOT both SPs confirmed ≥4 starts + ERA<2.50 → BANNED (37% hit rate, 10/27 games, small sample). Exception: both confirmed aces → route to P1. See P20 note — combined dome sample (n=284) reads 44.0% O/U, under investigation.
 P22_dual_lhp_under (v3.3): BOTH starting pitchers are LHP AND UNDER → strong signal (80% hit rate, 4/5 games). When both LHP, always weight UNDER 80:20. Discard OVER signal.
 P23_dual_lhp_over_ban (v3.3): BOTH starting pitchers are LHP AND OVER → BANNED (50% hit rate, 4/8 — coin flip, no edge). Route to UNDER or Pass.
 P24_ace_home_under (v3.3): Home SP is named ace (Ohtani/Yamamoto/Sale/Castillo/Woo/Kirby/Skubal/Fried/Gray/Gallen/Webb/Senga/Nola/Imanaga/Keller) AND Gate C met (4+ starts + ≥20 IP + ERA<2.50) → Pattern H UNDER $75 (100% hit rate, 10 games). Strongest confirmed Under signal.
@@ -455,7 +476,7 @@ R3 (RECLASSIFIED — v3.4): Single O/U signal active = bet ML (75.0%), SKIP O/U 
 R4 (REVISED — v3.4): WP-Override A fired = bet ML $75 (63.0%). For O/U UNDER in WPA games: confirmed current-season xFIP required — estimated xFIP → ML only, skip O/U UNDER. Flag: R4_WPA_REVISED.
 R5 (REVERSED — v3.5, 294-game): PVS>15 as an OVER routing signal is REMOVED. 294-game staked reality = 38–40% OVER hit rate (below breakeven). The 61.3% figure was from a biased sub-sample. PVS>15 now functions ONLY as a confidence suppressor: apply −10 confidence per pitcher with PVS>15. DO NOT route O/U direction based on PVS. Never bet UNDER with PVS>15 (still banned). But do NOT bet OVER on PVS alone either — it loses. Flag: R5_PVS_CONF_ONLY (confidence suppressor, not directional).
 R6 (confirmed): UNDER 8.0-9.0 line = only viable UNDER window (60.5%, n=43). Below 8.0 = market priced (34.5%, banned). Above 9.0 = scoring expected (sub-40%). All 7 gates still required.
-R7 (UPDATED v3.7 — 437-game): GVI≥65 OVER: viable in April (58.9%) but inverted in May without catalyst (44.9% — below breakeven). UNDER at GVI65+ = 0.0% (n=4 — HARD BAN). ML at GVI65+ = 50% (coin flip — SKIP ML). MAY+ CATALYST GATE: In May+, GVI≥65 OVER direction requires at least ONE confirmed catalyst beyond GVI itself: (a) Slumping SP RED>+1.5, (b) Wind OUT confirmed >12mph + temp>65F, (c) both offenses 30-day wRC+>105, OR (d) line 9.0–10.0. GVI elevated by PVS volatility alone (no named catalyst) in May+ → route to PASS (OVER_GVI_CATALYST_FAIL). Evidence: pitchers accumulate more starts in May so PVS rises mechanically — but this does NOT predict actual scoring explosions. Flag: R7_GVI65 — "GVI≥65: UNDER BANNED (0%). ML skip (50%). May+ OVER: catalyst required (44.9% without — below breakeven)."
+R7 (UPDATED v3.7 — 437-game, RE-MEASURED v3.14 — 1229-game, n=423): GVI≥65 OVER: viable in April (58.9%); the original May reading without catalyst was 44.9% (below breakeven) but has recovered to 53.4% at full-season scale. Read alongside §3.13 base-rate correction — KEEP the catalyst gate active rather than relaxing it pending isolated re-test. UNDER at GVI65+ = 0.0% (n=4 — HARD BAN). ML at GVI65+ = 50% (coin flip — SKIP ML). MAY+ CATALYST GATE (unchanged): In May+, GVI≥65 OVER direction requires at least ONE confirmed catalyst beyond GVI itself: (a) Slumping SP RED>+1.5, (b) Wind OUT confirmed >12mph + temp>65F, (c) both offenses 30-day wRC+>105, OR (d) line 9.0–10.0. GVI elevated by PVS volatility alone (no named catalyst) in May+ → route to PASS (OVER_GVI_CATALYST_FAIL). Flag: R7_GVI65 — "GVI≥65: UNDER BANNED (0%). ML skip (50%). May+ OVER: catalyst required (53.4% OU n=423 recovered, gate retained pending re-test)."
 R8 (UPDATED v3.8 — MCF refined with WP gap): MCF + GVI-only (no Slumping SP) → ML BANNED (50.0% coin flip). MCF + Slumping SP + WP gap>=15% → ML $75 (use live stats — see LIVE EMPIRICAL STATS block). MCF + Slumping SP + WP gap<15% → ML PASS (48.9% overall MCF+Slump, below breakeven — live stats show this is NOT reliable). For O/U: MCF + OVER → flip direction to UNDER. MCF + UNDER → escalate UNDER confidence. Flag: R8_MCF_REFINED — "MCF+Slump+WP≥10%=ML$75 | MCF+Slump+WP<10%=ML$37.50 | MCF+no-slump=ML BANNED. OVER flipped UNDER."
 R9 (REVISED — v3.5, external validated): Wind OUT standalone = 54-56% OVER edge — thin but real. Use as OVER lean at $25 minimum stake only (not full pass). Wind OUT + catalyst (PVS>15, Slumping SP RED>+1.5, or GVI>65) = OVER at standard $50 stake. External cross-validation confirms 54% standalone — prior "full PASS" was too conservative. Size according to signal strength. Flag: R9_WIND_CATALYST (catalyst present → $50) / R9_WIND_LEAN (standalone → $25).
 R10 (confirmed — v3.4 clarified): Conf 60-64 = O/U sweet spot (63.6%, n=11). ML at conf 60-64 = 33.3% (TRAP — skip ML). R10 is O/U ONLY. When conf 60-64: bet O/U, skip ML. Flag: R10_CONF_ZONE.
@@ -465,11 +486,11 @@ R12 UNDER LIFT EXCEPTION (v3.9 — 534-game empirical): When ALL of: (a) conf 60
 R14 (UPGRADED v3.8 — AWAY_ACE_HARD): Away SP RED<−1.0 AND >=5 confirmed starts → TWO hard rules:
 (1) ML: route to AWAY team unconditionally. Flip direction if model was backing home. CRITICAL: also update the home_win_pct and away_win_pct fields in the JSON output to reflect the R14 adjustment — subtract 10 from home_win_pct, add 10 to away_win_pct, then normalize to sum to 100. This ensures the displayed win probability is consistent with the ML recommendation (away team should show HIGHER WP when R14 fires). Example: if §4 gave home=52/away=48, output home=42/away=58 after R14.
 (2) O/U: SKIP all O/U bets on this game — away surge + UNDER = 35.0% OU (consistent loss), away surge + OVER = 51.7% OU (near breakeven) — both unreliable. Use R14 for ML direction only.
-Flag: R14_AWAY_ACE_HARD — "Away SP RED<−1.0 ≥5 starts: ML=AWAY unconditional + WP adjusted (−10% home) + O/U=SKIP."
+Flag: R14_AWAY_ACE_HARD — "Away SP RED<−1.0 ≥5 starts: ML=AWAY unconditional + WP adjusted (−10% home) + O/U=SKIP." NOTE (v3.14): a server-side bug where the WP adjustment could fail to cross home_win_pct/away_win_pct over to away (causing grading mismatches) was fixed — always ensure away_win_pct clearly exceeds home_win_pct when this fires, not just a token adjustment.
 R15 (NEW v3.7 — 437-game): OVER_RATE_GATE — rolling 5-day actual OVER rate <42% = suppress GVI-only OVER bets. May 8–10: rate=36%, model called OVER 84% of slates, OVER accuracy collapsed to 41.8%. Root cause: GVI/PVS mechanics calibrated on April data fire at same rate in May but scoring environment compressed. Apply thresholds per OVER_RATE_GATE instruction above. UNDER accuracy improved to 63.6% in May — shift staking toward UNDER when gate is active. Flag: R15_OVER_RATE.
 R16 (NEW v3.7 — 437-game): Conf 50-55 + OVER in May requires 2 named signals. Conf 50-55 + OVER dropped from 59.3% to 31.2% in May — reliable zone polluted by directional OVER bias in compressed environment. Conf 50-55 + UNDER still ~60%+. RULE: May+, conf 50-55 + OVER direction requires ≥2 named O/U signals (e.g. Slumping SP + Wind OUT, or OU-A + OU-B). Conf 50-55 + UNDER remains eligible with 1 named signal. Flag: R16_MAY_CONF_FILTER — "May conf 50-55 + OVER: 2 signals required (33% with 1 signal only)."
 R13 (NEW — v3.5, external validated): Platoon Weakness Flag (PWF) — if the BATTING team is 0-for-3 or worse vs the opposing SP's handedness this season → 86% ML win rate for the pitcher's team. This is the highest alpha ML signal in cross-validation. Add PWF as a PRIMARY ML driver when present. If PWF + WP-Override A both fire → treat as near-automatic ML bet (dual-override). Check batting team season wRC+ vs LHP or vs RHP (whichever matches the opposing SP). When detected, apply +8% WP to the pitcher's team. Flag: PWF_MATCH — "Platoon Weakness: [batting team] 0-for-season vs [handedness] → ML [pitcher team] (86% hit rate)".
-PRIORITY CHECKLIST v3.8 — Tier 1 (≥60%): HFCF active (WP≥68%) → ML Tier 1 $75 (85.7% ML, n=14 — reclassified v3.8, best single ML signal) · R13 PWF + any signal (86% ML) · WP gap≥15% ML (63.0%, n=173 — primary ML signal) · OUA+OUB+OVER = 57.8% OU (n=109) — Tier 1 O/U (v3.8) · Line 8-9+UNDER = 60.6% OU (n=71) · Home SP surge RED<-1.0 + Gate C → O/U UNDER lean (64.0% May OU, n=25 — NEW v3.8 Condition 5) · MCF + OVER → flip to UNDER (63.6% May OU) · UNDER line 8-9 + Slumping SP (63.6%) · RCF+OVER (63.3%) · R11 Slumping SP present (62%+) · GOLDEN_CONDITION (OU-A+OU-B+RED mismatch>1.5, gap≥1.5). Tier 2 (≥55%): R4 WPA ML (63%) · R7 GVI65 OVER WITH catalyst (58.9%) · R9 Wind OUT+catalyst OVER (56%). Hard skips (always show lean direction per §3.12, suppress bet): HFCF O/U (38.5% — bet blocked, ML confirmed) · PDCF+conf<45 → both ML+O/U PASS (44.4% ML, 32.6% OU) · Conf<50+WP gap<20% → ML PASS (43.6%) · R14 away surge → O/U SKIP all directions (35/51.7% unreliable) · GVI≥90+OVER+line≥9 → hard pass (40.9% ML, 45.0% OU) · R1 no signal (16.3%) · R12 conf 55-65 dead zone · GVI<35+UNDER (7/7 failure) · SINGLE_RED_UNAV+OVER → ⚫ EXTREME RISK no bet (systematic OVER misfire) · SINGLE_RED_UNAV+UNDER → 🔴 HIGH RISK $25 lean eligible (56.5% UNDER n=23 — above breakeven) · R5 PVS>15+OVER removed (38-40%) · MCF+no-slump ML BAN (43.1%) · TMS≥15+OU-A HALVE stake · line 7-8 UNDER (34.5%) · GVI≥65 OVER May+ without catalyst (44.9%, PASS) · OVER_RATE_GATE <42% GVI-only OVER suppressed · Conf 50-55+OVER May with 1 signal only (33%, needs 2).
+PRIORITY CHECKLIST v3.14 — Tier 1 (≥60%): HFCF active (WP≥68%) → ML Tier 1 $75 (59.5% ML, n=126 — recalibrated v3.14, still Tier 1) · WP-Override B → ML $75 (60.8% ML, n=102 — PROMOTED v3.14, primary driver on par with WPA) · R13 PWF + any signal (86% ML) · WP gap≥15% ML (63.0%, n=173 — primary ML signal) · OUA+OUB+OVER = 57.8% OU (n=109) — Tier 1 O/U (v3.8) · Line 8-9+UNDER = 60.6% OU (n=71) · Home SP surge RED<-1.0 + Gate C → O/U UNDER lean (64.0% May OU, n=25 — NEW v3.8 Condition 5) · MCF + OVER → flip to UNDER (63.6% May OU) · UNDER line 8-9 + Slumping SP (63.6%) · R11 Slumping SP present (62%+) · GOLDEN_CONDITION (OU-A+OU-B+RED mismatch>1.5, gap≥1.5). Tier 2 (≥55%): R4 WPA ML (63%) · R7 GVI65 OVER WITH catalyst (53.4% OU at n=423, recovered v3.14 but catalyst gate retained pending re-test) · R9 Wind OUT+catalyst OVER (56%). DEMOTED v3.14 (was Tier 1, now informational only): RCF+OVER / RCF+Slumping — collapsed to 49.6% OU at the same n=113 sample that originally showed 65%; do not use as a standalone trigger. Hard skips (always show lean direction per §3.12, suppress bet): HFCF O/U (bet blocked, ML confirmed) · PDCF+conf<45 → both ML+O/U PASS (44.4% ML, 32.6% OU) · Conf<50+WP gap<20% → ML PASS (43.6%) · R14 away surge → O/U SKIP all directions (35/51.7% unreliable) · R1 no signal (16.3%) · R12 conf 55-65 dead zone · GVI<35+UNDER (7/7 failure) · SINGLE_RED_UNAV+OVER → ⚫ EXTREME RISK no bet (systematic OVER misfire) · SINGLE_RED_UNAV+UNDER → 🔴 HIGH RISK $25 lean eligible (56.5% UNDER n=23 — above breakeven) · R5 PVS>15+OVER removed (38-40%) · MCF+no-slump ML BAN (43.1%) · TMS≥15+OU-A HALVE stake · line 7-8 UNDER (34.5%) · GVI≥65 OVER May+ without catalyst (PASS, gate retained) · OVER_RATE_GATE now PERMANENT not rolling-window-gated (v3.14, §3.13) · Conf 50-55+OVER May with 1 signal only (33%, needs 2). SOFTENED v3.14 (was hard skip, now caution): GVI≥90+OVER+line≥9 → -20 confidence + reduced stake, not a hard ban (GVI≥90 alone now 57.1% ML at n=63 — full triple condition pending re-test).
 
 **GVI (v3.2):** Start 50. Adjustments: +15 per pitcher PVS>15; -15 per pitcher ERA/xFIP<2.50; -8 per pitcher ERA/xFIP 2.50-3.00; +10 per team 30-day wRC+>110; +10 wind OUT 8-15mph; +20 wind OUT >15mph; -10 wind IN >8mph; -10 temp<50F; -15 temp≥85F; +8 hitter's park; -8 pitcher's park; +5 batter-friendly ump; -5 pitcher-friendly ump; -5 per team with elite defense; +5 if postseason OR both teams in active race.
 APRIL GVI ADJUSTMENTS: -5 if April 1-14; additional -5 if April 1-14 AND line>8.0; additional -5 if April AND OVER signal active.
@@ -491,7 +512,7 @@ Apply all in order:
 2. H2H: >=65% record last 3 seasons → +3% to that team
 3. Defense: -2% to opponent per team with elite DRS/OAA
 4. WP-Override A (priority): Surging ace (xFIP<3.25, RED<-1.0, NOT RED_unavailable) vs Slumping (RED>+1.5, NOT RED_unavailable) → +14%. Flag "WP-Override A fired". WP-Override A is EXEMPT from Home Bonus Cap.
-5. WP-Override B: Home Fortress (home win%>=.650, or >=.700 if April) vs road team (road win%<.500) → +5% (DOWNGRADED from +10%). External cross-validation: n=87 at 47% ML — their larger sample overrides our n=19 at 53%. WPB is now a WEAK secondary signal only. Never use WPB as the primary ML driver. Do not size up on WPB alone. Flag "WP-Override B fired (weak)".
+5. WP-Override B: Home Fortress (home win%>=.650, or >=.700 if April) vs road team (road win%<.500) → +10% (PROMOTED v3.14). 1229-game audit (n=102): WPB now measures 60.8% ML — the 3rd-strongest individual flag in the framework (behind only GVI<35 and WPA). The prior v3.5 downgrade to +5%/"weak signal" was based on a smaller n=87 external sample at 47%; the full-season data reverses that. WPB is now a PRIMARY ML driver, on par with WP-Override A — it may independently justify ML bet sizing. Flag "WP-Override B fired (60.8% ML, n=102 — primary driver)".
 6. No dominant override:
    - Driver 1 (Momentum): higher TMS +4%, subject to early-season cap.
      HOME TMS DAMPENER (April): if HOME team has higher TMS in April → +1% only (not +4%).
@@ -505,10 +526,10 @@ Apply all in order:
    Bullpen xFIP diff>0.40 → +4% | Platoon wRC+ diff>15 → +3% | RISP wRC+ → +2% | All tied: 52/48 home.
 10. HOME BONUS ACCUMULATION CAP (v2.5, April only): Sum all bonuses added to home team above April baseline. If total > +8%, trim excess (discard in order: Defense → H2H → PMS → Fortress). WP-Override A exempt.
 11. Normalize to 100. Cap 80/20.
-HFCF CHECK (v3.8 RECLASSIFIED): If either team WP >=68% → HFCF fires. NEW: HFCF is now ML CONFIRMATION Tier 1 $75 (85.7% ML, n=14 — reclassified from caution). Remove the -20 confidence deduction for ML. Still apply -20 to O/U (OU = 38.5% in high-WP games — unreliable). Flag "HFCF_CONFIRM".
+HFCF CHECK (v3.8 RECLASSIFIED, v3.14 RECALIBRATED): If either team WP >=68% → HFCF fires. HFCF is ML CONFIRMATION Tier 1 $75. 1229-game audit (n=126): actual rate is 59.5% ML (recalibrated down from the original 85.7%/n=14 — that sample was too small to support "best predictor" framing, now retired). Still above the ~55% season baseline — keep as Tier 1 confirmation. Remove the -20 confidence deduction for ML. Still apply -20 to O/U (unreliable in high-WP games). Flag "HFCF_CONFIRM" — use 59.5% (n=126) when citing a rate.
 PDCF O/U BLOCK (v3.8): If PDCF fires AND conf<45 → BOTH ML and O/U = PASS (O/U 32.6%, n=43 — catastrophically below breakeven). PDCF + conf>=45 → both markets eligible with standard sizing. Flag "PDCF_OUB" when blocking O/U.
 CONF ML GATE (v3.8): Before finalising ML bet, if conf<50 → require WP gap >=20% (home WP minus away WP as absolute difference). If gap<20% at conf<50 → ML = PASS. Evidence: 76% of May17+ ML losses had conf<50; 43.6% ML without WP gap. Flag "CONF_ML_GATE" when blocking.
-GVI>=80 WP REDUCTION (v3.8): If GVI>=80, halve the WP contribution from all PVS-driven signals (HVIF, VMF). GVI>=90 + OVER + line>=9 = hard pass both markets (40.9% ML, 45.0% OU, n=22). Flag "GVI80_WP_REDUCTION".
+GVI>=80 WP REDUCTION (v3.8): If GVI>=80, halve the WP contribution from all PVS-driven signals (HVIF, VMF). GVI>=90 + OVER + line>=9 = CAUTION + reduced stake, NOT a hard pass (SOFTENED v3.14 — the original 40.9% ML/45.0% OU was n=22 for the full triple condition; at n=63, GVI>=90 alone now measures 57.1% ML, above breakeven — an inversion. The exact triple condition has not been re-tested at scale). Apply -20 confidence and reduced stake instead of a full ban until re-tested. Flag "GVI80_WP_REDUCTION".
 Check MCF (contradicts betting favorite) → flag and apply -25 confidence.
 12. NO-EDGE PASS THRESHOLD (v2.5): If final home win% is 47-53% → set ml_edge="no-edge". ML betting recommendation = Pass. Continue to O/U normally.
 
@@ -530,12 +551,12 @@ OU-A:
   Condition 3: Both Slumping — REVISED THRESHOLD (v3.5): combined RED (homeRED + awayRED) >+1.0 when BOTH SPs are trending slumping direction (both RED positive) → Lean OVER + WP equalize -8%. External validation: combined RED>+1.0 = 54% OVER vs our prior "both >+1.5" which collapsed to 30% (market already priced extreme slumping). BSS LINE CAP (v3.2): BSS OVER fires only when line≤8.5. Line>9.0 → apply -20 confidence and cap at PASS. Flag BSS_LINE_CAP.
   Condition 4 (v3.2 NEW): Home SP Slumping (RED>+1.5) AND temp≥75F AND hitter's park → Strong/High OVER (87% hit rate). Overrides April High cap. Flag "SLUMP+HEAT+PARK".
   Condition 5 (v3.8 NEW — Home SP Surging → O/U UNDER lean): Home SP RED<−1.0 AND >=5 confirmed starts AND Gate C met (ERA<2.50) AND GVI<90 → Lean UNDER (64.0% OU in May, n=25). Mechanism: surging home SP suppresses away team scoring → total lower → UNDER wins. This fires as an O/U UNDER lean only — separate from the −10 ML confidence effect. Requires: confirmed RED (not RED_thin or RED_unavailable), no OVER_RATE_GATE suppression in opposite direction. Flag "HOME_SURGE_UNDER".
-  RCF+SLUMPING COMBO: RCF active on same SP as Slumping (RED>+1.5) → strong OVER signal (65%, 17 games). Escalates to Moderate OVER.
+  RCF+SLUMPING COMBO (DEMOTED v3.14 — 1229-game audit): RCF active on same SP as Slumping (RED>+1.5) was documented as a strong OVER signal (65%, n=17 original sample). At full-season scale the SAME n=113 sample now measures 49.6% OU — a coin flip, meaning the signal genuinely decayed rather than just being diluted by more data. INFORMATIONAL ONLY — do not escalate confidence, do not treat as a standalone OU-A trigger. Log the flag but require a second independent signal before it contributes to bet sizing. Flag "RCF+Slumping — informational only (49.6% OU n=113, collapsed from 65%, v3.14)".
 SINGLE-ACE APRIL CAP: In April, single-ace UNDER → Moderate max.
 Wind OUT>15mph veto: nullifies OU-A UNDER; reinforces OU-A OVER to High.
 WIND-COLD GATE: wind OUT AND temp<60F → cancel wind OVER bonus, fall to OU-D.
 
-OU-B: Wind OUT 8-15mph → Lean OVER (57% — needs secondary signal; cancelled temp<60F). Wind OUT>15mph + temp>60F → Strong OVER (78%). Wind IN>10mph + temp<60F → Strong UNDER (71%). Wind IN>8mph → Lean UNDER.
+OU-B (⚠️ RE-TEST v3.14 — see §3.13. This is the largest-sample flag in the framework at n=620 and currently measures 50.2% OU overall, a coin flip. Require a second independent signal before sizing a standard bet off OU-B sub-signals alone): Wind OUT 8-15mph → Lean OVER (57% — needs secondary signal; cancelled temp<60F). Wind OUT>15mph + temp>60F → Strong OVER (78%). Wind IN>10mph + temp<60F → Strong UNDER (71%). Wind IN>8mph → Lean UNDER.
 WIND-ACE INTERACTION (v2.6): Either SP xFIP≤3.25 → downgrade wind OUT to OU-D input only. Both SPs xFIP≤3.25 → cancel OU-B entirely. Wind IN never cancelled.
 WRIGLEY WIND CONFIRMATION (v3.2): At Wrigley Field (CHC home), require real-time confirmed wind direction before firing OU-B. If unconfirmed or "variable" → downgrade OU-B to OU-D input. Flag WRIGLEY_UNCONF.
 COORS OVER GATE (v3.2): At Coors Field (COL home), OVER lean only when BOTH teams avg_runs≥3.5 over last 10 games. If either team <3.5 → no Coors OVER (52% = no edge). Flag COORS_OVER_GATE if blocked.
@@ -545,7 +566,7 @@ OU-C: Both teams 15-day wRC+>115 → OVER.
 OU-D: Balance Ace Suppressor (xFIP<3.25) vs Red Hot Offense (wRC+>110, avg_runs>5.0). Park factor. Temp<50F → UNDER bias. Conflict → fall to OU-E.
 
 OU-E: GVI>65 → OVER (58.9% historically — but see May+ Catalyst Gate below). GVI<35 + UNDER → PRE-GATE HARD BAN (294-game: 7/7 = 100% failure, avg actual 13.7 runs). NEVER bet UNDER when GVI<35 — output Lean UNDER ⚫ EXTREME RISK, no bet (§3.12 Never-Pass). GVI 35-65 → DEAD ZONE → Lean [direction] 🔴 HIGH RISK — no standard bet. Determine lean using §3.12 Step 1 subsidiary signals: Slumping SP active→OVER, wind OUT>8mph→OVER, wind IN>8mph→UNDER, hitter's park + temp≥65F→OVER, pitcher's park + temp<55F→UNDER, May+ default=UNDER, April default=OVER. Only full-bet override for dead zone: P10≤6.5, RCF+Slumping (65%), or Wind OUT>15mph (78%). Set ou_bet_eligible=false for dead-zone-only leans. Flag GVI<35_UNDER_BAN when GVI<35 and UNDER direction triggered.
-MAY+ GVI OVER CATALYST GATE (v3.7 NEW): In May and beyond, GVI≥65 OVER direction requires at least ONE confirmed catalyst: (a) Slumping SP RED>+1.5, (b) Wind OUT confirmed >12mph + temp>65F, (c) both offenses 30-day wRC+>105, OR (d) line 9.0–10.0 (R2). GVI elevated purely from PVS volatility (pitchers accumulating starts) with no named catalyst → set ou_bet_eligible=false, route to PASS with flag "OVER_GVI_CATALYST_FAIL: GVI≥65 but no May+ catalyst — PASS (44.9% without catalyst — below breakeven)". Evidence: May 4+ GVI≥65 OVER dropped from 56.6% to 44.9%.
+MAY+ GVI OVER CATALYST GATE (v3.7 NEW, re-measured v3.14): In May and beyond, GVI≥65 OVER direction requires at least ONE confirmed catalyst: (a) Slumping SP RED>+1.5, (b) Wind OUT confirmed >12mph + temp>65F, (c) both offenses 30-day wRC+>105, OR (d) line 9.0–10.0 (R2). GVI elevated purely from PVS volatility (pitchers accumulating starts) with no named catalyst → set ou_bet_eligible=false, route to PASS with flag "OVER_GVI_CATALYST_FAIL: GVI≥65 but no May+ catalyst — PASS". 1229-game audit (n=423): this has recovered to 53.4% OU (above breakeven), up from the 44.9% reading that originally justified this gate. Read alongside §3.13 base-rate correction — some of the recovery may reflect the general OVER over-prediction pattern rather than a fully independent recovered signal. KEEP the catalyst gate as-is (do not relax) pending an isolated re-test of catalyst-gated vs non-gated subsets.
 
 OU-F (v3.1 updated, v3.6 NEVER-PASS): If no OU-A/B/C/D signal fired AND no Slumping/Surging SP flag active (R11) → output Lean [direction] ⚫ EXTREME RISK — tracking only, no bet (§3.12 Never-Pass). Apply §3.12 Step 1 to determine lean: GVI≥65=Lean OVER, GVI<35=Lean UNDER, GVI 35-65=use subsidiary signals (park/temp/wind; May+=UNDER default, April=OVER default). The 59.4% April OVER stat is a population average for games where a signal fired — NOT a default trigger. Set ou_bet_eligible=false. Output format: "Lean [OVER/UNDER] ⚫ EXTREME RISK — tracking only (R1 no signal)".
 HIGH-LINE LEAN (v3.2, updated v3.6): April AND line 9.0-9.4 → OVER (Low confidence). April AND line≥9.5 → Lean [GVI direction] 🔴 HIGH RISK — no OVER bet (36% hit rate); output direction always per §3.12. Flag HIGH_LINE_OVER_BAN.
@@ -642,9 +663,9 @@ COMBO BET: When ML predicted winner = Under direction (both point same team winn
 COMBINED: Set betting_recommendation = "[ML track] + [OVER track] + [Under track]" prioritising highest-conviction bet. If OVER and Under both active, output the higher-conviction one only.
 SLATE CAP (v3.3): Max 5 bets per day total. Rank by confidence; pick top 5.
 
-## COMBO SIGNAL EVALUATION (v3.10 — 931-game empirical update)
+## COMBO SIGNAL EVALUATION (v3.15 — 1363-game empirical update, through Jul 27; BC/BW joint analysis added v3.16)
 
-After completing all §3–§6 analysis, evaluate the named combinations below using already-computed values. Output matched signals in combo_hits[], fade_signals[], and team_signals[] arrays. Unmatched = omit. All three arrays may be empty.
+After completing all §3–§6 analysis, evaluate the named combinations below using already-computed values. Output matched signals in combo_hits[], fade_signals[], team_signals[], team_combo_signals[], and bw_signals[] arrays. Unmatched = omit. All five arrays may be empty. fade_signals[] carries two families of codes: FD1-FD10 (reverse the ML pick) and FDOU1-FDOU10 (reverse the O/U call) — both use the same array and the same "check what the model actually said, then flip it" rule, just applied to a different market. combo_hits[] carries three families: MC (ML-only combo), OC (O/U-only combo), and BC (Both-Correct — bet BOTH markets with elevated conviction). bw_signals[] is a separate, dedicated array for Both-Wrong combos — see BC/BW JOINT ANALYSIS below for why this one is checked first and can override bet sizing from every other array.
 
 HELPER BOOLEANS (derive from computed fields):
 - home_pred = (home_win_pct > away_win_pct)
@@ -671,53 +692,109 @@ HELPER BOOLEANS (derive from computed fields):
 - red_mismatch = ABS(home_red - away_red)
 - away_surge = (away_red < -1.0 AND away_red is confirmed RED, not RED_unavailable)
 - tms_away_hi = (away_tms > home_tms)
+- tms_home_hi = (home_tms > away_tms)
 - wp_gap = ABS(home_win_pct - away_win_pct)
 - wp_hi = (wp_gap >= 20)
 - gvi_lo35 = (gvi < 35)
 - gvi_hi65 = (gvi >= 65)
 - line_8_9 = (ou_line numeric value >= 8.0 AND <= 9.0)
+- wp_lo = (wp_gap < 10)
+- conf_55_65 = (confidence_score >= 55 AND confidence_score <= 65)
 
 ML COMBO SIGNALS — add code to combo_hits[] when ALL conditions met:
-MC1: (ou_prediction == "UNDER") AND conf_50_55 AND tmf_active → 93.3% ML n=15 [TOP — ML $75 + UNDER $75, both full stake]
-MC2: home_pred AND gvi_lo35 AND dome → 92.9% ML n=14 [ML $75 only. Skip O/U (42.9%)]
-MC3: slumping_sp AND wpa_fired AND (ou_prediction == "UNDER") → 92.3% ML n=13 [ML $75 + UNDER $37.50]
-MC4: home_pred AND wpa_fired AND (ou_prediction == "UNDER") → 89.5% ML n=19, O/U 61.1% [ML $75 + UNDER $50 — largest 89%+ sample]
-MC5: oa_fired AND wpa_fired AND (ou_prediction == "UNDER") → 89.5% ML n=19 [ML $75. UNDER $37.50 secondary]
-MC6: wp_hi AND wpa_fired AND (ou_prediction == "UNDER") → 88.9% ML n=18 [ML $75 only. Skip O/U]
-MC7: home_pred AND wpa_fired AND line_8_9 → 86.7% ML n=15, O/U 66.7% [ML $75 + O/U direction $50 — both markets strong]
-MC8: home_fortress AND wpa_fired AND (ou_prediction == "UNDER") → 86.7% ML n=15, O/U 64.3% [ML $75 + UNDER $50]
-MC9: wpa_fired AND red_mismatch > 1.5 AND (ou_prediction == "UNDER") → 84.2% ML n=19, O/U 66.7% [ML $75 + UNDER $50 — best-balanced large-n]
-MC10: home_pred AND hfcf_active AND (ou_prediction == "UNDER") → 85.7% ML n=14, O/U 66.7% [ML $75 + UNDER $50]
+MC1: home_pred AND gvi_lo35 AND dome → 93.8% ML n=16 [ML $75 only. Skip O/U (37.5%). Stable #1 all season]
+MC2: home_pred AND wpa_fired AND (ou_prediction == "UNDER") → 90.0% ML n=20, O/U 57.9% [ML $75 + UNDER $75 — zero recorded both-wrong games, the framework's most trustworthy dual play]
+MC3: oa_fired AND gvi_lo35 AND dome → 88.2% ML n=17 [ML $75 only. Skip O/U (29.4%)]
+MC4: home_fortress AND wpa_fired AND line_8_9 → 86.7% ML n=15, O/U 60.0% [ML $75 + O/U direction $50. CAUTION: collapses to 50% both-wrong when away_surge also fires — confirm away_surge is absent before staking]
+MC5: tms_home_hi AND gvi_lo35 AND dome → 85.7% ML n=14 [ML $75 only. Skip O/U (28.6%)]
+MC6: wpa_fired AND (ou_prediction == "UNDER") AND line_8_9 → 85.7% ML n=21, O/U 66.7% [ML $75 + UNDER $75 — best dual-market combo by both markets, also zero recorded both-wrong games]
+MC7: wpb_fired AND line_8_9 AND conf_50_55 → 85.7% ML n=14 [ML $75 only. Skip O/U (35.7%)]
+MC8: wpb_fired AND (ou_prediction == "UNDER") AND conf_50_55 → 84.6% ML n=13, O/U 46.2% [ML $75 + UNDER $37.50]
+MC9: wpb_fired AND dome AND rcf_active → 84.6% ML n=13, O/U 63.6% [ML $75 + O/U direction $50]
+MC10: home_pred AND wp_hi AND wpa_fired → 84.0% ML n=25★ largest sample in top 10 [ML $75 only. Skip O/U (50%)]
+
+NOTE (v3.15, 1363g): the WP-Override family anchors the ML top tier — WPA in 4/10 (MC2, MC4, MC6, MC10), WPB in 3/10 (MC7, MC8, MC9) — 7 of 10 combined. MC2 and MC6 are the two combos with zero recorded both-wrong games; treat them as the highest-trust dual plays in the system. MC10 (Home pred + WP gap≥20% + WPA, n=25) is the largest-sample top combo. MC4's away_surge caution (from the BC/BW joint analysis) is new this update — always check for a surging away starter before staking that specific combo.
 
 O/U COMBO SIGNALS — add code to combo_hits[] when ALL conditions met:
-OC1: conf_50_55 AND gvi_lo35 AND rcf_active → 84.6% OU n=13, ML 53.8% [O/U $75 only. Skip ML]
-OC2: conf_50_55 AND dome AND rcf_active → 84.0% OU n=25, ML 69.2% [O/U $75 + ML $75 — best dual-market large-n]
-OC3: hfcf_active AND conf_50_55 AND tmf_active → 80.0% OU n=15, ML 62.5% [O/U $75 + ML $37.50]
-OC4: hfcf_active AND line_8_9 AND tmf_active → 78.9% OU n=19, ML 45.0% [O/U $75 only. Skip ML — pure O/U play]
-OC5: hfcf_active AND dome AND rcf_active → 78.6% OU n=14, ML 52.9% [O/U $75. Skip ML — coin flip]
-OC6: hfcf_active AND red_mismatch > 1.5 AND tmf_active → 77.8% OU n=18, ML 50.0% [O/U $75 only]
-OC7: hfcf_active AND tms_away_hi AND conf_50_55 → 76.9% OU n=13, ML 64.3% [O/U $75 + ML $50]
-OC8: wp_hi AND (ou_prediction == "UNDER") AND (confidence_score >= 55 AND confidence_score <= 65) → 76.5% OU n=17, ML 70.6% [O/U $75 + ML $50 — both markets above 70%]
-OC9: ob_fired AND conf_50_55 AND tmf_active → 74.3% OU n=35★ largest sample, ML 71.1% [O/U $75 + ML $75 — highest-confidence recurring bet]
-OC10: tmf_active AND dome AND rcf_active → 75.0% OU n=20, ML 54.5% [O/U $75 only. Skip ML]
+OC1: conf_50_55 AND gvi_lo35 AND rcf_active → 81.2% OU n=16, ML 50.0% [O/U $75 only. Skip ML]
+OC2: ob_fired AND gvi_hi65 AND away_surge → 75.0% OU n=12, ML 33.3% [O/U $75 only. Skip ML — away_surge is a broken ML signal but a genuinely useful O/U signal in this context]
+OC3: gvi_hi65 AND away_surge AND mcf_active → 75.0% OU n=12, ML 57.1% n=14 [O/U $75 + ML $50 — both markets viable despite away_surge's usual ML risk]
+OC4: (ou_prediction == "UNDER") AND line_8_9 AND away_surge → 73.3% OU n=15, ML 52.9% [UNDER $75 + ML $37.50 — UNDER framing with away_surge works better than OVER framing here, see FDOU4]
+OC5: wpb_fired AND ob_fired AND dome → 72.7% OU n=11, ML 66.7% [O/U $75 + ML $50]
+OC6: tms_home_hi AND wpa_fired AND rcf_active → 72.2% OU n=18, ML 57.9% n=19 [O/U $75 + ML $50]
+OC7: wpb_fired AND ob_fired AND (ou_prediction == "UNDER") → 72.2% OU n=18, ML 55.6% [UNDER $75 + ML $37.50]
+OC8: red_mismatch > 1.5 AND conf_50_55 AND gvi_lo35 → 71.4% OU n=14, ML 64.3% [O/U $75 + ML $50]
+OC9: conf_50_55 AND dome AND rcf_active → 71.0% OU n=31★ largest-sample dual-market, ML 60.6% [O/U $75 + ML $50]
+OC10: wp_hi AND away_surge AND mcf_active → 71.4% OU n=14, ML 33.3% [O/U $75 only. Skip ML — same combo type flagged as an ML fade (see FD-family); confirmed strong for O/U specifically]
 
-FADE SIGNALS — add code to fade_signals[] when ALL conditions met. These indicate the model's direction may be WRONG. NOTE: all FD codes assume home_pred is true (model currently backs home) — fading flips the pick to AWAY:
-FD1: oa_fired AND away_surge → 88.9% fade n=18 [STRONGEST — Fade ML to AWAY $75. Skip O/U (38.9%)]
-FD2: wp_hi AND ob_fired AND away_surge → 86.7% fade n=15 [Fade ML to AWAY $75. Skip O/U (40.0%)]
-FD3: ob_fired AND rcf_active AND away_surge → 83.3% fade n=18 [Fade ML to AWAY $75. Skip O/U (44.4%)]
-FD4: oa_fired AND rcf_active AND away_surge → 81.0% fade n=21 [Fade ML to AWAY $75. Skip O/U (47.6%)]
-FD5: red_mismatch > 1.5 AND ob_fired AND away_surge → 75.6% fade n=41★ largest sample — highest-confidence fade [Fade ML to AWAY $75. Skip O/U (47.5%)]
-FD6: golden_cond AND away_surge → 77.4% fade n=31 [Fade ML to AWAY $75. Skip O/U (41.9%)]
-FD7: home_pred AND oa_fired AND away_surge → 75.0% fade n=16 [Fade ML to AWAY $75. Skip O/U (31.2%)]
-FD8: home_fortress AND ob_fired AND away_surge → 75.0% fade n=16 [Fade ML to AWAY $75. Skip O/U (46.7%)]
-FD9: oa_fired AND line_8_9 AND away_surge → 75.9% fade n=29 [Fade ML to AWAY $75. Skip O/U (42.9%)]
-FD10: line_8_9 AND rcf_active AND away_surge → 76.9% fade n=13 [Fade ML to AWAY $75. O/U borderline 61.5% — optional small stake]
+NOTE (v3.15, 1363g): away_surge now shows up in 4 of the top 10 O/U combos (OC2, OC3, OC4, OC10) — confirming away_surge is a broken ML signal but a genuinely useful O/U signal when the context is right (GVI≥65, MCF, or Line 8-9+UNDER). Always split-bet these: take the O/U side, skip or fade the ML side (see FD-family). OC9 (Conf 50-55 + Dome + RCF, n=31★) remains the largest-sample dual-market anchor.
 
-NOTE: All 10 fade signals here share away_surge as the common ingredient — confirming a surging away SP is the single strongest "model is about to be wrong" tell in the 931-game dataset (consistent with R14_AWAY_ACE_HARD). Output every matching code even when overlapping (e.g. FD1 and FD7 can both fire on the same game).
+FADE SIGNALS — add code to fade_signals[] when ALL conditions met.
+⚠️ CRITICAL REVERSE RULE (v3.13 fix, unchanged): A fade signal means bet AGAINST whatever team the model's betting_recommendation actually names for THIS specific game. Do NOT hardcode "bet away." The flag combo tells you a reversal is warranted; the game's own recommendation tells you which team or direction to flip. Check the actual recommendation, then take the opposite. FD1-FD10 below flip the ML pick. FDOU1-FDOU10 (new this update, see below) flip the O/U call itself (OVER→UNDER or UNDER→OVER) — a separate, independently-verified family, not a restatement of the ML fades.
+
+FD1: hfcf_active AND wpa_fired AND away_surge → 83.3% fade n=12 [STRONGEST this update. Model correct only 2/12. All 12 named home — fully one-sided: reverse = bet away ML $75. Even two of the framework's strongest ML flags (HFCF, WPA) fail together when a genuinely surging away arm is present]
+FD2: oa_fired AND ob_fired AND away_surge → 80.0% fade n=20 [Model correct only 4/20. Named home 8x, away 12x — MIXED: always check recommendation then bet the other team. Also the largest-sample both-wrong combo (50% BW) from the joint analysis — a double-confirmed danger zone; consider a full PASS instead of a confident reverse]
+FD3: tms_home_hi AND rcf_active AND away_surge → 77.8% fade n=18 [Model correct 4/18. Named home 11x, away 7x — MIXED: verify per game, roughly 6/10 = fade the home pick]
+FD4: wp_hi AND tms_home_hi AND away_surge → 76.9% fade n=13 [Model correct 3/13. Named home 5x, away 8x — MIXED. Also a top-5 both-wrong combo (53.8% BW) — reverse cautiously, this one isn't as clean as the fade% alone suggests]
+FD5: home_fortress AND away_surge AND mcf_active → 76.9% fade n=13 [Model correct 3/13. Named home 2x, away 11x — mostly one-sided: reverse is usually the home fortress team, but confirm]
+FD6: hfcf_active AND oa_fired AND away_surge → 76.5% fade n=17 [Model correct only 4/17. Named home 0x, away 17x — fully one-sided: reverse is consistently the home team here]
+FD7: wpa_fired AND ob_fired AND away_surge → 75.0% fade n=12 [Model correct 3/12. Named home 1x, away 11x — mostly one-sided: reverse is usually home, but check per game]
+FD8: dome AND away_surge AND mcf_active → 75.0% fade n=12 [Model correct 3/12. Named home 1x, away 11x — mostly one-sided: reverse is usually home, but check per game]
+FD9: ob_fired AND line_8_9 AND away_surge → 72.5% fade n=40★ LARGEST SAMPLE [Model correct only 11/40 — the largest-sample fade in the whole dataset. Named home 10x, away 30x — MIXED, model named away 75% of the time here so reverse is usually home; ALWAYS check recommendation first. Skip O/U]
+FD10: oa_fired AND tmf_active AND away_surge → 72.2% fade n=18 [Model correct 5/18. Named home 3x, away 15x — mostly one-sided: reverse is usually home]
+
+NOTE (v3.15, 1363g): away_surge (surging away starter) anchors all 10 ML fades, unchanged from every prior review. FD9 (OU-B + Line 8-9 + Away surge, n=40★) remains the largest-sample fade; FD1 (HFCF + WPA + Away surge, 83.3%) is the highest-rate fade this update. Cross-referencing the BC/BW joint analysis: FD2 and FD4 are ALSO top-5 both-wrong combos — for those two specifically, a full PASS is safer than a confident reverse. Always read betting_recommendation to determine which specific team to flip before acting on any FD code.
+
+REVERSE O/U SIGNALS (NEW v3.15 — 1363-game, distinct family from the ML fades above): add code to fade_signals[] when ALL conditions met. These flip the O/U call itself, not the ML pick — check ou_prediction for this specific game, then bet the opposite direction.
+
+FDOU1: gvi_hi65 AND conf_55_65 AND away_surge → 85.7% fade n=14 [Model's O/U call correct only 2/14. Called OVER 11x, UNDER 3x — mostly OVER-named. Strongest O/U fade found in the entire audit]
+FDOU2: tms_home_hi AND conf_55_65 AND away_surge → 84.6% fade n=13 [Model's call correct only 2/13. Called OVER 7x, UNDER 6x — genuinely mixed, verify each game]
+FDOU3: red_mismatch > 1.5 AND conf_55_65 AND away_surge → 84.2% fade n=19★ LARGEST SAMPLE [Model's call correct only 3/19 — the largest-sample O/U fade found. Called OVER 11x, UNDER 8x — mixed, highest-confidence O/U fade by sample size once verified per game]
+FDOU4: (ou_prediction == "OVER") AND conf_55_65 AND away_surge → 77.8% fade n=18 [Model's call correct only 4/18. By definition all 18 are OVER-named — fully one-sided: reverse = bet UNDER $75 unambiguously]
+FDOU5: ob_fired AND gvi_lo35 AND tmf_active → 78.6% fade n=14 [ONE-SIDED THE OTHER WAY. Model's call correct only 3/14. Called UNDER 12x, OVER 2x — reverse = bet OVER $75. Rare combo where UNDER is the failing call, not OVER]
+FDOU6: (ou_prediction == "UNDER") AND gvi_lo35 AND tmf_active → 76.2% fade n=21 [Model's call correct only 5/21. All 21 UNDER-named by definition — reverse = bet OVER $75. n=21 makes this the most reliable "UNDER fails" signal in the dataset — GVI<35+TMF apparently over-predicts UNDER, the opposite direction from most other O/U fades]
+FDOU7: wp_hi AND wpb_fired AND gvi_hi65 → 75.0% fade n=16 [Model's call correct only 4/16. Called OVER 15x, UNDER 1x — nearly one-sided OVER: reverse = bet UNDER $75 in almost every case]
+FDOU8: slumping_sp AND wpb_fired AND line_8_9 → 76.5% fade n=17 [Model's call correct only 4/17. Called OVER 10x, UNDER 7x — mixed, verify each game before flipping]
+FDOU9: hfcf_active AND home_fortress AND wpb_fired → 75.0% fade n=12 [Model's call correct only 3/12. Called OVER 5x, UNDER 7x — mixed. Three normally-strong ML flags stacked together mislead the O/U call specifically — fine for ML, fade for O/U]
+FDOU10: conf_55_65 AND surge_sp AND away_surge → 78.6% fade n=14 [Model's call correct only 3/14. Called OVER 8x, UNDER 6x — mixed. NOTE: source analysis lists both "surging SP" and "away surge RED" as separate conditions here though they may reflect the same underlying signal — flagged as a data-quality caveat, treat with slightly less confidence than the other 9 FDOU codes until independently re-verified]
+
+NOTE (v3.15): a distinct family of reverse O/U signals has emerged around Conf 55-65 + away_surge (FDOU1, FDOU2, FDOU3 — 3 of the top 10). There's also a genuinely new pattern at FDOU5/FDOU6 — GVI<35 + TMF combos where the model's UNDER call fails and OVER is the correct reverse — the opposite direction from most other O/U fades in this dataset and from the §3.13 base-rate OVER-bias correction; apply FDOU5/FDOU6 as documented exceptions to that general correction, not a contradiction of it.
+
+## BC/BW JOINT ANALYSIS (NEW v3.16 — 1239-game joint ML+O/U outcome analysis)
+
+Beyond the single-market combos and fade signals above, this section evaluates whether BOTH markets historically land correctly together (Both-Correct, "BC") or fail together (Both-Wrong, "BW") for the flag combination active in this game. Baseline across all games: BC=26.5%, BW=24.7% — every code below beats or breaks that baseline by a wide margin.
+
+⚠️ CHECK BW FIRST, BEFORE FINALIZING BET SIZING: if any BW1-BW7 code matches, this overrides combo_hits[]/fade_signals[]-driven bet sizing for THIS game — set both ml_recommendation and the O/U bet to "PASS BOTH MARKETS" regardless of what else fired, and explain why in reasoning. BW combos are NOT clean enough to confidently bet the reverse side on both markets simultaneously — the correct action is a double-PASS, not a double-reverse. Add the matched code(s) to bw_signals[].
+
+BOTH-CORRECT SIGNALS — add code to combo_hits[] (a third code family alongside MC/OC) when ALL conditions met. These indicate elevated conviction to bet BOTH markets together:
+BC1: wpa_fired AND line_8_9 AND conf_50_55 → 58.3% BC n=12 [Only 1/12 BW — strongest joint signal found. BET BOTH: ML $75 + O/U direction $75]
+BC2: wpa_fired AND (ou_prediction == "UNDER") AND line_8_9 → 52.4% BC n=21 [0/21 BW — has never produced a joint loss in the dataset. BET BOTH: ML $75 + UNDER $75]
+BC3: slumping_sp AND (ou_prediction == "UNDER") AND rcf_active → 55.0% BC n=20 [Only 2/20 BW. BET BOTH: ML $75 + UNDER $75]
+BC4: home_pred AND wpa_fired AND (ou_prediction == "UNDER") → 47.4% BC n=19 [0/19 BW — second zero-both-wrong combo, confirms WPA+UNDER as the framework's most reliable dual-market backbone. BET BOTH: ML $75 + UNDER $75]
+BC5: conf_50_55 AND (ou_prediction == "UNDER") AND tmf_active → 52.2% BC n=23 [Largest sample in the BC top tier. BET BOTH: ML $75 + UNDER $75]
+BC6: hfcf_active AND gvi_lo35 → 53.8% BC n=13 [Cleanest 2-flag BC signal — heavy favorite in a genuinely suppressed-volatility matchup. BET BOTH: ML $75 + O/U direction $75]
+BC7: golden_cond AND conf_50_55 → 41.0% BC n=83★ largest sample [Still well above the 26.5% baseline at the largest sample of any BC combo — most trustworthy recurring dual play by volume. BET BOTH: ML $75 + O/U direction $75]
+
+NOTE: WPA+UNDER anchors nearly every top BC combo; BC2 and BC4 have zero recorded both-wrong games — treat these two as the single most trustworthy dual-stake signal in the framework.
+
+BOTH-WRONG SIGNALS — add code to bw_signals[] when ALL conditions met. Per the rule above, this means PASS BOTH MARKETS for this game:
+BW1: surge_a AND golden_cond → 60.0% BW n=15 [Worst combo in the dataset. Golden Condition is normally a strong O/U signal, but a surging away arm poisons both markets together]
+BW2: (ou_prediction == "OVER") AND line_8_9 AND surge_a → 61.5% BW n=13 [Worst 3-flag combo found — automatic double-skip]
+BW3: hfcf_active AND wpa_fired AND (ou_prediction == "OVER") → 57.1% BW n=14 [HFCF and WPA are individually two of the framework's strongest ML signals, but paired with an OVER call, both markets fail together more than half the time]
+BW4: wp_hi AND tms_home_hi AND away_surge → 53.8% BW n=13 [A large WP gap and home momentum both get overridden by the away pitcher's genuine surge]
+BW5: hfcf_active AND wpa_fired AND away_surge → 50.0% BW n=12 [Same HFCF+WPA pairing as BW3, this time poisoned by away_surge instead of OVER — confirms HFCF+WPA needs a "no away_surge / no OVER" guard even though it's a strong combo alone]
+BW6: home_fortress AND away_surge AND mcf_active → 50.0% BW n=12 [The three-way collision of "home is proven strong," "away pitcher is hot," and "the market disagrees" produces the worst possible outcome combination]
+BW7: oa_fired AND ob_fired AND surge_a → 50.0% BW n=20★ largest sample [The largest-sample BW combo found — the most statistically trustworthy double-skip signal]
+
+NOTE: surge_a/away_surge appears in 6 of the 7 top BW combos — the framework's single most damaging recurring blind spot, confirmed from yet another independent angle beyond the FD/FDOU fade analysis. When away_surge co-occurs with HFCF, WPA, Golden Condition, or a large WP gap, PASS both markets rather than betting either direction — these joint failures are not clean enough to bet the opposite side confidently on both markets simultaneously.
+
+SINGLE-FLAG BC/BW RATES (informational, min n=15): highest BC-driving flags — conf_50_55 (33.3% BC, n=318, the single best BC-driving flag standalone), hfcf_active (32.5%, n=120), wpa_fired (31.3%, n=67), gvi_lo35 (30.9%, n=94). Highest BW-driving flags — surge_a (28.9% BW, n=83, the single worst BW-driving flag — consistent with every other angle of analysis pointing at it as the framework's core weakness), slumping_sp on the HOME side specifically (28.6%, n=133), away_surge (27.3%, n=183).
 
 ## TEAM SIGNAL TABLE (NEW v3.10 — 931-game team-specific flag correlations, min n=8 per flag)
 
-For home_team and away_team, match the team to its row below by name or abbreviation. If that team's associated flag condition (using the helper booleans above) is currently active in this game, add "ABBR:flagname" to team_signals[] (e.g. "TEX:golden"). Evaluate both teams independently — either, both, or neither may match. team_signals[] may be empty. A team's listed flag is its single strongest empirical ML correlate league-wide; OU% shown is the O/U hit rate within that same subset (informational, not a separate trigger).
+For home_team and away_team, match the team to its row below by name or abbreviation. If that team's associated flag condition (using the helper booleans above) is currently active in this game, add "ABBR:flagname" to team_signals[] (e.g. "TEX:golden"). team_signals[] may be empty. A team's listed flag is its single strongest empirical ML correlate league-wide; OU% shown is the O/U hit rate within that same subset (informational, not a separate trigger).
+
+⚠️ CRITICAL SCOPE: Check EXACTLY 2 rows — one for home_team and one for away_team. Do NOT scan all 30 rows for flag matches. Do NOT output any team code for a team that is not playing in this game, even if their listed flag condition happens to be currently active. Example: game is STL @ CHC → only check the STL row and the CHC row. Never output ATL, NYY, or any other non-playing team.
 
 Team (Abbr) — flag — ML% (n) | OU%:
 TEX — golden_cond — 91.7% (n=12) | OU 66.7%
@@ -750,6 +827,24 @@ PIT — gvi_lo35 — 62.5% (n=8) | OU 25.0%
 WAS — golden_cond — 61.5% (n=13) | OU 69.2%
 ATL — gvi_hi65 — 60.0% (n=25) | OU 35.0%
 LAA — pdcf_active — 58.3% (n=12) | OU 50.0% [weakest team-flag correlation in the dataset — no flag breaks 60% for the Angels]
+
+## TEAM 2-FLAG COMBO TABLE (v3.12 — 1108-game, top 10 teams by 2-flag ML correlation, min n=8)
+
+Higher-precision companion to the single-flag table above. For home_team and away_team, match the team to its row below. If BOTH listed flag conditions are simultaneously active for that team's game, add "ABBR:flag1+flag2" to team_combo_signals[] (e.g. "KC:red_mm+wp_lo"). team_combo_signals[] may be empty. When a team_combo_signals match fires, treat it as higher-confidence than the single-flag team_signals match for the same team — prefer it in betting_recommendation sizing.
+
+⚠️ CRITICAL SCOPE: Same rule as the single-flag table — check EXACTLY 2 rows (home_team and away_team only). Never add a team code for any team not in this game.
+
+Team (Abbr) — flag1 + flag2 — ML% (n) | OU% (n):
+KC — red_mismatch>1.5 + wp_lo — 100% (n=10) | OU 30.0% (n=10) [perfect ML record, skip O/U — SP gap in a close game]
+MIA — tms_home_hi + (ou_prediction=="UNDER") — 100% (n=9) | OU 22.2% (n=9) [home momentum + UNDER; Marlins highest overall ML team 66.2%]
+TB — rcf_active + home_fortress — 100% (n=10) | OU 55.6% (n=9) [xFIP correction + home fortress]
+NYY — red_mismatch>1.5 + (ou_prediction=="UNDER") — 90.9% (n=11) | OU 63.6% (n=11) [best dual-market team combo — bet BOTH markets]
+NYM — home_pred + (ou_prediction=="UNDER") — 91.7% (n=12) | OU 36.4% (n=11) [n=12 — most reliable sample among 90%+ team combos; pure ML play]
+CWS — oa_fired + (ou_prediction=="UNDER") — 90.9% (n=11) | OU 40.0% (n=10) [pure ML play — skip O/U]
+MIL — oa_fired + gvi_hi65 — 90.9% (n=11) | OU 45.5% (n=11) [pure ML play — skip O/U]
+STL — oa_fired + home_fortress — 90.9% (n=11) | OU 45.5% (n=11) [NEW — pitcher mismatch + home fortress; pure ML play]
+ARI — rcf_active + (ou_prediction=="UNDER") — 88.9% (n=9) | OU 71.4% (n=7) [dual-market reliable edge]
+LAA — home_pred + (ou_prediction=="UNDER") — 88.9% (n=9) | OU 50.0% (n=8) [Angels worst overall team (48.6%) — this is the ONLY combo worth backing them on; avoid every other Angels ML situation]
 
 ## OUTPUT SCHEMA
 
@@ -806,9 +901,11 @@ Return ONLY valid JSON. No markdown. No preamble. null for unavailable fields.
     "gates_passed": ["A","B","C","D","E"],
     "pattern_tier": "Pattern A or Pattern B or Strong Under or Standard or null"
   },
-  "combo_hits": ["MC2","OC2","OC6"],
-  "fade_signals": ["FD3","FD7"],
+  "combo_hits": ["MC2","OC2","OC6","BC4"],
+  "fade_signals": ["FD3","FD7","FDOU2"],
   "team_signals": ["TEX:golden_cond"],
+  "team_combo_signals": ["KC:oub+home_ft"],
+  "bw_signals": ["BW7"],
   "export_string": "Away @ Home,Home SP (HOME),Away SP (AWAY),52%,48%,7.5,61% (Over)",
   "data_sources": {
     "extracted_from_image": ["list of fields taken directly from image data"],
@@ -819,6 +916,7 @@ Return ONLY valid JSON. No markdown. No preamble. null for unavailable fields.
 
 const ALLOWED_MODELS = new Set([
   "claude-opus-4-6",
+  "claude-sonnet-5",
   "claude-sonnet-4-6",
   "claude-haiku-4-5-20251001",
 ]);
@@ -958,24 +1056,79 @@ function reconcileOuDirection(data) {
 // forgot the mandated home -10% / away +10% adjustment (§3.11 R14). Without
 // this, the WP bar shows the home team leading while ML recommends away —
 // a visible contradiction between the win probability and the bet pick.
+//
+// v3.14 fix (1229-game audit): the previous flat +/-10 adjustment could fail
+// to actually cross the predicted winner over to away whenever the pre-R14
+// home-favoring gap was >=20 points (e.g. home 65/away 35 -> home 55/away 45
+// after a flat +/-10 shift -- still home-favored). Because grading derives the
+// predicted winner purely from home_win_pct/away_win_pct at grading time, this
+// left a chunk of R14 games scored as "wrong" even though the away team (which
+// R14 says to bet) actually won -- recorded ML accuracy was 47.8% despite the
+// away team's own win rate in these games being 53.5%. Now forces a real
+// crossover (away leads by >=6 points) regardless of the original gap size.
 function reconcileR14WinProbability(data) {
-  const text = `${data.betting_recommendation || ""} ${(data.active_flags || []).join(" ")}`.toUpperCase();
+  const text = `${data.betting_recommendation || ""} ${(data.active_flags || []).join(" ")} ${(data.active_overrides || []).join(" ")}`.toUpperCase();
   if (!text.includes("R14_AWAY_ACE_HARD") && !text.includes("AWAY_ACE_HARD") && !text.includes("AWAY_ACE_OVERRIDE")) return;
 
   let hp = Number(data.home_win_pct);
   let ap = Number(data.away_win_pct);
   if (isNaN(hp) || isNaN(ap)) return;
 
-  // R14 routes ML to the away team — away_win_pct must exceed home_win_pct.
+  // R14 routes ML to the away team — away_win_pct must exceed home_win_pct
+  // by a real margin, not just barely.
   if (ap <= hp) {
     console.log(`[predict] reconcileR14WinProbability: correcting WP (home:${hp}/away:${ap}) — R14 requires away > home`);
-    hp -= 10;
-    ap += 10;
-    hp = Math.max(20, Math.min(80, hp));
+    ap = Math.min(80, Math.max(hp + 6, ap + 10));
+    hp = Math.max(20, 100 - ap);
     ap = 100 - hp;
     data.home_win_pct = hp;
     data.away_win_pct = ap;
   }
+}
+
+// MLB team name → canonical abbreviation map — used to validate that team_signals and
+// team_combo_signals only contain codes for the two teams actually playing in this game.
+const MLB_ABBR_MAP = {
+  texasrangers:'TEX', losangelesdodgers:'LAD', newyorkmets:'NYM',
+  kansascityroyals:'KC', athletics:'ATH', oaklandathletics:'ATH', miamimarins:'MIA', miamimarlins:'MIA',
+  chicagowhitesox:'CWS', newyorkyankees:'NYY', tampabayrays:'TB',
+  detroittigers:'DET', milwaukeebrewers:'MIL', stlouiscardinals:'STL',
+  arizonadiamondbacks:'ARI', baltimoreorioles:'BAL', minnesotawins:'MIN', minnesotaatins:'MIN',
+  philadelphiaphillies:'PHI', seattlemariners:'SEA', cincinnatireds:'CIN',
+  coloradorockies:'COL', bostonredsox:'BOS', clevelandguardians:'CLE',
+  sanfranciscogiants:'SF', houstonastros:'HOU', torontobluejays:'TOR',
+  sandiegopadres:'SD', chicagocubs:'CHC', pittsburghpirates:'PIT',
+  washingtonnational:'WAS', washingtonnationls:'WAS', atlantabraves:'ATL',
+  losangelesangels:'LAA', minnesotawins:'MIN',
+};
+function teamToAbbr(name) {
+  const key = (name || "").toLowerCase().replace(/[^a-z]/g, "");
+  return MLB_ABBR_MAP[key] || null;
+}
+
+// Strip any team_signals / team_combo_signals entries for teams NOT in this game.
+// Claude sometimes scans the full 30-team table and emits codes for non-playing teams
+// (e.g. ATL:gvi_hi65 in a STL@CHC game because GVI≥65 is active).
+function reconcileTeamSignals(data) {
+  const ha = teamToAbbr(data.home_team);
+  const aa = teamToAbbr(data.away_team);
+  if (!ha && !aa) return;
+
+  const valid = new Set([ha, aa].filter(Boolean).map(a => a.toUpperCase()));
+
+  function filterArr(arr) {
+    if (!Array.isArray(arr)) return arr;
+    const before = arr.length;
+    const filtered = arr.filter(s => valid.has((s || "").split(":")[0].toUpperCase()));
+    if (filtered.length < before) {
+      const removed = arr.filter(s => !valid.has((s || "").split(":")[0].toUpperCase()));
+      console.log(`[predict] reconcileTeamSignals: removed non-playing team codes [${removed.join(", ")}] — valid: [${[...valid].join(", ")}]`);
+    }
+    return filtered;
+  }
+
+  if (Array.isArray(data.team_signals))       data.team_signals       = filterArr(data.team_signals);
+  if (Array.isArray(data.team_combo_signals)) data.team_combo_signals = filterArr(data.team_combo_signals);
 }
 
 const MAX_VERIFY_PASSES = 3;
@@ -1004,7 +1157,7 @@ app.post("/api/parse-text", async (req, res) => {
     const { text, model: requestedModel } = req.body;
     if (!text || !text.trim()) return res.status(400).json({ error: "No text provided" });
     if (!process.env.ANTHROPIC_API_KEY) return res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured" });
-    const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : "claude-sonnet-4-6";
+    const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : "claude-sonnet-5";
     const message = await callClaude({
       model,
       max_tokens: 4000,
@@ -1014,7 +1167,7 @@ app.post("/api/parse-text", async (req, res) => {
         content: `The following is plain text or pasted game data for an MLB matchup. Extract all available fields into the exact JSON structure template below. Fill every field you can find in the text.\n\nTemplate:\n${JSON_TEMPLATE}\n\nGame data to parse:\n\n${text.trim()}`,
       }],
     });
-    const rawText = message.content[0].text.trim();
+    const rawText = extractResponseText(message);
     const parsed = parseJsonResponse(rawText);
     res.json({ success: true, data: parsed });
   } catch (err) {
@@ -1037,7 +1190,7 @@ app.post("/api/analyze", async (req, res) => {
     }
 
     const requestedModel = req.body.model;
-    const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : "claude-sonnet-4-6";
+    const model = ALLOWED_MODELS.has(requestedModel) ? requestedModel : "claude-sonnet-5";
 
     // Check total payload size before sending to Claude
     const totalBytes = req.files.reduce((sum, f) => sum + f.size, 0);
@@ -1067,8 +1220,25 @@ app.post("/api/analyze", async (req, res) => {
 
     while (pass < MAX_VERIFY_PASSES) {
       pass++;
-      const message = await callClaude({ model, max_tokens: 8000, system: SYSTEM_PROMPT, messages });
-      const rawText = message.content[0].text.trim();
+      const message = await callClaude({ model, max_tokens: 32000, system: SYSTEM_PROMPT, messages });
+
+      if (message.stop_reason === "max_tokens") {
+        console.warn(`⚠️  Analysis pass ${pass} hit max_tokens limit`);
+      }
+
+      let rawText;
+      try {
+        rawText = extractResponseText(message);
+      } catch (e) {
+        if (pass >= MAX_VERIFY_PASSES) throw e;
+        console.warn(`⚠️  Analysis pass ${pass} produced no text block — retrying with a concise-output reminder`);
+        messages = [
+          ...messages,
+          { role: "assistant", content: "(response truncated before any output was produced)" },
+          { role: "user", content: "Your previous response was cut off before producing any output. Skip preamble or extended reasoning — respond with ONLY the final JSON object." },
+        ];
+        continue;
+      }
 
       try {
         parsed = parseJsonResponse(rawText);
@@ -1198,6 +1368,22 @@ KEY O/U COMBOS:
 
     } catch (_) { /* non-critical */ }
 
+    // ── Emergency OVER_RATE_GATE warning when scoring environment is compressed ──
+    // The diagnostic (Jul 5) shows the model predicted OVER 82.5% of games while
+    // actual OVER was only 42.5% — a +40pp bias that's persisted for 6 weeks.
+    // Inject a hard-to-miss caution block when rolling actOV falls below 45%.
+    try {
+      const fiveDaysAgo2 = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().slice(0,10);
+      const r5b = db.prepare(`SELECT COUNT(*) as n, SUM(CASE WHEN actual_total > CAST(ou_line AS REAL) THEN 1 ELSE 0 END) as ov FROM predictions WHERE game_date >= ? AND actual_total IS NOT NULL AND ou_line IS NOT NULL AND ou_line != ''`).get(fiveDaysAgo2);
+      if (r5b.n >= 3) {
+        const actOvRate = Math.round(r5b.ov / r5b.n * 100);
+        if (actOvRate < 45) {
+          rollingStatsBlock += `\n\n⚠️  OVER ENVIRONMENT ALERT (compressed scoring): Rolling 5-day actual-OVER rate = ${actOvRate}% (${r5b.n} games) — BELOW 45%. The model has a documented +40pp OVER-prediction bias in this environment (Jun 15–Jul 5: predicted OVER 75%+, actual OVER only 45%). MANDATORY ADJUSTMENTS: (1) GVI≥65 alone is NOT a valid OVER catalyst — require OU-B confirmed wind OR Slumping SP RED>+1.5 as an independent second signal; (2) default O/U lean in GVI dead zone is UNDER, not OVER; (3) all OVER confidence deductions apply at full weight — do NOT round up. If OVER_RATE_GATE is SUPPRESSED or HARDBAN, treat it as a hard stop on standalone GVI OVER calls.`;
+          console.log(`[predict] OVER_RATE_GATE emergency warning injected: actOvRate=${actOvRate}% (n=${r5b.n})`);
+        }
+      }
+    } catch (_) { /* non-critical */ }
+
     const notesBlock = extraNotes && extraNotes.trim()
       ? `\n\nADDITIONAL CONTEXT FROM USER (treat as high-priority scouting notes — incorporate into your analysis):\n${extraNotes.trim()}`
       : "";
@@ -1205,20 +1391,32 @@ KEY O/U COMBOS:
     // ── Pass 1: initial prediction ──────────────────────────────────────────
     let messages = [{
       role: "user",
-      content: `Apply the MLB Game Predictor v3.10 framework to this extracted game data. Fill any missing fields from your knowledge base first, then return the complete JSON prediction:\n\n${JSON.stringify(gameData, null, 2)}${rollingStatsBlock}${notesBlock}`,
+      content: `Apply the MLB Game Predictor v3.16 framework to this extracted game data. Fill any missing fields from your knowledge base first, then return the complete JSON prediction:\n\n${JSON.stringify(gameData, null, 2)}${rollingStatsBlock}${notesBlock}`,
     }];
 
     let parsed, issues, pass = 0;
 
     while (pass < MAX_VERIFY_PASSES) {
       pass++;
-      const message = await callClaude({ model, max_tokens: 8000, system: PREDICT_SYSTEM, messages });
+      const message = await callClaude({ model, max_tokens: 32000, system: PREDICT_SYSTEM, messages });
 
       if (message.stop_reason === "max_tokens") {
         console.warn(`⚠️  Prediction pass ${pass} hit max_tokens limit`);
       }
 
-      const rawText = message.content[0].text.trim();
+      let rawText;
+      try {
+        rawText = extractResponseText(message);
+      } catch (e) {
+        if (pass >= MAX_VERIFY_PASSES) throw e;
+        console.warn(`⚠️  Prediction pass ${pass} produced no text block — retrying with a concise-output reminder`);
+        messages = [
+          ...messages,
+          { role: "assistant", content: "(response truncated before any output was produced)" },
+          { role: "user", content: "Your previous response was cut off before producing any output. Skip restating the framework — respond with ONLY the final JSON object, no preamble or extended reasoning." },
+        ];
+        continue;
+      }
       console.log(`[predict] Pass ${pass} raw (first 200):`, rawText.slice(0, 200));
 
       try {
@@ -1235,6 +1433,7 @@ KEY O/U COMBOS:
 
       reconcileOuDirection(parsed);
       reconcileR14WinProbability(parsed);
+      reconcileTeamSignals(parsed);
       issues = verifyPrediction(parsed);
       console.log(`[predict] Pass ${pass} — ${issues.length} issue(s):`, issues);
 
@@ -1305,6 +1504,8 @@ app.post("/api/save-prediction", (req, res) => {
       combo_hits:            JSON.stringify(prediction.combo_hits || []),
       fade_signals:          JSON.stringify(prediction.fade_signals || []),
       team_signals:          JSON.stringify(prediction.team_signals || []),
+      team_combo_signals:    JSON.stringify(prediction.team_combo_signals || []),
+      bw_signals:            JSON.stringify(prediction.bw_signals || []),
     };
 
     const info = insertPrediction.run(row);
@@ -1454,7 +1655,7 @@ app.get("/api/flag-stats", (_req, res) => {
       { code:"R11_SLUMPING_SP",    label:"R11 · Slumping SP",             desc:"Either SP RED>+1.5 → O/U power signal +20pp accuracy. Away slumping: 62.5% (n=24). Home slumping: 61.9% (n=21). Independently justifies O/U bet.", expected_ou:62.0, type:"rule", patterns:["R11_SLUMPING_SP","Slumping.*SP","SP Slumping","SP.*slumping"] },
       { code:"R12_DEAD_ZONE",      label:"R12 · Conf 55–65 Dead Zone [Extended]", desc:"Extended from 55–60 to 55–65 (v3.5). O/U dead zone: 28–30% hit rate. Conf 60–65 elevated in wrong games (15.9% BW vs 6.5% BC). Output PASS — no O/U direction. ML still eligible.", expected_ou:28.0, type:"rule", patterns:["R12_DEAD_ZONE"] },
       { code:"PWF_MATCH",          label:"R13 · Platoon Weakness Flag",   desc:"Batting team 0-for-3+ vs SP handedness this season → ML 86% for pitcher's team. Highest alpha ML signal. Apply +8% WP. If PWF+WPA both fire = near-automatic ML.", expected_ml:86.0, type:"rule", patterns:["PWF_MATCH","Platoon Weakness","PWF"] },
-      { code:"AWAY_ACE_OVERRIDE",  label:"R14 · Away Ace Override [NEW v3.5]", desc:"Away SP RED<−1.0 (surging) while model routes ML to home team → 9/9 failure. Apply −10% to home WP, flip ML to away. Surging away ace overrides all home-field adjustments.", expected_ml:100.0, type:"rule", patterns:["AWAY_ACE_OVERRIDE","Away SP surging","R14","away.*RED.*-1","surging away"] },
+      { code:"AWAY_ACE_OVERRIDE",  label:"R14 · Away Ace Override [implementation bug fixed v3.14]", desc:"Away SP RED<−1.0 (surging, ≥5 confirmed starts) → flip ML to away, adjust WP, skip O/U. Original small-sample figure was 9/9=100%. 1229-game audit (n=159): the underlying away-win rate in these games is a genuine 53.5%, but recorded ML grading was only 47.8% — traced to a WP-reconciliation bug where a flat ±10 adjustment could fail to cross home_win_pct/away_win_pct over to away when the pre-R14 gap was ≥20 points, so grading scored some correct 'bet away' calls as home picks. Bug fixed v3.14 (forces a real ≥6-point crossover). expected_ml intentionally left unset pending re-audit on a post-fix sample.", type:"rule", patterns:["AWAY_ACE_OVERRIDE","Away SP surging","R14","away.*RED.*-1","surging away"] },
       // ── New v3.5 signals ──────────────────────────────────────────────────────
       { code:"SINGLE_RED_UNAV",    label:"Single SP RED_unavailable [v3.9 split]", desc:"RED missing on EITHER SP: OVER → ⚫ EXTREME RISK no bet (systematic OVER misfire, 26.1% BW vs 4.8% BC). UNDER → 🔴 HIGH RISK $25 lean eligible (56.5% UNDER n=23). Direction split added v3.9.", type:"rule", patterns:["SINGLE_RED_UNAV","SINGLE_RED_UNAV_OVER","SINGLE_RED_UNAV_UNDER","RED_unavailable","RED unavailable","Early-Season RED Unreliable"] },
       { code:"GOLDEN_CONDITION",   label:"Golden Condition [NEW v3.5]",   desc:"OU-A + OU-B + RED mismatch >1.5 all fire → gap threshold drops to 1.5 runs. Appears in 42% of both-correct games. Triple signal = highest-quality bet setup.", type:"rule", patterns:["GOLDEN_CONDITION"] },
@@ -1472,7 +1673,7 @@ app.get("/api/flag-stats", (_req, res) => {
       { code:"KXF",                label:"KXF · Knowledge xFIP Primary",  desc:"UNDER call primarily driven by knowledge-estimated xFIP (not confirmed from current-season logs) → −10 confidence. Estimated xFIP cannot drive High O/U confidence — capped at Moderate.", type:"flag", patterns:["KXF","Knowledge xFIP","knowledge.*xFIP","xFIP_estimated","xFIP.*estimated"] },
       { code:"COORS_OVER_GATE",    label:"Coors OVER Gate",               desc:"Coors Field (COL home): OVER lean only valid when BOTH teams avg_runs ≥3.5 over last 10 games. Either team <3.5 → no Coors OVER (52% = no edge). Prevents reflexive altitude OVER bets.", type:"flag", patterns:["COORS_OVER_GATE","Coors.*gate","COORS.*GATE","Coors.*OVER.*gate"] },
       { code:"WRIGLEY_UNCONF",     label:"WRIGLEY_UNCONF · Wrigley Wind", desc:"Wrigley Field game + wind-based OU-B signal + direction unconfirmed/variable → downgrade OU-B to OU-D input only. Wrigley wind notoriously inconsistent; require real-time confirmation.", type:"flag", patterns:["WRIGLEY_UNCONF","Wrigley.*unconf","Wrigley.*variable","WRIGLEY"] },
-      { code:"RCF_SLUMPING",       label:"RCF+Slumping OVER Combo",       desc:"RCF active + same SP also Slumping (RED>+1.5) → strong OVER signal (65%, n=17). Pitcher simultaneously overperforming true level AND trending down — double vulnerability. Escalates to Moderate OVER.", expected_ou:65.0, type:"flag", patterns:["RCF+SLUMPING","RCF.*Slumping","RCF.*slumping","RCF+Slump"] },
+      { code:"RCF_SLUMPING",       label:"RCF+Slumping OVER Combo [DEMOTED v3.14]",       desc:"RCF active + same SP also Slumping (RED>+1.5) — originally documented as a strong OVER signal (65%, n=17 small sample). 1229-game audit: the SAME n=113 sample now measures 49.6% OU, a coin flip — a genuine decay, not sample dilution. Demoted to informational-only; do not escalate confidence or treat as a standalone trigger pending re-validation.", expected_ou:49.6, type:"flag", patterns:["RCF+SLUMPING","RCF.*Slumping","RCF.*slumping","RCF+Slump"] },
       { code:"GVI_DEAD_ZONE",      label:"GVI Dead Zone (35–65)",         desc:"GVI falls 35–65 → PASS O/U (51% hit rate = no edge). Only override with primary signal: P10≤6.5, RCF+Slumping (65%), or Wind OUT>15mph (78%). Do not bet O/U on GVI alone in this range.", type:"flag", patterns:["GVI_DEAD_ZONE","GVI.*dead.*zone","GVI.*35.*65","GVI Dead Zone","Dead Zone"] },
       { code:"BOTH_RED_UNAVAIL",   label:"BOTH_RED_UNAVAIL · Both SPs <3 Starts", desc:"Both SPs have <3 confirmed starts → O/U 38% accuracy across 22 games (well below breakeven). Pass all O/U bets. Exception: P10 (bias-corrected projected total ≤6.5) may still fire.", expected_ou:38.0, type:"flag", patterns:["BOTH_RED_UNAVAIL","BOTH_RED_UNAVAILABLE","Both.*RED.*unavail","both.*SPs.*3 starts","BRU"] },
       { code:"H2H_ADJ",            label:"H2H Adjustment",                desc:"One team holds ≥65% H2H win rate over last 3 seasons → +3% win probability to that team. Applied in Step 1 of §4 alongside TMS, PMS, and defensive adjustments.", type:"flag", patterns:["H2H","Head-to-Head"] },
@@ -1523,12 +1724,12 @@ app.get("/api/flag-stats", (_req, res) => {
       { code:"P25_HOU_HOME_OVER",  label:"P25 · HOU Home OVER",          desc:"Minute Maid Park home games → OVER bias. ~75% hit rate (n=8), avg 12.1 runs. Arrighetti/Burrows/Imai allowing many runs early 2026.", expected_ou:75.0, type:"pattern", patterns:["P25_HOU_HOME_OVER","P25_hou","HOU home","Minute Maid"] },
       { code:"P26_INVERSION_DAY",  label:"P26 · Inversion Day",          desc:"Prev-day ML<40% + O/U>70% → reduce ML to $37.50, concentrate O/U at full unit. Conditions favour scoring volatility but not directional certainty.", type:"pattern", patterns:["P26_INVERSION_DAY","P26_inversion","Inversion day"] },
       // ── Overrides & amplifiers ────────────────────────────────────────────────
-      { code:"WP_OVERRIDE_B",      label:"WP-Override B [DOWNGRADED]",   desc:"Home Fortress vs poor road team → +5% home WP (reduced from +10%). External validation n=87 at 47% ML. Weak secondary signal only. Never primary ML driver.", expected_ml:47.0, type:"flag", patterns:["WP-Override B fired","WP-Override B","WPOvr-B","WPB"] },
+      { code:"WP_OVERRIDE_B",      label:"WP-Override B [PROMOTED v3.14]",   desc:"Home Fortress vs poor road team → +10% home WP. 1229-game audit (n=102): 60.8% ML — 3rd-strongest individual flag in the framework. Promoted from a weak secondary signal (was 47% at n=87) to a primary ML driver, on par with WPA.", expected_ml:60.8, type:"flag", patterns:["WP-Override B fired","WP-Override B","WPOvr-B","WPB"] },
       { code:"AWAY_MOM_AMP",       label:"Away Momentum Amplifier",      desc:"Away TMS leads by 5+ pts and no WP-Override → additional +2% away WP (total +6%). Amplifies away form when momentum gap is significant.", type:"flag", patterns:["AWAY_MOM","Away TMS"] },
       { code:"FTMF",               label:"FORTRESS+TMF Combo",           desc:"Home Fortress (home win%≥.650) + away team 5+ loss streak → secondary Under confirmation. 73% Under hit rate (n=8). Escalates Under confidence to Moderate if currently Low.", expected_ou:73.0, type:"flag", patterns:["FTMF","FORTRESS+TMF","Fortress.*TMF","TMF.*Fortress"] },
       { code:"RCF",                label:"RCF · Regression Candidate",   desc:"SP xFIP exceeds ERA by ≥1.20 → substitute xFIP for ERA downstream. RCF+Slumping = strong OVER signal (65%, n=17). RCF alone = ML edge (+2.4% vs baseline).", expected_ml:58.0, type:"flag", patterns:["RCF","Regression Risk","Regression Candidate"] },
       { code:"PDCF",               label:"PDCF · Primary Driver Conflict", desc:"Away team TMS-favored AND home team has Home Fortress → conflict protocol triggers. Apply tiebreaker hierarchy: bullpen xFIP diff → platoon advantage → RISP → home default.", type:"flag", patterns:["PDCF","Primary Driver Conflict"] },
-      { code:"HFCF",               label:"HFCF · Heavy Favorite Caution", desc:"Either team win probability ≥68% → −20 confidence deduction. High WP may reflect genuine edge (P16/P17) or overfit stacking. Confidence penalised to reflect uncertainty.", type:"flag", patterns:["HFCF","Heavy Favorite"] },
+      { code:"HFCF",               label:"HFCF · Heavy Favorite Confirmation [v3.14 recalibrated]", desc:"Either team win probability ≥68% → ML Tier 1 $75 confirmation (reclassified v3.8 from a −20 caution flag). 1229-game audit (n=126): 59.5% ML — recalibrated down from the original 85.7%/n=14 claim, which was too small a sample to support 'best predictor' framing. Still above the ~55% season baseline; O/U still penalised −20 (unreliable in high-WP games).", expected_ml:59.5, type:"flag", patterns:["HFCF","Heavy Favorite"] },
       { code:"TMF",                label:"TMF · Team Meltdown",          desc:"Either team on 5+ consecutive losses → −20 confidence. Away TMF: −3% home WP. Home TMF: −5% home WP. Desperate team may regress to mean.", type:"flag", patterns:["TMF ","TMF:","Team Meltdown"] },
       { code:"COLD_HAMMER",        label:"Cold Hammer Override",         desc:"Temp<50°F + wind≥15mph → Strong UNDER hard override (81% hit rate). Fires before OU-A. Still subject to Gates 0/A/C/E and venue bans.", expected_ou:81.0, type:"flag", patterns:["COLD_HAMMER","Cold Hammer"] },
       { code:"SLUMP_HEAT_PARK",    label:"Slump+Heat+Park OVER",        desc:"Home SP Slumping (RED>+1.5) + temp≥75°F + hitter park → Strong/High OVER (87% hit rate). Overrides April High confidence cap. Structural OVER condition.", expected_ou:87.0, type:"flag", patterns:["SLUMP+HEAT+PARK","SLUMP.*HEAT.*PARK","slump.*heat.*park"] },
@@ -1726,7 +1927,7 @@ app.post("/api/import", (req, res) => {
         key_driver, reasoning, export_string, full_prediction,
         actual_winner, actual_home_score, actual_away_score, actual_total,
         ml_result, ou_result, ml_correct, ou_correct, notes,
-        combo_hits, fade_signals, team_signals
+        combo_hits, fade_signals, team_signals, team_combo_signals, bw_signals
       ) VALUES (
         @id, @saved_at, @game_date, @season_type, @home_team, @away_team,
         @home_starter, @away_starter, @home_win_pct, @away_win_pct,
@@ -1737,14 +1938,14 @@ app.post("/api/import", (req, res) => {
         @key_driver, @reasoning, @export_string, @full_prediction,
         @actual_winner, @actual_home_score, @actual_away_score, @actual_total,
         @ml_result, @ou_result, @ml_correct, @ou_correct, @notes,
-        @combo_hits, @fade_signals, @team_signals
+        @combo_hits, @fade_signals, @team_signals, @team_combo_signals, @bw_signals
       )
     `);
 
     const importAll = db.transaction((rows) => {
       let inserted = 0;
       for (const row of rows) {
-        const result = importRow.run({ combo_hits: null, fade_signals: null, team_signals: null, ...row });
+        const result = importRow.run({ combo_hits: null, fade_signals: null, team_signals: null, team_combo_signals: null, bw_signals: null, ...row });
         inserted += result.changes;
       }
       return inserted;

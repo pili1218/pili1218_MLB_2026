@@ -56,7 +56,7 @@
         <div class="globe-stats">
           <div class="globe-stat"><span class="globe-stat-num">3</span><span class="globe-stat-label">AI Models</span></div>
           <div class="globe-stat-divider"></div>
-          <div class="globe-stat"><span class="globe-stat-num">v3.10</span><span class="globe-stat-label">Framework</span></div>
+          <div class="globe-stat"><span class="globe-stat-num">v3.16</span><span class="globe-stat-label">Framework</span></div>
           <div class="globe-stat-divider"></div>
           <div class="globe-stat"><span class="globe-stat-num">MLB</span><span class="globe-stat-label">All Season</span></div>
         </div>
@@ -205,9 +205,9 @@
             </div>
           </button>
 
-          <button class="model-card model-card--active" data-model="claude-sonnet-4-6" onclick="selectModel(this)">
+          <button class="model-card model-card--active" data-model="claude-sonnet-5" onclick="selectModel(this)">
             <div class="model-card-top">
-              <span class="model-name">Sonnet 4.6</span>
+              <span class="model-name">Sonnet 5</span>
               <span class="model-badge badge-rec">Recommended</span>
             </div>
             <div class="model-desc">Balanced speed &amp; accuracy. Great for standard game previews and lineups.</div>
@@ -405,11 +405,77 @@
   <section class="changelog-section">
     <div class="changelog-header" id="changelogToggle">
       <span class="changelog-title">Framework Changelog</span>
-      <span class="changelog-badge">v3.10</span>
+      <span class="changelog-badge">v3.16</span>
       <span class="changelog-chevron" id="changelogChevron">▼</span>
     </div>
     <div class="changelog-body hidden" id="changelogBody">
       <div class="changelog-entry changelog-entry--current">
+        <div class="changelog-version">v3.16 <span class="changelog-date">2026-07-28</span></div>
+        <div class="changelog-desc">BC/BW joint analysis — 1239-game study of games where ML and O/U land correctly together (Both-Correct) or fail together (Both-Wrong). New combo_hits[] code family (BC1–7) plus a dedicated new bw_signals[] array/DB column (BW1–7) — BW is a hard double-PASS override, not a fade.</div>
+        <ul class="changelog-items">
+          <li><strong>NEW — Both-Correct signals (BC1–7)</strong> — added to <code>combo_hits[]</code> as a third code family (alongside MC/OC), representing elevated conviction to bet BOTH markets. BC2 and BC4 (both WPA+UNDER variants) have zero recorded both-wrong games across n=19–21 each.</li>
+          <li><strong>NEW — Both-Wrong signals (BW1–7)</strong> — added to a brand-new <code>bw_signals[]</code> array with its own DB column (idempotent migration, same pattern as combo_hits/fade_signals). When a BW code fires, both ML and O/U bet sizing are overridden to "PASS BOTH MARKETS" — the joint failure isn't clean enough to bet the reverse side on both markets.</li>
+          <li><strong>away_surge confirmed a third time</strong> — appears in 6 of the top 7 BW combos, consistent with the FD and FDOU fade families pointing at the same surging-away-starter blind spot from an independent angle.</li>
+          <li><strong>Combos reference page</strong> — added 4 new tabs: BC/BW trend, Both-Correct combos, Both-Wrong combos, Single-flag BC/BW.</li>
+        </ul>
+      </div>
+      <div class="changelog-entry changelog-entry--prev">
+        <div class="changelog-version">v3.15 <span class="changelog-date">2026-07-28</span></div>
+        <div class="changelog-desc">1363-game combo/fade refresh (+134 games since v3.14). MC1–10, OC1–10, and FD1–10 re-derived; new Reverse O/U signal family (FDOU1–10) added — flips the model's O/U call itself, distinct from reversing the ML pick.</div>
+        <ul class="changelog-items">
+          <li><strong>NEW — Reverse O/U signals (FDOU1–10)</strong> — a distinct signal family from the existing ML fades: flips OVER↔UNDER rather than the team pick, surfaced via the same <code>fade_signals[]</code> array with an <code>FDOU</code>-prefixed code (no schema change). FDOU3 (RED mismatch + Conf 55–65 + Away surge, n=19★) is the largest-sample O/U fade found.</li>
+          <li><strong>FDOU5/FDOU6 — opposite-direction exception</strong> — GVI&lt;35 + TMF combos where the model's UNDER call fails and OVER is the correct reverse, the opposite of every other O/U fade this update; tracked as a documented exception to the §3.13 base-rate OVER-bias correction, not a contradiction of it.</li>
+          <li><strong>MC1–MC10 refreshed (1363g)</strong> — WP-Override family (WPA+WPB) anchors 7 of 10 top ML combos. MC2 and MC6 flagged as having zero recorded both-wrong games — the two highest-trust dual plays in the system. MC4 carries a new caution: collapses to 50% both-wrong when away_surge co-fires.</li>
+          <li><strong>OC1–OC10 refreshed (1363g)</strong> — away_surge now anchors 4 of the top 10 O/U combos (OC2, OC3, OC4, OC10); confirmed a broken ML signal but a genuinely useful O/U signal in the right context.</li>
+          <li><strong>FD1–FD10 refreshed (1363g)</strong> — FD1 (HFCF + WPA + Away surge, 83.3%) is the strongest fade this update; FD9 (OU-B + Line 8-9 + Away surge, n=40★) remains the largest sample. FD2 and FD4 cross-referenced as also being top-5 both-wrong combos — flagged for PASS over confident reversal.</li>
+          <li><strong>Season context</strong> — overall ML 54.3% / OU 47.5%; since the All-Star break, ML improved to 58.5% while OU stayed weak at 46.9%.</li>
+        </ul>
+      </div>
+      <div class="changelog-entry changelog-entry--prev">
+        <div class="changelog-version">v3.14 <span class="changelog-date">2026-07-18</span></div>
+        <div class="changelog-desc">Full flag audit — 1229-game structural recalibration. Season-long OVER-prediction bias identified and corrected (new §3.13); several overstated flags recalibrated; WP-Override B promoted to a primary ML driver; R14 WP-flip implementation bug fixed.</div>
+        <ul class="changelog-items">
+          <li><strong>Structural finding (new §3.13, highest priority)</strong> — the model predicted OVER on 70.1% of all games all season (n=1124) while actual outcomes split 49.6%/50.4%, a season-long +20.5pp bias. <code>OVER_RATE_GATE</code> reclassified from rolling-window emergency patch to permanent structural correction.</li>
+          <li><strong>Overstated flags corrected</strong> — HFCF ML recalibrated 85.7%→59.5% (n=126); RCF+Slumping OVER demoted from a strong 65% signal to informational-only (49.6% at the same n=113); GVI≥90 hard pass softened to caution pending re-test.</li>
+          <li><strong>WP-Override B promoted</strong> — raised from a weak secondary signal (~47%) to a primary ML driver on par with WPA (60.8% ML, n=102); award increased from +5% to +10% WP.</li>
+          <li><strong>Flagged for re-test</strong> — OU-B (n=620, 50.2% OU — a coin flip at the largest sample in the framework) and Dome games (n=284, 44.0% O/U) marked as suspected contributors to the OVER bias, pending isolated re-test.</li>
+          <li><strong>Implementation bug fixed</strong> — R14's away-ace WP-flip could fail to cross the predicted winner to away when the pre-R14 home-favoring gap was ≥20 points; fixed to force a real ≥6-point crossover.</li>
+        </ul>
+      </div>
+      <div class="changelog-entry changelog-entry--prev">
+        <div class="changelog-version">v3.13 <span class="changelog-date">2026-07-18</span></div>
+        <div class="changelog-desc">1229-game refresh + corrected reverse signal rule. Key fix: fade/reverse signals were hardcoded as "Fade ML to AWAY $75" — but 6 of 10 combos are mixed directional. Correct rule: REVERSE whatever team the model's recommendation actually names in that specific game.</div>
+        <ul class="changelog-items">
+          <li><strong>Reverse signal rule corrected (critical)</strong> — prior instruction "Fade ML to AWAY $75" was wrong for 25–42% of games in 6 of 10 combos. New rule: always read betting_recommendation and bet the OTHER team. For O/U: flip called direction.</li>
+          <li><strong>MC1–MC10 refreshed (1229g)</strong> — WPA now anchors 7 of 10 top ML combos (WPB previously dominated). MC5 (Home pred + WP gap≥20% + WPA, n=24) is the new largest-n top combo. MC9 (WPA + UNDER + Line 8-9, 85%/65% OU) is best dual-market.</li>
+          <li><strong>OC1–OC10 refreshed (1229g)</strong> — OC2 added with fade warning (O/U 75% but ML only 25% — flip ML via FD6). OC7 (Conf 50-55 + Dome + RCF, n=31★) is largest-sample dual-market. OC9 (Line 8-9 + Conf 55-65 + RCF, n=35★) is largest O/U-only sample.</li>
+          <li><strong>FD1–FD10 refreshed (1229g)</strong> — FD9 (OU-B + Line 8-9 + Away surge, n=40★) is now the largest-sample fade; FD1 (HFCF + OU-A + Away surge) tops rate at 81.2%; all 10 carry explicit "MIXED" vs "one-sided" directional labels.</li>
+          <li><strong>Team 2-flag combos refreshed (1229g)</strong> — ATH added (gvi65+c50, 100% n=8, new #1 dual-market); KC changed to ob_fired+under (100% n=8); STL changed to rcf+c50 (90%/55.6%); TB updated to 90.9% n=11.</li>
+          <li><strong>Sonnet 5 as analyzer default</strong> — image analysis and text/JSON parse endpoints now default to claude-sonnet-5.</li>
+        </ul>
+      </div>
+      <div class="changelog-entry changelog-entry--prev">
+        <div class="changelog-version">v3.12 <span class="changelog-date">2026-07-05</span></div>
+        <div class="changelog-desc">1108-game refresh + O/U diagnostic fix. Key finding: model had a +40pp OVER-prediction bias over the last 40 graded O/U games (predicted OVER 82.5%, actual only 42.5%) — a 6-week drift now addressed at the server level.</div>
+        <ul class="changelog-items">
+          <li><strong>OVER_RATE_GATE emergency warning</strong> — when rolling 5-day actual-OVER rate falls below 45%, a hard-to-miss caution block is now injected into the prediction context, explicitly suppressing GVI-only OVER calls and defaulting the O/U lean to UNDER until the environment recovers.</li>
+          <li><strong>MC1–MC10 / OC1–OC10 / FD1–FD10 refreshed</strong> — all combos re-derived from 1108-game dataset; OC8 grew to n=52★★ (largest playbook sample); team 2-flag combos added KC, MIA, TB as perfect-ML-record teams.</li>
+          <li><strong>O/U diagnostic tab</strong> added to <code>/combos</code> page with bias visualization and 6-week drift table.</li>
+        </ul>
+      </div>
+      <div class="changelog-entry changelog-entry--prev">
+        <div class="changelog-version">v3.11 <span class="changelog-date">2026-06-28</span></div>
+        <div class="changelog-desc">1018-game empirical refresh — all 30 combo/fade codes re-derived again, plus a new Team 2-Flag Combo system layered on top of the existing single-flag team table for higher-precision team-specific signals.</div>
+        <ul class="changelog-items">
+          <li><strong>MC1–MC10 refreshed</strong> — WP-Override B has overtaken WPA as the dominant ML backbone, appearing in 4 of the top 6 combos; top combo is Home pred + GVI&lt;35 + Dome (93.3% ML, n=15).</li>
+          <li><strong>OC1–OC10 refreshed</strong> — new n=47★ "TMS home higher + Conf 50–55 + RCF" combo (74.5% OU) is now the most statistically trustworthy recurring O/U bet; RCF appears in 5 of 10, Conf 50–55 in 8 of 10.</li>
+          <li><strong>FD1–FD10 refreshed</strong> — all 10 fade signals still share a confirmed surging away SP; top fade is WP gap≥20% + OU-B + Away surge (81.2%, n=16).</li>
+          <li><strong>Team 2-Flag Combo Table (NEW)</strong> — 10 teams mapped to their strongest 2-flag pairing (e.g. Kansas City Royals + WPB+Home Fortress = 100% ML / 90% OU, n=11). Surfaced via new <code>team_combo_signals[]</code> array, layered above the existing single-flag <code>team_signals[]</code>.</li>
+          <li><strong>Combos reference page</strong> — added a "Team 2-flag combos" tab and a "Results update" diagnostics tab (5-period trend + day-by-day breakdown) at <code>/combos</code>.</li>
+          <li><strong>JSON schema</strong> — new field: <code>team_combo_signals[]</code> (format <code>"ABBR:flag1+flag2"</code>).</li>
+        </ul>
+      </div>
+      <div class="changelog-entry changelog-entry--prev">
         <div class="changelog-version">v3.10 <span class="changelog-date">2026-06-21</span></div>
         <div class="changelog-desc">931-game empirical refresh — all 30 combo/fade codes (MC1–MC10, OC1–OC10, FD1–FD10) re-derived from the larger dataset, plus a brand-new Team Signal system: 30 team-specific flag correlations surfaced as chips alongside the combo/fade indicators.</div>
         <ul class="changelog-items">
@@ -651,7 +717,7 @@
   </section>
 
   <footer class="footer">
-    <p>MLB Game Analyzer · Regular Season &amp; Postseason · Powered by Claude AI · <span id="footerModel">claude-sonnet-4-6</span></p>
+    <p>MLB Game Analyzer · Regular Season &amp; Postseason · Powered by Claude AI · <span id="footerModel">claude-sonnet-5</span></p>
   </footer>
 
   <script src="app.js"></script>

@@ -2,7 +2,7 @@
 let files = [];
 let lastResult = null;
 let lastPrediction = null;
-let selectedModel = "claude-sonnet-4-6"; // default
+let selectedModel = "claude-sonnet-5"; // default
 
 // Load prediction count badge on page load
 document.addEventListener("DOMContentLoaded", async () => {
@@ -697,39 +697,69 @@ function renderCombos(data) {
   if (!el) return;
 
   const COMBO_META = {
-    // ── ML Combos (931-game) ──────────────────────────────────────────────────
-    MC1:  { label:"MC1",  type:"ml",   pct:"93%",  n:15,  title:"UNDER + Conf 50–55 + TMF",                    tip:"ML 93.3% n=15 · TOP combo — both ML and O/U (78.6%) elite here. Bet ML $75 + UNDER $75 full stake." },
-    MC2:  { label:"MC2",  type:"ml",   pct:"93%",  n:14,  title:"Home pred + GVI<35 + Dome",                   tip:"ML 92.9% n=14 · suppressed scoring + dome neutrality. O/U unclear (42.9%) — skip O/U." },
-    MC3:  { label:"MC3",  type:"ml",   pct:"92%",  n:13,  title:"Slumping SP + WP-Override A + UNDER",         tip:"ML 92.3% n=13 · double-confirmed SP quality gap. ML $75 + UNDER $37.50." },
-    MC4:  { label:"MC4",  type:"ml",   pct:"90%",  n:19,  title:"Home pred + WP-Override A + UNDER",           tip:"ML 89.5% n=19 · largest 89%+ sample. O/U solid at 61.1%. ML $75 + UNDER $50." },
-    MC5:  { label:"MC5",  type:"ml",   pct:"90%",  n:19,  title:"OU-A fired + WP-Override A + UNDER",          tip:"ML 89.5% n=19 · SP mismatch confirmed by two independent signals. UNDER $37.50 secondary." },
-    MC6:  { label:"MC6",  type:"ml",   pct:"89%",  n:18,  title:"WP gap ≥20% + WP-Override A + UNDER",         tip:"ML 88.9% n=18 · large WP gap validates WPA signal. ML $75 only, skip O/U." },
-    MC7:  { label:"MC7",  type:"ml",   pct:"87%",  n:15,  title:"Home pred + WP-Override A + Line 8–9",        tip:"ML 86.7% n=15 · AND 66.7% O/U — both markets strong. ML $75 + O/U direction $50." },
-    MC8:  { label:"MC8",  type:"ml",   pct:"87%",  n:15,  title:"Home Fortress + WP-Override A + UNDER",       tip:"ML 86.7% n=15 · O/U 64.3%. ML $75 + UNDER $50." },
-    MC9:  { label:"MC9",  type:"ml",   pct:"84%",  n:19,  title:"WP-Override A + RED mismatch + UNDER",        tip:"ML 84.2% n=19 · AND 66.7% O/U — best-balanced large-n combo. ML $75 + UNDER $50." },
-    MC10: { label:"MC10", type:"ml",   pct:"86%",  n:14,  title:"Home pred + Heavy Favorite + UNDER",          tip:"ML 85.7% n=14 · AND 66.7% O/U. ML $75 + UNDER $50." },
-    // ── O/U Combos (931-game) ────────────────────────────────────────────────
-    OC1:  { label:"OC1",  type:"ou",   pct:"85%",  n:13,  title:"Conf 50–55 + GVI<35 + RCF",                   tip:"O/U 84.6% n=13 · ML weak (53.8%) — skip ML. O/U direction $75 only." },
-    OC2:  { label:"OC2",  type:"ou",   pct:"84%",  n:25,  title:"Conf 50–55 + Dome + RCF",                     tip:"O/U 84.0% n=25 · AND 69.2% ML — best dual-market large-n combo. O/U $75 + ML $75." },
-    OC3:  { label:"OC3",  type:"ou",   pct:"80%",  n:15,  title:"Heavy Favorite + Conf 50–55 + TMF",           tip:"O/U 80.0% n=15 · ML 62.5%. O/U $75 + ML $37.50." },
-    OC4:  { label:"OC4",  type:"ou",   pct:"79%",  n:19,  title:"Heavy Favorite + Line 8–9 + TMF",             tip:"O/U 78.9% n=19 · ML poor (45.0%) — pure O/U play. Skip ML." },
-    OC5:  { label:"OC5",  type:"ou",   pct:"79%",  n:14,  title:"Heavy Favorite + Dome + RCF",                 tip:"O/U 78.6% n=14 · ML 52.9% — coin flip, skip ML." },
-    OC6:  { label:"OC6",  type:"ou",   pct:"78%",  n:18,  title:"Heavy Favorite + RED mismatch + TMF",         tip:"O/U 77.8% n=18 · ML weak (50.0%). O/U direction $75 only." },
-    OC7:  { label:"OC7",  type:"ou",   pct:"77%",  n:13,  title:"Heavy Favorite + TMS home higher + Conf 50–55", tip:"O/U 76.9% n=13 · ML solid at 64.3%. O/U $75 + ML $50." },
-    OC8:  { label:"OC8",  type:"ou",   pct:"77%",  n:17,  title:"WP gap ≥20% + UNDER + Conf 55–65",            tip:"O/U 76.5% n=17 · AND 70.6% ML — both markets above 70%. O/U $75 + ML $50." },
-    OC9:  { label:"OC9",  type:"ou",   pct:"74%",  n:35,  title:"OU-B active + Conf 50–55 + TMF ★",            tip:"O/U 74.3% n=35★ largest sample · AND 71.1% ML — highest-confidence recurring bet. O/U $75 + ML $75." },
-    OC10: { label:"OC10", type:"ou",   pct:"75%",  n:20,  title:"TMF + Dome + RCF",                            tip:"O/U 75.0% n=20 · ML weak (54.5%). O/U direction $75 only." },
-    // ── Fade Signals (931-game) — all share away_surge (Away RED<-1.0) as the common ingredient ──
-    FD1:  { label:"FD1",  type:"fade", pct:"89%",  n:18,  title:"OU-A fired + Surging Away SP",                tip:"STRONGEST fade in dataset (88.9%). Model backs HOME only 11.1% correct. Bet AWAY team ML $75. Skip O/U (38.9%)." },
-    FD2:  { label:"FD2",  type:"fade", pct:"87%",  n:15,  title:"WP gap ≥20% + OU-B + Away surge",             tip:"87% fade (n=15). Model backs HOME on stale WP gap (13.3% correct). Bet AWAY $75. Skip O/U (40.0%)." },
-    FD3:  { label:"FD3",  type:"fade", pct:"83%",  n:18,  title:"OU-B + RCF active + Away surge",              tip:"83% fade (n=18). Model backs HOME (16.7% correct). Bet AWAY $75. Skip O/U (44.4%)." },
-    FD4:  { label:"FD4",  type:"fade", pct:"81%",  n:21,  title:"OU-A fired + RCF active + Away surge",        tip:"81% fade (n=21). Model backs HOME (19.0% correct) — repeatable at this sample size. Bet AWAY $75. Skip O/U (47.6%)." },
-    FD5:  { label:"FD5",  type:"fade", pct:"76%",  n:41,  title:"RED mismatch>1.5 + OU-B + Away surge ★",      tip:"Largest sample fade (n=41★), highest-confidence. Model backs HOME (24.4% correct). Bet AWAY $75. Skip O/U (47.5%)." },
-    FD6:  { label:"FD6",  type:"fade", pct:"77%",  n:31,  title:"Golden Condition + Away surge",               tip:"77% fade (n=31). Model backs HOME (22.6% correct). Bet AWAY $75. Skip O/U (41.9%)." },
-    FD7:  { label:"FD7",  type:"fade", pct:"75%",  n:16,  title:"Home pred + OU-A fired + Away surge",         tip:"75% fade (n=16). Model backs HOME (25.0% correct). Bet AWAY $75. Skip O/U (31.2%)." },
-    FD8:  { label:"FD8",  type:"fade", pct:"75%",  n:16,  title:"Home Fortress + OU-B + Away surge",           tip:"75% fade (n=16). Model backs HOME on fortress reputation (25.0% correct). Bet AWAY $75. Skip O/U (46.7%)." },
-    FD9:  { label:"FD9",  type:"fade", pct:"76%",  n:29,  title:"OU-A fired + Line 8–9 + Away surge",          tip:"76% fade (n=29) · a reliable repeatable pattern. Model backs HOME (24.1% correct). Bet AWAY $75. Skip O/U (42.9%)." },
-    FD10: { label:"FD10", type:"fade", pct:"77%",  n:13,  title:"Line 8–9 + RCF active + Away surge",          tip:"77% fade (n=13). Model backs HOME (23.1% correct). Bet AWAY $75. O/U borderline (61.5%) — optional small stake." }
+    // ── ML Combos (1363-game, through Jul 27) — WP-Override family (WPA+WPB) anchors 7 of 10 ──
+    MC1:  { label:"MC1",  type:"ml",   pct:"94%",  n:16,  title:"Home pred + GVI<35 + Dome",                       tip:"ML 93.8% n=16 · stable #1 all season. ML $75 only — skip O/U (37.5%)." },
+    MC2:  { label:"MC2",  type:"ml",   pct:"90%",  n:20,  title:"Home pred + WP-Override A + UNDER",               tip:"ML 90.0% n=20 · zero recorded both-wrong games — most trustworthy dual play. O/U 57.9%. ML $75 + UNDER $75." },
+    MC3:  { label:"MC3",  type:"ml",   pct:"88%",  n:17,  title:"OU-A fired + GVI<35 + Dome",                      tip:"ML 88.2% n=17 · pitcher-form signal in suppressed dome. ML $75 only — skip O/U (29.4%)." },
+    MC4:  { label:"MC4",  type:"ml",   pct:"87%",  n:15,  title:"Home Fortress + WP-Override A + Line 8–9",        tip:"ML 86.7% n=15 · CAUTION: collapses to 50% both-wrong when away_surge co-fires — confirm absent first. O/U 60%. ML $75 + O/U direction $50." },
+    MC5:  { label:"MC5",  type:"ml",   pct:"86%",  n:14,  title:"TMS home higher + GVI<35 + Dome",                 tip:"ML 85.7% n=14 · home momentum + suppressed dome. ML $75 only — skip O/U (28.6%)." },
+    MC6:  { label:"MC6",  type:"ml",   pct:"86%",  n:21,  title:"WP-Override A + UNDER + Line 8–9",                tip:"ML 85.7% n=21 · BEST DUAL-MARKET, zero recorded both-wrong games. O/U 66.7%. ML $75 + UNDER $75." },
+    MC7:  { label:"MC7",  type:"ml",   pct:"86%",  n:14,  title:"WP-Override B + Line 8–9 + Conf 50–55",           tip:"ML 85.7% n=14 · WPB at sweet-spot line + calibrated confidence. Pure ML (OU 35.7%). ML $75 only." },
+    MC8:  { label:"MC8",  type:"ml",   pct:"85%",  n:13,  title:"WP-Override B + UNDER + Conf 50–55",              tip:"ML 84.6% n=13 · WPB + UNDER + calibrated confidence. O/U 46.2%. ML $75 + UNDER $37.50." },
+    MC9:  { label:"MC9",  type:"ml",   pct:"85%",  n:13,  title:"WP-Override B + Dome + RCF",                      tip:"ML 84.6% n=13 · WPB + dome + xFIP correction. O/U 63.6%. ML $75 + O/U direction $50." },
+    MC10: { label:"MC10", type:"ml",   pct:"84%",  n:25,  title:"Home pred + WP gap ≥20% + WP-Override A ★",       tip:"ML 84.0% n=25★ · largest sample of any top-10 ML combo. Pure ML (OU 50%). ML $75 only." },
+    // ── O/U Combos (1363-game) — away_surge now anchors 4 of the top 10 ──
+    OC1:  { label:"OC1",  type:"ou",   pct:"81%",  n:16,  title:"Conf 50–55 + GVI<35 + RCF",                       tip:"O/U 81.2% n=16 · calibrated conf + suppressed GVI + regression risk. ML 50% — skip ML. O/U $75 only." },
+    OC2:  { label:"OC2",  type:"ou",   pct:"75%",  n:12,  title:"OU-B fired + GVI≥65 + Surging Away SP",           tip:"O/U 75.0% n=12 · away_surge is a broken ML signal (33.3%) but useful for O/U here. Skip ML. O/U $75 only." },
+    OC3:  { label:"OC3",  type:"ou",   pct:"75%",  n:12,  title:"GVI≥65 + Surging Away SP + MCF",                  tip:"O/U 75.0% n=12 · AND ML 57.1% (n=14) — both markets viable despite away_surge's usual ML risk. O/U $75 + ML $50." },
+    OC4:  { label:"OC4",  type:"ou",   pct:"73%",  n:15,  title:"UNDER + Line 8–9 + Surging Away SP",              tip:"O/U 73.3% n=15 · UNDER framing works better than OVER with away_surge (see reverse O/U FDOU4). ML 52.9%. UNDER $75 + ML $37.50." },
+    OC5:  { label:"OC5",  type:"ou",   pct:"73%",  n:11,  title:"WP-Override B + OU-B + Dome",                     tip:"O/U 72.7% n=11 · WPB + environmental + dome. ML 66.7%. O/U $75 + ML $50." },
+    OC6:  { label:"OC6",  type:"ou",   pct:"72%",  n:18,  title:"TMS home higher + WP-Override A + RCF",           tip:"O/U 72.2% n=18 · home momentum + WPA + regression risk. ML 57.9% (n=19). O/U $75 + ML $50." },
+    OC7:  { label:"OC7",  type:"ou",   pct:"72%",  n:18,  title:"WP-Override B + OU-B + UNDER",                    tip:"O/U 72.2% n=18 · WPB + environmental + UNDER direction. ML 55.6%. UNDER $75 + ML $37.50." },
+    OC8:  { label:"OC8",  type:"ou",   pct:"71%",  n:14,  title:"RED mismatch >1.5 + Conf 50–55 + GVI<35",         tip:"O/U 71.4% n=14 · SP gap + calibrated conf + suppressed GVI. ML 64.3%. O/U $75 + ML $50." },
+    OC9:  { label:"OC9",  type:"ou",   pct:"71%",  n:31,  title:"Conf 50–55 + Dome + RCF ★",                       tip:"O/U 71.0% n=31★ LARGEST SAMPLE IN O/U TOP 10 · AND 60.6% ML — most trustworthy recurring dual play by volume. O/U $75 + ML $75." },
+    OC10: { label:"OC10", type:"ou",   pct:"71%",  n:14,  title:"WP gap ≥20% + Away surge + MCF",                  tip:"O/U 71.4% n=14 · same combo type flagged as an ML fade — confirmed strong for O/U specifically. ML weak (33.3%) — skip ML. O/U $75 only." },
+    // ── Reverse ML Signals (1363-game) — away_surge anchors all 10; REVERSE the model's actual named team ──
+    FD1:  { label:"FD1",  type:"fade", pct:"83%",  n:12,  title:"HFCF + WP-Override A + Away surge",               tip:"STRONGEST fade this update (83.3%, n=12). Model named HOME all 12x (fully one-sided). REVERSE → bet AWAY ML $75. Skip O/U." },
+    FD2:  { label:"FD2",  type:"fade", pct:"80%",  n:20,  title:"OU-A fired + OU-B + Away surge ⚠",                tip:"80.0% fade (n=20). MIXED — model named home 8x, away 12x. Also a top-5 both-wrong combo (50% BW) — consider a full PASS over a confident reverse. Skip O/U." },
+    FD3:  { label:"FD3",  type:"fade", pct:"78%",  n:18,  title:"TMS home higher + RCF + Away surge",              tip:"77.8% fade (n=18). MIXED — model named home 11x, away 7x. Check actual rec first, then REVERSE it." },
+    FD4:  { label:"FD4",  type:"fade", pct:"77%",  n:13,  title:"WP gap ≥20% + TMS home higher + Away surge ⚠",    tip:"76.9% fade (n=13). MIXED. Also a top-5 both-wrong combo (53.8% BW) — reverse cautiously, not as clean as the fade% suggests." },
+    FD5:  { label:"FD5",  type:"fade", pct:"77%",  n:13,  title:"Home Fortress + Away surge + MCF",                tip:"76.9% fade (n=13). Mostly away (11 of 13). Check actual rec first, then REVERSE it — usually the home fortress side." },
+    FD6:  { label:"FD6",  type:"fade", pct:"77%",  n:17,  title:"HFCF + OU-A fired + Away surge",                  tip:"76.5% fade (n=17). Fully one-sided — model named home 0x, away 17x. REVERSE → consistently the home team here." },
+    FD7:  { label:"FD7",  type:"fade", pct:"75%",  n:12,  title:"WP-Override A + OU-B + Away surge",               tip:"75.0% fade (n=12). Mostly away (11 of 12). REVERSE → usually bet HOME." },
+    FD8:  { label:"FD8",  type:"fade", pct:"75%",  n:12,  title:"Dome + Away surge + MCF",                         tip:"75.0% fade (n=12). Mostly away (11 of 12). REVERSE → usually bet HOME." },
+    FD9:  { label:"FD9",  type:"fade", pct:"73%",  n:40,  title:"OU-B + Line 8–9 + Away surge ★",                  tip:"LARGEST-SAMPLE fade (72.5%, n=40★). MIXED — model named home 10x, away 30x. Check actual rec first, then REVERSE it. Skip O/U." },
+    FD10: { label:"FD10", type:"fade", pct:"72%",  n:18,  title:"OU-A fired + TMF + Away surge",                   tip:"72.2% fade (n=18). Mostly away (15 of 18). REVERSE → usually bet HOME." },
+    // ── Reverse O/U Signals (NEW v3.15, 1363-game) — flips the O/U call itself, not the ML pick ──
+    FDOU1:  { label:"FDOU1",  type:"fadeou", pct:"86%", n:14, title:"GVI≥65 + Conf 55–65 + Away surge",             tip:"Strongest O/U fade found (85.7%, n=14). Model called OVER 11x, UNDER 3x — mostly OVER-named. REVERSE the model's called direction." },
+    FDOU2:  { label:"FDOU2",  type:"fadeou", pct:"85%", n:13, title:"TMS home higher + Conf 55–65 + Away surge",    tip:"84.6% fade (n=13). Genuinely mixed — called OVER 7x, UNDER 6x. Verify each game's actual call." },
+    FDOU3:  { label:"FDOU3",  type:"fadeou", pct:"84%", n:19, title:"RED mismatch + Conf 55–65 + Away surge ★",     tip:"LARGEST-SAMPLE O/U fade (84.2%, n=19★). Called OVER 11x, UNDER 8x — mixed. Always verify the actual call before flipping." },
+    FDOU4:  { label:"FDOU4",  type:"fadeou", pct:"78%", n:18, title:"OVER pred + Conf 55–65 + Away surge",          tip:"77.8% fade (n=18). By definition all 18 are OVER-named — fully one-sided. REVERSE → bet UNDER $75, unambiguous." },
+    FDOU5:  { label:"FDOU5",  type:"fadeou", pct:"79%", n:14, title:"OU-B + GVI<35 + TMF ⚠ opposite direction",     tip:"78.6% fade (n=14). Called UNDER 12x, OVER 2x — rare combo where UNDER is the failing call. REVERSE → bet OVER $75." },
+    FDOU6:  { label:"FDOU6",  type:"fadeou", pct:"76%", n:21, title:"UNDER pred + GVI<35 + TMF ⚠ opposite",         tip:"76.2% fade (n=21). All 21 UNDER-named by definition. Most reliable \"UNDER fails\" signal — REVERSE → bet OVER $75." },
+    FDOU7:  { label:"FDOU7",  type:"fadeou", pct:"75%", n:16, title:"WP gap ≥20% + WP-Override B + GVI≥65",         tip:"75.0% fade (n=16). Nearly one-sided OVER (15 of 16). REVERSE → bet UNDER $75 in almost every case." },
+    FDOU8:  { label:"FDOU8",  type:"fadeou", pct:"77%", n:17, title:"Slumping SP + WP-Override B + Line 8–9",       tip:"76.5% fade (n=17). Mixed — called OVER 10x, UNDER 7x. Verify each game before flipping." },
+    FDOU9:  { label:"FDOU9",  type:"fadeou", pct:"75%", n:12, title:"HFCF + Home Fortress + WP-Override B",         tip:"75.0% fade (n=12). Mixed — called OVER 5x, UNDER 7x. Fine for ML, but fade the O/U call specifically." },
+    FDOU10: { label:"FDOU10", type:"fadeou", pct:"79%", n:14, title:"Conf 55–65 + Surging SP + Away surge ⚠ caveat", tip:"78.6% fade (n=14). Mixed — called OVER 8x, UNDER 6x. Source analysis may double-count the same underlying signal — treat with reduced confidence pending re-verification." },
+    // ── Both-Correct Signals (NEW v3.16, 1239-game joint analysis) — bet BOTH markets together ──
+    BC1: { label:"BC1", type:"bc", pct:"58%", n:12, title:"WP-Override A + Line 8–9 + Conf 50–55",   tip:"BC 58.3% n=12 · only 1/12 both-wrong — strongest joint signal found. BET BOTH: ML $75 + O/U direction $75." },
+    BC2: { label:"BC2", type:"bc", pct:"52%", n:21, title:"WP-Override A + UNDER + Line 8–9",         tip:"BC 52.4% n=21 · 0/21 both-wrong — never produced a joint loss. BET BOTH: ML $75 + UNDER $75." },
+    BC3: { label:"BC3", type:"bc", pct:"55%", n:20, title:"Slumping SP + UNDER + RCF",                tip:"BC 55.0% n=20 · only 2/20 both-wrong. BET BOTH: ML $75 + UNDER $75." },
+    BC4: { label:"BC4", type:"bc", pct:"47%", n:19, title:"Home pred + WP-Override A + UNDER",        tip:"BC 47.4% n=19 · 0/19 both-wrong — second zero-BW combo, confirms WPA+UNDER as the framework's most reliable dual-market backbone. BET BOTH: ML $75 + UNDER $75." },
+    BC5: { label:"BC5", type:"bc", pct:"52%", n:23, title:"Conf 50–55 + UNDER + TMF",                 tip:"BC 52.2% n=23 · largest sample in the BC top tier. BET BOTH: ML $75 + UNDER $75." },
+    BC6: { label:"BC6", type:"bc", pct:"54%", n:13, title:"HFCF + GVI<35",                            tip:"BC 53.8% n=13 · cleanest 2-flag BC signal. BET BOTH: ML $75 + O/U direction $75." },
+    BC7: { label:"BC7", type:"bc", pct:"41%", n:83, title:"Golden Condition + Conf 50–55 ★",          tip:"BC 41.0% n=83★ largest sample of any BC combo — still well above the 26.5% baseline. BET BOTH: ML $75 + O/U direction $75." }
+  };
+
+  // ── Both-Wrong Signals (NEW v3.16, 1239-game) — hard double-PASS override, not a fade ──
+  const BW_META = {
+    BW1: { label:"BW1", pct:"60%", n:15, title:"Surging Away SP + Golden Condition",               tip:"BW 60.0% n=15 · worst combo in the dataset. Golden Condition normally a strong O/U signal, but a surging away arm poisons both markets together." },
+    BW2: { label:"BW2", pct:"62%", n:13, title:"OVER + Line 8–9 + Surging Away SP",                tip:"BW 61.5% n=13 · worst 3-flag combo found — automatic double-skip." },
+    BW3: { label:"BW3", pct:"57%", n:14, title:"HFCF + WP-Override A + OVER",                       tip:"BW 57.1% n=14 · HFCF+WPA individually strong ML signals, but paired with OVER, both markets fail together more than half the time." },
+    BW4: { label:"BW4", pct:"54%", n:13, title:"WP gap≥20% + TMS home higher + Away surge RED",     tip:"BW 53.8% n=13 · large WP gap + home momentum overridden by the away pitcher's genuine surge." },
+    BW5: { label:"BW5", pct:"50%", n:12, title:"HFCF + WP-Override A + Away surge RED",             tip:"BW 50.0% n=12 · same HFCF+WPA pairing as BW3, poisoned by away_surge instead of OVER — needs a \"no away_surge / no OVER\" guard." },
+    BW6: { label:"BW6", pct:"50%", n:12, title:"Home Fortress + Away surge RED + MCF",              tip:"BW 50.0% n=12 · three-way collision: home proven strong + away pitcher hot + market disagrees." },
+    BW7: { label:"BW7", pct:"50%", n:20, title:"OU-A + OU-B + Surging Away SP ★",                   tip:"BW 50.0% n=20★ largest sample — the most statistically trustworthy double-skip signal in the dataset." }
   };
 
   // ── Team-specific signal correlations (931-game, min n=8 per flag) ─────────
@@ -766,15 +796,31 @@ function renderCombos(data) {
     LAA: { name:"Los Angeles Angels",   flag:"PDCF active",      pct:"58%", n:12, ou:"50.0%" },
   };
 
+  // ── Team-specific 2-flag combos (1229-game, top 10 teams, min n=8) ─────────
+  const TEAM_COMBO_META = {
+    ATH: { name:"Athletics",            combo:"GVI≥65 + Conf 50–55",          pct:"100%", n:8,  ou:"75.0%" },
+    KC:  { name:"Kansas City Royals",   combo:"OU-B fired + UNDER pred",       pct:"100%", n:8,  ou:"50.0%" },
+    MIA: { name:"Miami Marlins",        combo:"TMS home higher + UNDER pred",  pct:"100%", n:9,  ou:"22.2%" },
+    NYM: { name:"New York Mets",        combo:"Home pred + UNDER pred",        pct:"92%",  n:12, ou:"36.4%" },
+    STL: { name:"St. Louis Cardinals",  combo:"RCF active + Conf 50–55",       pct:"90%",  n:10, ou:"55.6%" },
+    CWS: { name:"Chicago White Sox",    combo:"OU-A fired + UNDER pred",       pct:"91%",  n:11, ou:"40.0%" },
+    MIL: { name:"Milwaukee Brewers",    combo:"OU-A fired + GVI≥65",           pct:"91%",  n:11, ou:"45.5%" },
+    NYY: { name:"New York Yankees",     combo:"RED mismatch>1.5 + UNDER pred", pct:"91%",  n:11, ou:"63.6%" },
+    TB:  { name:"Tampa Bay Rays",       combo:"RCF active + Home Fortress",    pct:"91%",  n:11, ou:"54.5%" },
+    LAA: { name:"Los Angeles Angels",   combo:"Home pred + UNDER pred",        pct:"89%",  n:9,  ou:"50.0%" },
+  };
+
   function parseArr(v) {
     if (Array.isArray(v)) return v;
     if (typeof v === 'string' && v) { try { return JSON.parse(v); } catch(e) {} }
     return [];
   }
-  const combos  = parseArr(data.combo_hits).filter(c => COMBO_META[c]);
-  const fades   = parseArr(data.fade_signals).filter(c => COMBO_META[c]);
-  const teams   = parseArr(data.team_signals).filter(t => TEAM_META[(t || "").split(":")[0]]);
-  const all     = [...combos, ...fades, ...teams];
+  const combos    = parseArr(data.combo_hits).filter(c => COMBO_META[c]);
+  const fades     = parseArr(data.fade_signals).filter(c => COMBO_META[c]);
+  const teams     = parseArr(data.team_signals).filter(t => TEAM_META[(t || "").split(":")[0]]);
+  const teamCombos = parseArr(data.team_combo_signals).filter(t => TEAM_COMBO_META[(t || "").split(":")[0]]);
+  const bwHits    = parseArr(data.bw_signals).filter(c => BW_META[c]);
+  const all     = [...combos, ...fades, ...teams, ...teamCombos, ...bwHits];
 
   if (all.length === 0) {
     if (block) block.style.display = "none";
@@ -782,13 +828,26 @@ function renderCombos(data) {
   }
   if (block) block.style.display = "";
 
-  const mlHits  = combos.filter(c => COMBO_META[c].type === "ml");
-  const ouHits  = combos.filter(c => COMBO_META[c].type === "ou");
-  const fdHits  = fades;
+  const mlHits    = combos.filter(c => COMBO_META[c].type === "ml");
+  const ouHits    = combos.filter(c => COMBO_META[c].type === "ou");
+  const bcHits    = combos.filter(c => COMBO_META[c].type === "bc");
+  const fdHits    = fades.filter(c => COMBO_META[c].type === "fade");
+  const fdouHits  = fades.filter(c => COMBO_META[c].type === "fadeou");
 
   function chipHTML(codes, bgColor, labelColor) {
     return codes.map(code => {
       const m = COMBO_META[code];
+      return `<div class="combo-chip" style="--cc:${bgColor};--cl:${labelColor}" title="${escapeHtml(m.tip)}">
+        <span class="combo-code">${escapeHtml(m.label)}</span>
+        <span class="combo-title">${escapeHtml(m.title)}</span>
+        <span class="combo-pct">${escapeHtml(m.pct)} n=${m.n}</span>
+      </div>`;
+    }).join("");
+  }
+
+  function bwChipHTML(codes, bgColor, labelColor) {
+    return codes.map(code => {
+      const m = BW_META[code];
       return `<div class="combo-chip" style="--cc:${bgColor};--cl:${labelColor}" title="${escapeHtml(m.tip)}">
         <span class="combo-code">${escapeHtml(m.label)}</span>
         <span class="combo-title">${escapeHtml(m.title)}</span>
@@ -809,11 +868,35 @@ function renderCombos(data) {
     }).join("");
   }
 
+  function teamComboChipHTML(codes, bgColor, labelColor) {
+    return codes.map(code => {
+      const [abbr] = code.split(":");
+      const m = TEAM_COMBO_META[abbr];
+      return `<div class="combo-chip" style="--cc:${bgColor};--cl:${labelColor}" title="${escapeHtml(m.name)} + ${escapeHtml(m.combo)} → O/U ${escapeHtml(m.ou)} (n=${m.n})">
+        <span class="combo-code">${escapeHtml(abbr)}</span>
+        <span class="combo-title">${escapeHtml(m.combo)}</span>
+        <span class="combo-pct">${escapeHtml(m.pct)} n=${m.n}</span>
+      </div>`;
+    }).join("");
+  }
+
   let html = '<div class="combo-wrap">';
 
+  if (bwHits.length) {
+    html += `<div class="combo-group"><div class="combo-group-label" style="color:#e24b4a">🛑 PASS BOTH MARKETS — Both-Wrong signal active</div>`;
+    html += `<div class="combo-chips">${bwChipHTML(bwHits, "rgba(226,75,74,.16)", "#e24b4a")}</div></div>`;
+  }
   if (fdHits.length) {
-    html += `<div class="combo-group"><div class="combo-group-label fade-label">⚠ Fade Signals Active — model direction may be reversed</div>`;
+    html += `<div class="combo-group"><div class="combo-group-label fade-label">⚠ Reverse ML Signals Active — model's team pick may be reversed</div>`;
     html += `<div class="combo-chips">${chipHTML(fdHits, "rgba(226,75,74,.1)", "#e24b4a")}</div></div>`;
+  }
+  if (fdouHits.length) {
+    html += `<div class="combo-group"><div class="combo-group-label fadeou-label">⚠ Reverse O/U Signals Active — model's O/U call may be reversed</div>`;
+    html += `<div class="combo-chips">${chipHTML(fdouHits, "rgba(127,119,221,.12)", "#7F77DD")}</div></div>`;
+  }
+  if (bcHits.length) {
+    html += `<div class="combo-group"><div class="combo-group-label ml-label">🎯 Both-Correct — Bet Both Markets</div>`;
+    html += `<div class="combo-chips">${chipHTML(bcHits, "rgba(63,185,80,.15)", "#3fb950")}</div></div>`;
   }
   if (mlHits.length) {
     html += `<div class="combo-group"><div class="combo-group-label ml-label">ML Combos</div>`;
@@ -822,6 +905,10 @@ function renderCombos(data) {
   if (ouHits.length) {
     html += `<div class="combo-group"><div class="combo-group-label ou-label">O/U Combos</div>`;
     html += `<div class="combo-chips">${chipHTML(ouHits, "rgba(55,138,221,.1)", "#378ADD")}</div></div>`;
+  }
+  if (teamCombos.length) {
+    html += `<div class="combo-group"><div class="combo-group-label" style="color:#7F77DD">Team 2-Flag Combos</div>`;
+    html += `<div class="combo-chips">${teamComboChipHTML(teamCombos, "rgba(127,119,221,.15)", "#7F77DD")}</div></div>`;
   }
   if (teams.length) {
     html += `<div class="combo-group"><div class="combo-group-label" style="color:#7F77DD">Team Signals</div>`;
@@ -1021,6 +1108,140 @@ function normalizeGameData(data) {
       lineups: {
         home: ht.expected_lineup || [],
         away: at.expected_lineup || [],
+      },
+    });
+  }
+
+  // ── game_info + matchup_trends/pitching_matchup/team_batting_stats schema ──
+  // (and its sibling variant: team_records_and_trends/starting_pitchers — same
+  // source tool, different wrapper key names between runs)
+  if (data.pitching_matchup || data.matchup_trends || data.team_batting_stats ||
+      data.starting_pitchers || data.team_records_and_trends) {
+    const gi2  = data.game_info || {};
+    const mt   = data.matchup_trends || data.team_records_and_trends || {};
+    const recs = mt.records || mt; // older variant nests under .records; newer is flat
+    const pm   = data.pitching_matchup || data.starting_pitchers || {};
+    const tbs  = data.team_batting_stats || {};
+    const bo   = gi2.betting_odds || {};
+    const stadiumInfo = gi2.stadium || gi2.venue || {};
+    const wRaw2 = gi2.weather || data.weather || {};
+    const precipMatch = String(wRaw2.precipitation || "").match(/^(\d+)%\s*(.*)$/);
+
+    function teamKey(name) {
+      return (name || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    }
+    const awayName = gi2.away_team?.name || gi2.away_team?.abbreviation || "";
+    const homeName = gi2.home_team?.name || gi2.home_team?.abbreviation || "";
+    const awayKey  = teamKey(awayName);
+    const homeKey  = teamKey(homeName);
+
+    const tbsKeys  = Object.keys(tbs).filter(k => k !== "columns_reference" && k !== "metrics");
+    const tbsAway  = tbs[awayKey] || tbs[tbsKeys.find(k => k.startsWith("away_"))] || {};
+    const tbsHome  = tbs[homeKey] || tbs[tbsKeys.find(k => k.startsWith("home_"))] || {};
+
+    function stripRank(v) { return String(v ?? "").replace(/\(\d+\)\s*$/, "").trim(); }
+
+    // Resolves a {away,home}-shaped lookup across every naming convention seen from
+    // this source tool: plain away/home, team-name key, literal away_team/home_team,
+    // team-name+suffix, or any away_*/home_*-prefixed key.
+    function findTeamValue(obj, side) {
+      if (!obj || typeof obj !== "object") return undefined;
+      const nameKey = side === "away" ? awayKey : homeKey;
+      const candidates = [obj[nameKey], obj[side], obj[`${side}_team`], obj[`${nameKey}_${side}`]];
+      for (const c of candidates) if (c !== undefined) return c;
+      const prefixKey = Object.keys(obj).find(k => k.startsWith(`${side}_`));
+      return prefixKey ? obj[prefixKey] : undefined;
+    }
+
+    function parseLast10(str) {
+      if (!str) return { last10: "", streak: "" };
+      const rec = str.match(/^\d+-\d+/);
+      const sk  = str.match(/\((\d+)\s*(Win|Loss)\s*Streak\)/i);
+      return {
+        last10: rec ? rec[0] : "",
+        streak: sk ? `${sk[2][0].toUpperCase()}${sk[1]}` : "",
+      };
+    }
+    function resolveLast10(raw) {
+      if (raw && typeof raw === "object" && raw.record) {
+        const streakStr = String(raw.streak || "");
+        const sk   = streakStr.match(/\((\d+)\s*(Win|Loss)\s*Streak\)/i);
+        const skCn = streakStr.match(/(\d+)\s*連\s*(勝|敗)/);
+        const streak = sk ? `${sk[2][0].toUpperCase()}${sk[1]}` : skCn ? `${skCn[2] === "勝" ? "W" : "L"}${skCn[1]}` : "";
+        return { last10: raw.record, streak };
+      }
+      return parseLast10(raw);
+    }
+    const last10Away = resolveLast10(findTeamValue(recs.last_10_games, "away"));
+    const last10Home = resolveLast10(findTeamValue(recs.last_10_games, "home"));
+
+    const overallAway   = findTeamValue(recs.overall, "away") ?? findTeamValue(recs.overall_record, "away") ?? "";
+    const overallHome   = findTeamValue(recs.overall, "home") ?? findTeamValue(recs.overall_record, "home") ?? "";
+    const awayRoadRecord = findTeamValue(recs.home_away_splits, "away") || "";
+    const homeHomeRecord = findTeamValue(recs.home_away_splits, "home") || "";
+
+    function pitcherFromMatchup(p) {
+      if (!p) return {};
+      const ss = p.season_stats || p.season_stats_legumina_detailed || p.season_stats_seymour_lineup || {};
+      return {
+        name:                p.name || p.name_primary_source || p.name_lineup_source || "",
+        handedness:          p.throws || p.throws_lineup_source || p.handedness || "",
+        era:                 String(ss.era ?? ""),
+        whip:                String(ss.whip ?? ""),
+        win_loss:            (ss.wins != null && ss.losses != null) ? `${ss.wins}-${ss.losses}` : "",
+        strikeouts:          String(ss.so ?? ""),
+        innings_pitched:     String(ss.ip ?? ""),
+        batting_avg_against: ss.baa || "",
+        walks:               String(ss.bb ?? ""),
+        recent_games:        p.recent_starts || p.recent_starts_legumina || [],
+      };
+    }
+
+    const elKeys = Object.keys(data.expected_lineups || {});
+
+    return normalizeGameData({
+      game_date:  gi2.date || "",
+      game_time:  gi2.time || "",
+      venue:      stadiumInfo.description || stadiumInfo.weather_conditions || stadiumInfo.type || stadiumInfo.stadium_type || "",
+      home_team:  homeName,
+      away_team:  awayName,
+      weather: {
+        condition:   precipMatch ? precipMatch[2] : "",
+        temperature: wRaw2.temperature || "",
+        wind_speed:  wRaw2.wind || "",
+        precipitation_chance_pct: precipMatch ? precipMatch[1] : "",
+      },
+      betting: {
+        over_under: String(bo.over_under ?? bo.over_under_runs ?? ""),
+        line:       String(bo.moneyline ?? bo.lottery_handicap_home ?? bo.spread?.lottery_handicap_home ?? ""),
+      },
+      starters: {
+        home: pitcherFromMatchup(pm.home_pitcher || pm.home_starter),
+        away: pitcherFromMatchup(pm.away_pitcher || pm.away_starter),
+      },
+      team_stats: {
+        home: {
+          batting_avg:  stripRank(tbsHome.this_season?.avg),
+          on_base_pct:  stripRank(tbsHome.this_season?.obp),
+          avg_runs:     stripRank(tbsHome.this_season?.avg_runs),
+          recent_form:  overallHome,
+          home_record:  homeHomeRecord,
+          last_10:      last10Home.last10,
+          streak:       last10Home.streak,
+        },
+        away: {
+          batting_avg:  stripRank(tbsAway.this_season?.avg),
+          on_base_pct:  stripRank(tbsAway.this_season?.obp),
+          avg_runs:     stripRank(tbsAway.this_season?.avg_runs),
+          recent_form:  overallAway,
+          away_record:  awayRoadRecord,
+          last_10:      last10Away.last10,
+          streak:       last10Away.streak,
+        },
+      },
+      lineups: {
+        home: data.expected_lineups?.[homeKey] || data.expected_lineups?.[elKeys.find(k => k.startsWith("home_"))] || [],
+        away: data.expected_lineups?.[awayKey] || data.expected_lineups?.[elKeys.find(k => k.startsWith("away_"))] || [],
       },
     });
   }

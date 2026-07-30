@@ -1327,6 +1327,7 @@ body {
 .combo-group-label.ml-label    { color: #3fb950; }
 .combo-group-label.ou-label    { color: #378ADD; }
 .combo-group-label.fade-label  { color: #e24b4a; }
+.combo-group-label.fadeou-label { color: #7F77DD; }
 
 .combo-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 

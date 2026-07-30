@@ -71,6 +71,7 @@
         .combos-page-wrap .tabs{display:flex;border-bottom:0.5px solid var(--color-border-tertiary);margin-bottom:14px;flex-wrap:wrap;gap:2px}
         .combos-page-wrap .tab{padding:7px 14px;font-size:10.5px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--color-text-secondary);border-bottom:2px solid transparent;transition:color .15s}
         .combos-page-wrap .tab.on{color:var(--color-text-primary);border-bottom-color:#378ADD}
+        .combos-page-wrap .tab[data-target="upd"].on{border-bottom-color:#ef9f27}
         .combos-page-wrap .tab:hover:not(.on){color:var(--color-text-primary)}
         .combos-page-wrap .panel{display:none}.combos-page-wrap .panel.on{display:block}
         .combos-page-wrap .sh{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary);padding-bottom:4px;margin:14px 0 10px}
@@ -88,8 +89,8 @@
         .combos-page-wrap .act-r{border-color:rgba(226,75,74,.3);background:rgba(226,75,74,.06);color:#e24b4a}
         .combos-page-wrap .act-a{border-color:rgba(239,159,39,.3);background:rgba(239,159,39,.06);color:#ef9f27}
         /* text colours */
-        .combos-page-wrap .g{color:#3fb950}.combos-page-wrap .r{color:#e24b4a}.combos-page-wrap .a{color:#ef9f27}
-        /* card layout (931g) */
+        .combos-page-wrap .g{color:#3fb950}.combos-page-wrap .r{color:#e24b4a}.combos-page-wrap .a{color:#ef9f27}.combos-page-wrap .b{color:#378ADD}
+        /* card layout */
         .combos-page-wrap .cc{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);margin-bottom:8px;overflow:hidden;border:0.5px solid var(--color-border-tertiary)}
         .combos-page-wrap .cc-h{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:0.5px solid var(--color-border-tertiary)}
         .combos-page-wrap .rk{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0}
@@ -108,7 +109,7 @@
         .combos-page-wrap .fade-arrow{display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--color-text-secondary);padding-top:18px}
         /* new badge */
         .combos-page-wrap .cnew{background:rgba(239,159,39,.12);border-radius:3px;padding:0 3px;font-size:8px;color:#ef9f27;font-weight:700;vertical-align:middle;margin-left:3px}
-        /* alert boxes */
+        /* alert / ok boxes */
         .combos-page-wrap .alarm{background:rgba(226,75,74,.06);border:1.5px solid #e24b4a;border-radius:var(--border-radius-lg);padding:10px 13px;margin-bottom:10px}
         .combos-page-wrap .alarm-t{font-size:11px;font-weight:700;color:#e24b4a;margin-bottom:3px}
         .combos-page-wrap .alarm-b{font-size:10px;color:var(--color-text-secondary);line-height:1.65}
@@ -117,7 +118,24 @@
         .combos-page-wrap .notice-t{font-size:11px;font-weight:700;color:#ef9f27;margin-bottom:3px}
         .combos-page-wrap .notice-b{font-size:10px;color:var(--color-text-secondary);line-height:1.65}
         .combos-page-wrap .notice-b b{color:var(--color-text-primary)}
-        /* team result card */
+        .combos-page-wrap .ok{background:rgba(63,185,80,.05);border:1.5px solid #3fb950;border-radius:var(--border-radius-lg);padding:10px 13px;margin-bottom:10px}
+        .combos-page-wrap .ok-t{font-size:11px;font-weight:700;color:#3fb950;margin-bottom:3px}
+        .combos-page-wrap .ok-b{font-size:10px;color:var(--color-text-secondary);line-height:1.65}
+        .combos-page-wrap .ok-b b{color:var(--color-text-primary)}
+        /* KPI row */
+        .combos-page-wrap .kpi{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px}
+        .combos-page-wrap .kc{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:9px;text-align:center}
+        .combos-page-wrap .kl{font-size:9px;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+        .combos-page-wrap .kv{font-size:17px;font-weight:700}
+        /* period trend table */
+        .combos-page-wrap .ptbl{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:10px}
+        .combos-page-wrap .ptbl th{background:var(--color-background-secondary);color:var(--color-text-secondary);font-size:9px;text-transform:uppercase;padding:4px 6px;text-align:center;border-bottom:0.5px solid var(--color-border-tertiary);font-weight:600}
+        .combos-page-wrap .ptbl th:first-child{text-align:left}
+        .combos-page-wrap .ptbl td{padding:4px 6px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary);text-align:center}
+        .combos-page-wrap .ptbl td:first-child{color:var(--color-text-primary);font-weight:500;text-align:left}
+        .combos-page-wrap .ptbl tr:last-child td{border-bottom:none}
+        .combos-page-wrap .hi{background:rgba(63,185,80,.04)}.combos-page-wrap .lo{background:rgba(226,75,74,.05)}.combos-page-wrap .warn{background:rgba(239,159,39,.04)}
+        /* team result card (single-flag, 30-team table) */
         .combos-page-wrap .tcard{border-radius:var(--border-radius-lg);margin-bottom:8px;overflow:hidden;border:0.5px solid var(--color-border-tertiary)}
         .combos-page-wrap .tcard-h{display:flex;align-items:center;gap:9px;padding:8px 12px;background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary)}
         .combos-page-wrap .trank{width:26px;height:26px;border-radius:6px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
@@ -128,6 +146,17 @@
         .combos-page-wrap .tflag-tag{font-family:var(--font-mono,monospace);font-weight:700;padding:3px 9px;border-radius:4px;background:rgba(127,119,221,.13);color:#7F77DD;font-size:10px;flex-shrink:0}
         .combos-page-wrap .tstat{font-size:10px;color:var(--color-text-secondary)}
         .combos-page-wrap .tstat b{color:#3fb950;font-weight:700}
+        /* team 2-flag combo card */
+        .combos-page-wrap .tc{border-radius:var(--border-radius-lg);margin-bottom:7px;overflow:hidden;border:1px solid var(--color-border-tertiary)}
+        .combos-page-wrap .tc-h{display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary)}
+        .combos-page-wrap .tc-rank{width:24px;height:24px;border-radius:5px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
+        .combos-page-wrap .tc-name{flex:1;font-size:11px;font-weight:700}
+        .combos-page-wrap .tc-ov{font-size:8.5px;color:var(--color-text-secondary);background:var(--bg2,var(--bg));padding:2px 7px;border-radius:4px}
+        .combos-page-wrap .tc-b{padding:8px 11px;background:var(--color-background-secondary)}
+        .combos-page-wrap .tc-combo{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+        .combos-page-wrap .tc-tag{font-family:var(--font-mono,monospace);font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(127,119,221,.13);color:#7F77DD;font-size:9.5px;flex-shrink:0}
+        .combos-page-wrap .tc-stat{font-size:9.8px;color:var(--color-text-secondary)}
+        .combos-page-wrap .tc-stat b{color:#3fb950;font-weight:700}
         /* all-teams compact table */
         .combos-page-wrap .attbl{width:100%;border-collapse:collapse;font-size:10px}
         .combos-page-wrap .attbl th{background:var(--color-background-secondary);color:var(--color-text-secondary);font-size:9px;text-transform:uppercase;letter-spacing:.04em;padding:5px 6px;text-align:center;border-bottom:0.5px solid var(--color-border-tertiary);font-weight:600}
@@ -136,305 +165,704 @@
         .combos-page-wrap .attbl td:first-child{color:var(--color-text-primary);font-weight:600;text-align:left}
         .combos-page-wrap .attbl tr:last-child td{border-bottom:none}
         .combos-page-wrap .attbl .flagcell{font-family:var(--font-mono,monospace);font-weight:700;color:#7F77DD}
-        .combos-page-wrap .hi{background:rgba(63,185,80,.04)}
         @media(max-width:640px){
           .combos-page-wrap .fade-vs{grid-template-columns:1fr;}.combos-page-wrap .fade-arrow{display:none;}
+          .combos-page-wrap .kpi{grid-template-columns:repeat(2,1fr);}
         }
       </style>
 
       <h1 class="combos-page-title">Combo &amp; Fade Signal Reference</h1>
-      <p class="combos-page-sub">Top 10 ML combos · Top 10 O/U combos · 10 fade signals · Team correlations — 931-game empirical · June 21 update</p>
+      <p class="combos-page-sub">O/U diagnostic · Top 10 ML combos · Top 10 O/U combos · Reverse ML + Reverse O/U signals · Both-Correct/Both-Wrong joint analysis · Team correlations — 1363-game empirical · Jul 28 update</p>
 
       <div class="wrap">
       <div class="tabs" id="tabBar">
-        <button class="tab on" data-target="p1">ML combos 1–5</button>
+        <button class="tab on" data-target="diag" style="border-bottom-color:#e24b4a">⚠ O/U Diagnostic</button>
+        <button class="tab" data-target="upd" style="">Weekly trend</button>
+        <button class="tab" data-target="p1">ML combos 1–5</button>
         <button class="tab" data-target="p2">ML combos 6–10</button>
         <button class="tab" data-target="p3">O/U combos 1–5</button>
         <button class="tab" data-target="p4">O/U combos 6–10</button>
-        <button class="tab" data-target="p5">Fade signals</button>
+        <button class="tab" data-target="p5">Reverse ML signals</button>
+        <button class="tab" data-target="p5b" style="border-bottom-color:#7F77DD">Reverse O/U signals <span class="cnew">NEW</span></button>
+        <button class="tab" data-target="bctrend" style="border-bottom-color:#ef9f27">BC/BW trend <span class="cnew">NEW</span></button>
+        <button class="tab" data-target="bc" style="border-bottom-color:#3fb950">🎯 Both-Correct combos <span class="cnew">NEW</span></button>
+        <button class="tab" data-target="bw" style="border-bottom-color:#e24b4a">⚠️ Both-Wrong combos <span class="cnew">NEW</span></button>
+        <button class="tab" data-target="bcbwflag">Single-flag BC/BW</button>
+        <button class="tab" data-target="p8">Team 2-flag combos</button>
         <button class="tab" data-target="p6">Top 10 teams</button>
         <button class="tab" data-target="p7">All 30 teams</button>
       </div>
 
+      <!-- ══ O/U DIAGNOSTIC ══ -->
+      <div class="panel on" id="diag">
+      <div class="kpi">
+        <div class="kc"><div class="kl">Last 40 O/U</div><div class="kv r">35.0%</div></div>
+        <div class="kc"><div class="kl">Predicted OVER</div><div class="kv r">82.5%</div></div>
+        <div class="kc"><div class="kl">Actual OVER</div><div class="kv b">42.5%</div></div>
+        <div class="kc"><div class="kl">OVER bias</div><div class="kv r">+40pp</div></div>
+        <div class="kc"><div class="kl">If all UNDER</div><div class="kv g">57.5%</div></div>
+      </div>
+      <div class="alarm">
+        <div class="alarm-t">Root cause: a massive OVER-prediction bias, not bad luck</div>
+        <div class="alarm-b">Over the last 40 O/U games the model predicted <b>OVER 33 times (82.5%)</b> — but actual games went OVER only <b>17 times (42.5%)</b>. That's a <b>+40 percentage-point directional bias</b>. Of the 33 OVER calls, <b>21 lost</b> (game went UNDER), with the final total coming in an average of <b>3.4 runs below the line</b> — 9 of them missed by 4+ runs. This is not variance; it's a stale scoring assumption. <b>GVI 65–80 band: model predicted OVER 12/13, actual OVER only 3/13.</b></div>
+      </div>
+      <div class="ok">
+        <div class="ok-t">Fix applied: OVER_RATE_GATE emergency warning now injected into every prediction when actOV &lt;45%</div>
+        <div class="ok-b">When rolling 5-day actual-OVER rate falls below 45%, the server now injects a hard-to-miss caution block into the prediction context (before game data), explicitly suppressing GVI-only OVER calls and defaulting the O/U lean to UNDER. Three-pronged fix: (1) OVER_RATE_GATE warning injection, (2) GVI≥65 no longer standalone OVER catalyst — requires OU-B wind or Slumping SP, (3) UNDER as default lean when environment is compressed.</div>
+      </div>
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-secondary);margin:10px 0 6px">OVER-prediction bias — 6-week drift</div>
+      <table class="ptbl">
+      <thead><tr><th>Period</th><th>Pred OVER%</th><th>Actual OVER%</th><th>Bias</th><th>O/U acc</th><th>n</th></tr></thead>
+      <tbody>
+      <tr class="hi"><td>May 25–31</td><td>64.7</td><td>60.0</td><td class="g">+4.7</td><td class="g">62.4%</td><td>85</td></tr>
+      <tr class="warn"><td>Jun 1–14</td><td>74.3</td><td>56.2</td><td class="a">+18.1</td><td>57.6%</td><td>144</td></tr>
+      <tr class="lo"><td>Jun 15–28</td><td>72.1</td><td>44.8</td><td class="r">+27.3</td><td class="r">48.5%</td><td>165</td></tr>
+      <tr class="lo"><td>Jun 29–Jul 6</td><td>80.3</td><td>53.5</td><td class="r">+26.8</td><td class="r">45.1%</td><td>71</td></tr>
+      </tbody>
+      </table>
+      </div>
+
+      <!-- ══ WEEKLY TREND ══ -->
+      <div class="panel" id="upd">
+      <div class="kpi">
+        <div class="kc"><div class="kl">Total graded</div><div class="kv b">1363</div></div>
+        <div class="kc"><div class="kl">Season ML</div><div class="kv b">54.3%</div></div>
+        <div class="kc"><div class="kl">Season OU</div><div class="kv a">47.5%</div></div>
+        <div class="kc"><div class="kl">Since ASB ML</div><div class="kv g">58.5%</div></div>
+        <div class="kc"><div class="kl">Since ASB OU</div><div class="kv r">46.9%</div></div>
+      </div>
+      <div class="ok">
+        <div class="ok-t">v3.15 refresh — 1363 games (through Jul 27), new Reverse O/U signal family</div>
+        <div class="ok-b">1363-game dataset (+134 games since the v3.13/1229g update). <b>Key addition:</b> a fourth signal family — Reverse O/U signals (FDOU1-FDOU10) — separate from the existing ML fades, flips the O/U call itself rather than the ML pick. ML performance has improved markedly since the All-Star break (58.5% vs 54.3% season) while O/U has stayed weak (46.9% since ASB) — continue leaning on ML and the reverse-signal families over standalone O/U calls.</div>
+      </div>
+      <div class="alarm">
+        <div class="alarm-t">O/U remains the weaker market since the All-Star break — lean on ML and reverse signals</div>
+        <div class="alarm-b">Since-ASB O/U (46.9%) trails since-ASB ML (58.5%) by nearly 12 points. The new FDOU family exists specifically to recover edge from O/U calls that the model gets systematically wrong under certain flag combinations — use it alongside the standard OC combos rather than betting raw O/U direction alone.</div>
+      </div>
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-secondary);margin:10px 0 6px">6-week trend (historical, through Jul 18 — see KPI row above for the current 1363-game/Jul 27 season and since-ASB splits)</div>
+      <table class="ptbl">
+      <thead><tr><th>Period</th><th>Stk ML%</th><th>n</th><th>Stk OU%</th><th>n</th><th>BC</th><th>BW</th><th>Avg T</th><th>ActOV%</th><th>HW%</th><th>GVI</th></tr></thead>
+      <tbody>
+      <tr class="lo"><td>Jun 1–7</td><td class="r">45.3</td><td>53</td><td>51.0</td><td>51</td><td>18</td><td>19</td><td>9.7</td><td>55%</td><td>52%</td><td>56</td></tr>
+      <tr class="warn"><td>Jun 8–14</td><td>51.5</td><td>66</td><td class="g">62.1</td><td>58</td><td>28</td><td>18</td><td>9.8</td><td>49%</td><td>48%</td><td>58</td></tr>
+      <tr class="hi"><td>Jun 15–21</td><td class="g">58.2</td><td>67</td><td>59.7</td><td>62</td><td>29</td><td>18</td><td>9.4</td><td>47%</td><td>51%</td><td>68</td></tr>
+      <tr class="lo"><td>Jun 22–28</td><td>56.9</td><td>58</td><td class="r">31.6</td><td>57</td><td>17</td><td>18</td><td class="r">8.4</td><td class="r">38%</td><td class="r">45%</td><td>63</td></tr>
+      <tr class="warn"><td>Jun 29–Jul 5</td><td class="g">61.9</td><td>63</td><td class="r">43.1</td><td>58</td><td>19</td><td>15</td><td>9.9</td><td>49%</td><td class="r">41%</td><td>64</td></tr>
+      <tr class="warn"><td><b>Jul 6–18 (est)</b></td><td class="g">—</td><td>121</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      </tbody>
+      </table>
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-secondary);margin:10px 0 6px">Jun 29–Jul 5 day-by-day (last detailed breakdown)</div>
+      <table class="ptbl">
+      <thead><tr><th>Date</th><th>Stk ML%</th><th>Stk OU%</th><th>BC</th><th>BW</th><th>Avg T</th><th>Line</th><th>ActOV%</th></tr></thead>
+      <tbody>
+      <tr class="hi"><td>Jun 29</td><td class="g">70.0</td><td class="g">66.7</td><td>3</td><td>1</td><td>10.0</td><td>9.21</td><td>50%</td></tr>
+      <tr class="lo"><td>Jun 30</td><td class="r">25.0</td><td>50.0</td><td>1</td><td>2</td><td>8.2</td><td>8.30</td><td>40%</td></tr>
+      <tr class="hi"><td>Jul 1</td><td class="g">66.7</td><td class="g">62.5</td><td>4</td><td>1</td><td>11.6</td><td>9.40</td><td>70%</td></tr>
+      <tr class="warn"><td>Jul 2</td><td class="r">40.0</td><td class="a">60.0</td><td>3</td><td>2</td><td>12.0</td><td>9.28</td><td>56%</td></tr>
+      <tr class="warn"><td>Jul 3</td><td class="g">64.7</td><td class="r">35.3</td><td>4</td><td>4</td><td>9.5</td><td>9.39</td><td>42%</td></tr>
+      <tr class="warn"><td>Jul 4</td><td class="g">70.6</td><td class="r">29.4</td><td>4</td><td>3</td><td>8.9</td><td>9.16</td><td>37%</td></tr>
+      </tbody>
+      </table>
+      </div>
+
       <!-- ══ ML 1-5 ══ -->
-      <div class="panel on" id="p1">
-      <div class="sh">Top 10 ML combinations — 931 games · MC1–MC5</div>
+      <div class="panel" id="p1">
+      <div class="sh">Top 10 ML combinations — 1363 games (through Jul 27) · WP-Override family (WPA+WPB) anchors 7 of 10 top combos</div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:linear-gradient(135deg,#FFD700,#FFA500);color:#000">1</div>
-        <div class="cc-n g">UNDER + Conf 50–55 + TMF</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">93.3%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">15</span></div></div>
+        <div class="cc-n g">Home pred + GVI&lt;35 + Dome</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">93.8%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">16</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-b">UNDER</span><span class="flag flag-a">conf_50-55</span><span class="flag flag-r">TMF</span></div>
-        <div class="why">14/15 correct. The #1 combo overall at 931 games — both ML and O/U (78.6%) are elite here.</div>
-        <div class="act act-g">ML $75 + UNDER $75 (both full stake)</div>
+        <div class="flags"><span class="flag flag-b">home_pred</span><span class="flag flag-r">GVI&lt;35</span><span class="flag flag-p">dome</span></div>
+        <div class="why">15/16. Stable #1 all season, unchanged at 1363g. Suppressed-scoring dome + home edge. O/U skip (37.5%).</div>
+        <div class="act act-g">ML $75 only.</div>
       </div></div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:linear-gradient(135deg,#C0C0C0,#888)">2</div>
-        <div class="cc-n g">Home prediction + GVI&lt;35 + Dome</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">92.9%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">14</span></div></div>
+        <div class="cc-n g">Home pred + WPA + UNDER</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">90.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">20</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-b">home_pred</span><span class="flag flag-r">GVI&lt;35</span><span class="flag flag-p">dome</span></div>
-        <div class="why">13/14 correct. Suppressed scoring + dome neutrality. O/U unclear (42.9%) — skip it.</div>
-        <div class="act act-g">ML $75 only. Skip O/U.</div>
+        <div class="flags"><span class="flag flag-b">home_pred</span><span class="flag flag-g">WPA</span><span class="flag flag-b">UNDER</span></div>
+        <div class="why">18/20 AND 57.9% O/U. <b>Zero recorded both-wrong games</b> — the framework's most trustworthy dual play.</div>
+        <div class="act act-g">ML $75 + UNDER $75.</div>
       </div></div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:linear-gradient(135deg,#CD7F32,#A0522D);color:#fff">3</div>
-        <div class="cc-n g">Slumping SP + WPA fired + UNDER</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">92.3%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">13</span></div></div>
+        <div class="cc-n g">OU-A + GVI&lt;35 + Dome</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">88.2%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">17</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-r">slump_SP</span><span class="flag flag-g">WPA</span><span class="flag flag-b">UNDER</span></div>
-        <div class="why">12/13 correct. Double-confirmed SP quality gap.</div>
-        <div class="act act-g">ML $75 + UNDER $37.50</div>
+        <div class="flags"><span class="flag flag-b">OU-A</span><span class="flag flag-r">GVI&lt;35</span><span class="flag flag-p">dome</span></div>
+        <div class="why">15/17. Pitcher mismatch + suppressed environment + dome. Pure ML (O/U skip 29.4%).</div>
+        <div class="act act-g">ML $75 only.</div>
       </div></div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:#378ADD">4</div>
-        <div class="cc-n g">Home prediction + WPA fired + UNDER</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">89.5%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">19</span></div><div class="bg"><span class="bg-l">OU</span><span class="bg-v a">61.1%</span></div></div>
+        <div class="cc-n g">Home Fortress + WPA + Line 8–9 <span class="cnew">CAUTION</span></div>
+        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">86.7%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">15</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-b">home_pred</span><span class="flag flag-g">WPA</span><span class="flag flag-b">UNDER</span></div>
-        <div class="why">17/19 correct. Largest sample of any 89%+ combo. O/U solid at 61.1%.</div>
-        <div class="act act-g">ML $75 + UNDER $50</div>
+        <div class="flags"><span class="flag flag-g">home_fortress</span><span class="flag flag-g">WPA</span><span class="flag flag-p">line_8-9</span></div>
+        <div class="why">13/15 AND 60.0% O/U. <b>Caution:</b> this same fortress+WPA pairing collapses to 50% both-wrong when away_surge is also present — always confirm away_surge is absent before staking.</div>
+        <div class="act act-g">ML $75 + O/U direction $50 (verify away_surge absent).</div>
       </div></div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:#7D3C98;color:#fff">5</div>
-        <div class="cc-n g">OU-A fired + WPA fired + UNDER</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">89.5%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">19</span></div></div>
+        <div class="cc-n g">TMS home higher + GVI&lt;35 + Dome</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">85.7%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">14</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-b">OU-A</span><span class="flag flag-g">WPA</span><span class="flag flag-b">UNDER</span></div>
-        <div class="why">17/19 correct. SP mismatch confirmed by two independent signals.</div>
-        <div class="act act-g">ML $75. UNDER $37.50 (secondary)</div>
+        <div class="flags"><span class="flag flag-b">TMS_home_hi</span><span class="flag flag-r">GVI&lt;35</span><span class="flag flag-p">dome</span></div>
+        <div class="why">12/14. Home momentum + suppressed environment + dome. Pure ML (O/U skip 28.6%).</div>
+        <div class="act act-g">ML $75 only.</div>
       </div></div>
       </div>
 
       <!-- ══ ML 6-10 ══ -->
       <div class="panel" id="p2">
-      <div class="sh">ML combos 6–10 — 931 games</div>
+      <div class="sh">ML combos 6–10 — 1363 games</div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:#145A32;color:#fff">6</div>
-        <div class="cc-n g">WP gap ≥20% + WPA fired + UNDER</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">88.9%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">18</span></div></div>
+        <div class="cc-n g">WPA + UNDER + Line 8–9 <span class="cnew">BEST DUAL</span></div>
+        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">85.7%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">21</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-g">wp_gap≥20</span><span class="flag flag-g">WPA</span><span class="flag flag-b">UNDER</span></div>
-        <div class="why">16/18 correct. Large WP gap validates the WPA signal.</div>
-        <div class="act act-g">ML $75 only. Skip O/U.</div>
+        <div class="flags"><span class="flag flag-g">WPA</span><span class="flag flag-b">UNDER</span><span class="flag flag-p">line_8-9</span></div>
+        <div class="why">18/21 AND O/U 66.7% — <b>best dual-market combo by both markets</b>. Also has <b>zero recorded both-wrong games</b> (0/21) — the framework's highest-confidence dual play alongside MC2.</div>
+        <div class="act act-g">ML $75 + UNDER $75 (no recorded joint failure).</div>
       </div></div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:#922B21;color:#fff">7</div>
-        <div class="cc-n g">Home prediction + WPA fired + Line 8–9</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">86.7%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">15</span></div><div class="bg"><span class="bg-l">OU</span><span class="bg-v a">66.7%</span></div></div>
+        <div class="cc-n g">WP-Override B + Line 8–9 + Conf 50–55</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">85.7%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">14</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-b">home_pred</span><span class="flag flag-g">WPA</span><span class="flag flag-p">line_8-9</span></div>
-        <div class="why">13/15 correct AND 66.7% O/U — both markets strong.</div>
-        <div class="act act-g">ML $75 + O/U direction $50</div>
+        <div class="flags"><span class="flag flag-g">WPB</span><span class="flag flag-p">line_8-9</span><span class="flag flag-a">conf_50-55</span></div>
+        <div class="why">12/14. WPB at the sweet-spot line + calibrated confidence. Pure ML (OU 35.7%) — skip O/U.</div>
+        <div class="act act-g">ML $75 only.</div>
       </div></div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:#0E6655;color:#fff">8</div>
-        <div class="cc-n g">Home Fortress + WPA fired + UNDER</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">86.7%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">15</span></div><div class="bg"><span class="bg-l">OU</span><span class="bg-v a">64.3%</span></div></div>
+        <div class="cc-n g">WP-Override B + UNDER + Conf 50–55</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">84.6%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">13</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-g">home_fortress</span><span class="flag flag-g">WPA</span><span class="flag flag-b">UNDER</span></div>
-        <div class="why">13/15 correct, O/U 64.3%.</div>
-        <div class="act act-g">ML $75 + UNDER $50</div>
+        <div class="flags"><span class="flag flag-g">WPB</span><span class="flag flag-b">UNDER</span><span class="flag flag-a">conf_50-55</span></div>
+        <div class="why">11/13. OU 46.2% secondary. WPB + UNDER + calibrated confidence.</div>
+        <div class="act act-g">ML $75 + UNDER $37.50.</div>
       </div></div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:#1A5276;color:#fff">9</div>
-        <div class="cc-n g">WPA fired + RED mismatch + UNDER</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">84.2%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">19</span></div><div class="bg"><span class="bg-l">OU</span><span class="bg-v a">66.7%</span></div></div>
+        <div class="cc-n g">WP-Override B + Dome + RCF</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">84.6%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">13</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-g">WPA</span><span class="flag flag-a">RED_mm&gt;1.5</span><span class="flag flag-b">UNDER</span></div>
-        <div class="why">16/19 correct AND 66.7% O/U — best-balanced large-n combo.</div>
-        <div class="act act-g">ML $75 + UNDER $50</div>
+        <div class="flags"><span class="flag flag-g">WPB</span><span class="flag flag-p">dome</span><span class="flag flag-a">RCF</span></div>
+        <div class="why">11/13 AND 63.6% O/U — solid dual play. WPB + dome + xFIP correction.</div>
+        <div class="act act-g">ML $75 + O/U direction $50.</div>
       </div></div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:#2E4057;color:#fff">10</div>
-        <div class="cc-n g">Home pred + Heavy Favorite + UNDER</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">85.7%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">14</span></div><div class="bg"><span class="bg-l">OU</span><span class="bg-v a">66.7%</span></div></div>
+        <div class="cc-n g">Home pred + WP gap ≥20% + WPA <span class="cnew">n=25★</span></div>
+        <div class="bgs"><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">84.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">25</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-b">home_pred</span><span class="flag flag-a">HFCF</span><span class="flag flag-b">UNDER</span></div>
-        <div class="why">12/14 correct AND 66.7% O/U.</div>
-        <div class="act act-g">ML $75 + UNDER $50</div>
+        <div class="flags"><span class="flag flag-b">home_pred</span><span class="flag flag-g">wp_gap≥20</span><span class="flag flag-g">WPA</span></div>
+        <div class="why">21/25 — <b>largest sample of any top-10 ML combo</b>. Pure ML (OU 50%) — most reliable by sample size.</div>
+        <div class="act act-g">ML $75 only. Most reliable by sample.</div>
       </div></div>
+      <div class="notice" style="margin-top:4px"><div class="notice-b"><b style="color:var(--color-text-primary)">Cross-referenced with the BC/BW analysis (1363g):</b> WPA+UNDER remains the framework's strongest dual-market backbone — both combos featuring it (MC2, MC6) have zero recorded joint failures. The one caution flag is <b>Home Fortress + WPA</b> (MC4) — strong on its own (86.7%) but a known both-wrong risk when away_surge co-fires, so treat it as conditional on away_surge being absent.</div></div>
       </div>
 
       <!-- ══ O/U 1-5 ══ -->
       <div class="panel" id="p3">
-      <div class="sh">Top 10 O/U combinations — 931 games</div>
+      <div class="sh">Top 10 O/U combinations — 1363 games, ranked by O/U win rate (n≥11) · away_surge now anchors 4 of the top 10</div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:linear-gradient(135deg,#FFD700,#FFA500);color:#000">1</div>
-        <div class="cc-n g">Conf 50–55 + GVI&lt;35 + RCF active</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v g">84.6%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">13</span></div></div>
+        <div class="cc-n b">Conf 50–55 + GVI&lt;35 + RCF</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v b">81.2%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">16</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-a">conf_50-55</span><span class="flag flag-r">GVI&lt;35</span><span class="flag flag-a">RCF_active</span></div>
-        <div class="why">11/13 correct. ML weak (53.8%) — skip ML.</div>
+        <div class="flags"><span class="flag flag-a">conf_50-55</span><span class="flag flag-r">GVI&lt;35</span><span class="flag flag-a">RCF</span></div>
+        <div class="why">13/16 — UNDER-safe in compressed environment. ML 50% — skip ML entirely.</div>
         <div class="act act-g">O/U direction $75 only.</div>
       </div></div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:linear-gradient(135deg,#C0C0C0,#888)">2</div>
-        <div class="cc-n g">Conf 50–55 + Dome + RCF active</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v g">84.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">25</span></div><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">69.2%</span></div></div>
+        <div class="cc-n b">OU-B + GVI≥65 + Surging Away SP <span class="cnew">NEW</span></div>
+        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v b">75.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">12</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-a">conf_50-55</span><span class="flag flag-p">dome</span><span class="flag flag-a">RCF_active</span></div>
-        <div class="why">21/25 correct AND 69.2% ML — best dual-market large-n combo.</div>
-        <div class="act act-g">O/U direction $75 + ML $75</div>
-      </div></div>
-      <div class="cc"><div class="cc-h">
-        <div class="rk" style="background:linear-gradient(135deg,#CD7F32,#A0522D);color:#fff">3</div>
-        <div class="cc-n g">Heavy Favorite + Conf 50–55 + TMF</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v g">80.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">15</span></div><div class="bg"><span class="bg-l">ML</span><span class="bg-v a">62.5%</span></div></div>
-      </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-a">HFCF</span><span class="flag flag-a">conf_50-55</span><span class="flag flag-r">TMF</span></div>
-        <div class="why">12/15 correct, ML 62.5%.</div>
-        <div class="act act-g">O/U direction $75. ML $37.50.</div>
-      </div></div>
-      <div class="cc"><div class="cc-h">
-        <div class="rk" style="background:#378ADD">4</div>
-        <div class="cc-n g">Heavy Favorite + Line 8–9 + TMF</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v g">78.9%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">19</span></div><div class="bg"><span class="bg-l">ML</span><span class="bg-v a">45.0%</span></div></div>
-      </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-a">HFCF</span><span class="flag flag-p">line_8-9</span><span class="flag flag-r">TMF</span></div>
-        <div class="why">15/19 correct. ML poor (45.0%) — pure O/U play.</div>
+        <div class="flags"><span class="flag flag-b">OU-B</span><span class="flag flag-r">GVI≥65</span><span class="flag flag-r">away_surge</span></div>
+        <div class="why">9/12. ML weak (33.3%) — away_surge is a broken ML signal but a genuinely useful O/U signal here. O/U-only play.</div>
         <div class="act act-g">O/U direction $75 only. Skip ML.</div>
       </div></div>
       <div class="cc"><div class="cc-h">
-        <div class="rk" style="background:#7D3C98;color:#fff">5</div>
-        <div class="cc-n g">Heavy Favorite + Dome + RCF active</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v g">78.6%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">14</span></div><div class="bg"><span class="bg-l">ML</span><span class="bg-v a">52.9%</span></div></div>
+        <div class="rk" style="background:linear-gradient(135deg,#CD7F32,#A0522D);color:#fff">3</div>
+        <div class="cc-n b">GVI≥65 + Surging Away SP + MCF <span class="cnew">NEW</span></div>
+        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v b">75.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">12</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-a">HFCF</span><span class="flag flag-p">dome</span><span class="flag flag-a">RCF_active</span></div>
-        <div class="why">11/14 correct, ML 52.9% — coin flip, skip ML.</div>
-        <div class="act act-g">O/U direction $75. Skip ML.</div>
+        <div class="flags"><span class="flag flag-r">GVI≥65</span><span class="flag flag-r">away_surge</span><span class="flag flag-r">MCF</span></div>
+        <div class="why">9/12 AND ML 57.1% (n=14) — both markets viable here despite away_surge's usual ML risk.</div>
+        <div class="act act-g">O/U direction $75 + ML $50.</div>
+      </div></div>
+      <div class="cc"><div class="cc-h">
+        <div class="rk" style="background:#378ADD">4</div>
+        <div class="cc-n b">UNDER + Line 8–9 + Surging Away SP <span class="cnew">NEW</span></div>
+        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v b">73.3%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">15</span></div></div>
+      </div><div class="cc-b">
+        <div class="flags"><span class="flag flag-b">UNDER</span><span class="flag flag-p">line_8-9</span><span class="flag flag-r">away_surge</span></div>
+        <div class="why">11/15 AND ML 52.9%. UNDER framing with away_surge works better than OVER framing here (see the reverse O/U tab for the failure case).</div>
+        <div class="act act-g">UNDER $75 + ML $37.50.</div>
+      </div></div>
+      <div class="cc"><div class="cc-h">
+        <div class="rk" style="background:#7D3C98;color:#fff">5</div>
+        <div class="cc-n b">WP-Override B + OU-B + Dome</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v b">72.7%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">11</span></div></div>
+      </div><div class="cc-b">
+        <div class="flags"><span class="flag flag-g">WPB</span><span class="flag flag-b">OU-B</span><span class="flag flag-p">dome</span></div>
+        <div class="why">8/11 AND ML 66.7% — both markets solid in dome with WPB + wind signal.</div>
+        <div class="act act-g">O/U direction $75 + ML $50.</div>
       </div></div>
       </div>
 
       <!-- ══ O/U 6-10 ══ -->
       <div class="panel" id="p4">
-      <div class="sh">O/U combos 6–10 — 931 games</div>
+      <div class="sh">O/U combos 6–10 — 1363 games</div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:#145A32;color:#fff">6</div>
-        <div class="cc-n g">Heavy Favorite + RED mismatch + TMF</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v g">77.8%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">18</span></div><div class="bg"><span class="bg-l">ML</span><span class="bg-v a">50.0%</span></div></div>
+        <div class="cc-n b">TMS home higher + WPA + RCF</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v b">72.2%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">18</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-a">HFCF</span><span class="flag flag-a">RED_mm&gt;1.5</span><span class="flag flag-r">TMF</span></div>
-        <div class="why">14/18 correct. ML weak (50.0%).</div>
-        <div class="act act-g">O/U direction $75 only.</div>
+        <div class="flags"><span class="flag flag-b">TMS_home_hi</span><span class="flag flag-g">WPA</span><span class="flag flag-a">RCF</span></div>
+        <div class="why">13/18 AND ML 57.9% (n=19). Momentum + surging ace + xFIP correction. Both markets viable.</div>
+        <div class="act act-g">O/U direction $75 + ML $50.</div>
       </div></div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:#922B21;color:#fff">7</div>
-        <div class="cc-n g">Heavy Favorite + TMS home higher + Conf 50–55</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v g">76.9%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">13</span></div><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">64.3%</span></div></div>
+        <div class="cc-n b">WP-Override B + OU-B + UNDER</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v b">72.2%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">18</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-a">HFCF</span><span class="flag flag-b">TMS_home_hi</span><span class="flag flag-a">conf_50-55</span></div>
-        <div class="why">10/13 correct, ML solid at 64.3%.</div>
-        <div class="act act-g">O/U direction $75 + ML $50</div>
+        <div class="flags"><span class="flag flag-g">WPB</span><span class="flag flag-b">OU-B</span><span class="flag flag-b">UNDER</span></div>
+        <div class="why">13/18. Environmental signal + UNDER direction + WPB. ML 55.6% secondary.</div>
+        <div class="act act-g">UNDER $75 + ML $37.50.</div>
       </div></div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:#0E6655;color:#fff">8</div>
-        <div class="cc-n g">WP gap ≥20% + UNDER + Conf 55–65</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v g">76.5%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">17</span></div><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">70.6%</span></div></div>
+        <div class="cc-n b">RED mismatch &gt;1.5 + Conf 50–55 + GVI&lt;35</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v b">71.4%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">14</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-g">wp_gap≥20</span><span class="flag flag-b">UNDER</span><span class="flag flag-a">conf_55-65</span></div>
-        <div class="why">13/17 correct AND 70.6% ML — both markets above 70%.</div>
-        <div class="act act-g">O/U direction $75 + ML $50</div>
+        <div class="flags"><span class="flag flag-a">RED_mm&gt;1.5</span><span class="flag flag-a">conf_50-55</span><span class="flag flag-r">GVI&lt;35</span></div>
+        <div class="why">10/14 AND ML 64.3%. SP quality gap + suppressed scoring environment — reliably UNDER.</div>
+        <div class="act act-g">O/U direction $75 + ML $50.</div>
       </div></div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:#4A235A;color:#fff">9</div>
-        <div class="cc-n g">OU-B active + Conf 50–55 + TMF <span class="cnew">★ n=35</span></div>
-        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v g">74.3%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">35</span></div><div class="bg"><span class="bg-l">ML</span><span class="bg-v g">71.1%</span></div></div>
+        <div class="cc-n b">Conf 50–55 + Dome + RCF <span class="cnew">n=31★ largest n</span></div>
+        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v b">71.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">31</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-b">OU-B</span><span class="flag flag-a">conf_50-55</span><span class="flag flag-r">TMF</span></div>
-        <div class="why">26/35 correct, AND 71.1% ML — <b>largest sample in this list (n=35)</b>.</div>
-        <div class="act act-g">O/U direction $75 + ML $75 (highest-confidence recurring bet)</div>
+        <div class="flags"><span class="flag flag-a">conf_50-55</span><span class="flag flag-p">dome</span><span class="flag flag-a">RCF</span></div>
+        <div class="why">22/31 AND 60.6% ML — <b>largest sample in the O/U top 10</b>. Highest-confidence recurring dual play by volume.</div>
+        <div class="act act-g">O/U direction $75 + ML $75.</div>
       </div></div>
       <div class="cc"><div class="cc-h">
         <div class="rk" style="background:#2E4057;color:#fff">10</div>
-        <div class="cc-n g">TMF + Dome + RCF active</div>
-        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v g">75.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">20</span></div><div class="bg"><span class="bg-l">ML</span><span class="bg-v a">54.5%</span></div></div>
+        <div class="cc-n b">WP gap ≥20% + Away surge RED + MCF</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">OU</span><span class="bg-v b">71.4%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">14</span></div></div>
       </div><div class="cc-b">
-        <div class="flags"><span class="flag flag-r">TMF</span><span class="flag flag-p">dome</span><span class="flag flag-a">RCF_active</span></div>
-        <div class="why">15/20 correct. ML weak (54.5%).</div>
-        <div class="act act-g">O/U direction $75 only.</div>
+        <div class="flags"><span class="flag flag-g">wp_gap≥20</span><span class="flag flag-r">away_surge</span><span class="flag flag-r">MCF</span></div>
+        <div class="why">10/14. ML weak (33.3%) — same combo type flagged as an ML fade in the reverse ML tab; confirmed strong for O/U specifically.</div>
+        <div class="act act-g">O/U direction $75 only. Skip ML.</div>
       </div></div>
+      <div class="notice" style="margin-top:4px"><div class="notice-b"><b style="color:var(--color-text-primary)">New pattern this update:</b> away_surge shows up in 4 of the top 10 O/U combos now (OC2, OC3, OC4, OC10) — confirming a theme from the deep slump/surge analysis: <b>away_surge is a broken ML signal but a genuinely useful O/U signal</b> when the context is right (GVI≥65, MCF, or Line 8-9+UNDER). Always split-bet these: take the O/U side, skip or fade the ML side.</div></div>
       </div>
 
-      <!-- ══ FADE SIGNALS ══ -->
+      <!-- ══ REVERSE ML SIGNALS ══ -->
       <div class="panel" id="p5">
-      <div class="sh">10 fade signals — 931 games · model's original pick reversed</div>
+      <div class="sh">10 reverse ML signals — 1363 games · model's direction is wrong → REVERSE the model's actual named team</div>
       <div class="alarm">
-        <div class="alarm-t">Common thread: every fade signal shares "Away SP surging (RED&lt;–1.0)"</div>
-        <div class="alarm-b">All 10 reverse signals fire when the away starter is confirmed surging AND the model still backs HOME. This is the single strongest "model is about to be wrong" tell in the 931-game dataset — consistent with the framework's R14_AWAY_ACE_HARD rule.</div>
+        <div class="alarm-t">Rule (unchanged since v3.13): never hardcode "bet AWAY" — always check the actual recommendation first, then flip it</div>
+        <div class="alarm-b">away_surge (surging away starter) anchors all 10 signals, unchanged from every prior review. <b>Correct rule: read the recommendation for that specific game, then bet the OTHER team.</b> FD9 (OU-B + Line 8-9 + Away surge, n=40★) remains the largest-sample fade; FD1 (HFCF + WPA + Away surge, 83.3%) is the highest-rate fade this update. <b>New this update:</b> cross-referencing against the both-correct/both-wrong joint analysis shows 2 of these 10 fades (FD2 and FD4) are also top-5 both-wrong combos — the failure there isn't clean enough to confidently reverse; a full PASS is safer for those two specifically.</div>
       </div>
 
       <div class="fade-vs">
-      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">1</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">OU-A fired + Surging Away SP + Away RED&lt;–1.0</div><div class="bgs"><div class="bg"><span class="bg-l">n</span><span class="bg-v">18</span></div></div></div><div class="cc-b"><div class="why">Away SP genuinely surging, confirmed by both surge_a and OU-A flags simultaneously.</div><div class="flags" style="margin-top:6px"><span class="flag flag-r">Model backs HOME — 11.1% correct (2/18)</span></div></div></div>
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">1</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">HFCF + WPA + Away surge RED</div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">16.7%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">12</span></div></div></div><div class="cc-b"><div class="why">Correct only 2/12. All 12 named home — fully one-sided. Even two of the framework's strongest ML flags (HFCF, WPA) fail together when a genuinely surging away arm is present.</div></div></div>
       <div class="fade-arrow">→</div>
-      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">Bet AWAY team ML $75</div><div class="bgs"><div class="bg"><span class="bg-l">Reverse</span><span class="bg-v g">88.9%</span></div></div></div><div class="cc-b"><div class="why">Skip O/U (38.9%). <b>Strongest fade in 931 games.</b></div></div></div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE model pick ($75). Strongest fade this update.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">83.3%</span></div></div></div><div class="cc-b"><div class="why"><b>#1 this update.</b></div></div></div>
       </div>
 
       <div class="fade-vs">
-      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">2</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">WP gap ≥20% + OU-B + Away RED&lt;–1.0</div><div class="bgs"><div class="bg"><span class="bg-l">n</span><span class="bg-v">15</span></div></div></div><div class="cc-b"><div class="why">Large WP gap + environmental signal + away SP confirmed surging.</div><div class="flags" style="margin-top:6px"><span class="flag flag-r">Model backs HOME — 13.3% correct (2/15)</span></div></div></div>
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">2</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">OU-A + OU-B + Surging Away SP <span class="cnew">large n</span></div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">20.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">20</span></div></div></div><div class="cc-b"><div class="why">Correct only 4/20. Named home 8×, away 12× — MIXED. Also the largest-sample both-wrong combo (50% BW) from the joint analysis — a double-confirmed danger zone.</div></div></div>
       <div class="fade-arrow">→</div>
-      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">Bet AWAY team ML $75</div><div class="bgs"><div class="bg"><span class="bg-l">Reverse</span><span class="bg-v g">86.7%</span></div></div></div><div class="cc-b"><div class="why">Skip O/U (40.0%).</div></div></div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE ML only — check named team each time. Consider PASS given high BW rate.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">80.0%</span></div></div></div><div class="cc-b"><div class="why">Do not default to away; verify per game.</div></div></div>
       </div>
 
       <div class="fade-vs">
-      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">3</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">OU-B + RCF active + Away RED&lt;–1.0</div><div class="bgs"><div class="bg"><span class="bg-l">n</span><span class="bg-v">18</span></div></div></div><div class="cc-b"><div class="why">Environmental signal + home SP overvalued (RCF) + away SP confirmed surging.</div><div class="flags" style="margin-top:6px"><span class="flag flag-r">Model backs HOME — 16.7% correct (3/18)</span></div></div></div>
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">3</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">TMS home higher + RCF + Away surge RED</div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">22.2%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">18</span></div></div></div><div class="cc-b"><div class="why">Correct only 4/18. Named home 11×, away 7× — MIXED, roughly 6/10 are home-named.</div></div></div>
       <div class="fade-arrow">→</div>
-      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">Bet AWAY team ML $75</div><div class="bgs"><div class="bg"><span class="bg-l">Reverse</span><span class="bg-v g">83.3%</span></div></div></div><div class="cc-b"><div class="why">Skip O/U (44.4%).</div></div></div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE model's named team. Verify per game.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">77.8%</span></div></div></div><div class="cc-b"><div class="why">Mixed directional — always check actual pick.</div></div></div>
       </div>
 
       <div class="fade-vs">
-      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">4</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">OU-A fired + RCF active + Away RED&lt;–1.0</div><div class="bgs"><div class="bg"><span class="bg-l">n</span><span class="bg-v">21</span></div></div></div><div class="cc-b"><div class="why">Pitcher-mismatch signal + home SP overvalued + away SP confirmed surging.</div><div class="flags" style="margin-top:6px"><span class="flag flag-r">Model backs HOME — 19.0% correct (4/21)</span></div></div></div>
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">4</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">WP gap ≥20% + TMS home higher + Away surge RED</div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">23.1%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">13</span></div></div></div><div class="cc-b"><div class="why">Correct only 3/13. Named home 5×, away 8× — MIXED. Also a top-5 both-wrong combo (53.8% BW) — the reversal isn't as clean as the fade% alone suggests.</div></div></div>
       <div class="fade-arrow">→</div>
-      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">Bet AWAY team ML $75</div><div class="bgs"><div class="bg"><span class="bg-l">Reverse</span><span class="bg-v g">81.0%</span></div></div></div><div class="cc-b"><div class="why">Skip O/U (47.6%). n=21 confirms this is repeatable.</div></div></div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE cautiously — check named pick.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">76.9%</span></div></div></div><div class="cc-b"><div class="why">High BW rate — treat with extra caution.</div></div></div>
       </div>
 
       <div class="fade-vs">
-      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">5</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">RED mismatch&gt;1.5 + OU-B + Away RED&lt;–1.0 <span class="cnew">★ n=41</span></div><div class="bgs"><div class="bg"><span class="bg-l">n</span><span class="bg-v">41</span></div></div></div><div class="cc-b"><div class="why">Confirmed SP quality gap + environmental signal + away pitcher is the surging side.</div><div class="flags" style="margin-top:6px"><span class="flag flag-r">Model backs HOME — 24.4% correct (10/41)</span></div></div></div>
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">5</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">Home Fortress + Away surge RED + MCF</div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">23.1%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">13</span></div></div></div><div class="cc-b"><div class="why">Correct only 3/13. Named home 2×, away 11× — mostly one-sided.</div></div></div>
       <div class="fade-arrow">→</div>
-      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">Bet AWAY team ML $75</div><div class="bgs"><div class="bg"><span class="bg-l">Reverse</span><span class="bg-v g">75.6%</span></div></div></div><div class="cc-b"><div class="why">Skip O/U (47.5%). <b>Largest sample of any reverse signal — highest-confidence fade.</b></div></div></div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE model's named team — usually the home fortress side.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">76.9%</span></div></div></div><div class="cc-b"><div class="why">Mostly reverse=away→home. Still confirm.</div></div></div>
       </div>
 
       <div class="fade-vs">
-      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">6</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">Golden Condition + Away RED&lt;–1.0</div><div class="bgs"><div class="bg"><span class="bg-l">n</span><span class="bg-v">31</span></div></div></div><div class="cc-b"><div class="why">Golden Condition active AND away pitcher is the surging side.</div><div class="flags" style="margin-top:6px"><span class="flag flag-r">Model backs HOME — 22.6% correct (7/31)</span></div></div></div>
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">6</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">HFCF + OU-A + Away surge RED</div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">23.5%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">17</span></div></div></div><div class="cc-b"><div class="why">Correct only 4/17. Named home 0×, away 17× — fully one-sided. Safe to generalize loosely as "fade home" for this specific combo.</div></div></div>
       <div class="fade-arrow">→</div>
-      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">Bet AWAY team ML $75</div><div class="bgs"><div class="bg"><span class="bg-l">Reverse</span><span class="bg-v g">77.4%</span></div></div></div><div class="cc-b"><div class="why">Skip O/U (41.9%).</div></div></div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE — consistently the home team here.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">76.5%</span></div></div></div><div class="cc-b"><div class="why">Fully one-sided.</div></div></div>
       </div>
 
       <div class="fade-vs">
-      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">7</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">Home pred + OU-A fired + Away RED&lt;–1.0</div><div class="bgs"><div class="bg"><span class="bg-l">n</span><span class="bg-v">16</span></div></div></div><div class="cc-b"><div class="why">Model already favors home AND OU-A fires AND away SP confirmed surging.</div><div class="flags" style="margin-top:6px"><span class="flag flag-r">Model backs HOME — 25.0% correct (4/16)</span></div></div></div>
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">7</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">WPA + OU-B + Away surge RED</div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">25.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">12</span></div></div></div><div class="cc-b"><div class="why">Correct only 3/12. Named home 1×, away 11× — mostly one-sided.</div></div></div>
       <div class="fade-arrow">→</div>
-      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">Bet AWAY team ML $75</div><div class="bgs"><div class="bg"><span class="bg-l">Reverse</span><span class="bg-v g">75.0%</span></div></div></div><div class="cc-b"><div class="why">Skip O/U (31.2%).</div></div></div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE model's named team — usually home.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">75.0%</span></div></div></div><div class="cc-b"><div class="why">Mostly one-sided.</div></div></div>
       </div>
 
       <div class="fade-vs">
-      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">8</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">Home Fortress + OU-B + Away RED&lt;–1.0</div><div class="bgs"><div class="bg"><span class="bg-l">n</span><span class="bg-v">16</span></div></div></div><div class="cc-b"><div class="why">Home is a proven fortress AND environmental signal fires AND away SP confirmed surging.</div><div class="flags" style="margin-top:6px"><span class="flag flag-r">Model backs HOME — 25.0% correct (4/16)</span></div></div></div>
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">8</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">Dome + Away surge RED + MCF</div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">25.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">12</span></div></div></div><div class="cc-b"><div class="why">Correct only 3/12. Named home 1×, away 11× — mostly one-sided.</div></div></div>
       <div class="fade-arrow">→</div>
-      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">Bet AWAY team ML $75</div><div class="bgs"><div class="bg"><span class="bg-l">Reverse</span><span class="bg-v g">75.0%</span></div></div></div><div class="cc-b"><div class="why">Skip O/U (46.7%).</div></div></div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE model's named team — usually home.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">75.0%</span></div></div></div><div class="cc-b"><div class="why">Mostly one-sided.</div></div></div>
       </div>
 
       <div class="fade-vs">
-      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">9</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">OU-A fired + Line 8–9 + Away RED&lt;–1.0</div><div class="bgs"><div class="bg"><span class="bg-l">n</span><span class="bg-v">29</span></div></div></div><div class="cc-b"><div class="why">Pitcher-mismatch signal at a standard line with away pitcher confirmed surging.</div><div class="flags" style="margin-top:6px"><span class="flag flag-r">Model backs HOME — 24.1% correct (7/29)</span></div></div></div>
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">9</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">OU-B + Line 8–9 + Away surge RED <span class="cnew">n=40★ largest</span></div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">27.5%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">40</span></div></div></div><div class="cc-b"><div class="why">Correct only 11/40 — <b>the largest-sample fade in the whole dataset.</b> Named home 10×, away 30× — MIXED, model named away 75% of the time here.</div></div></div>
       <div class="fade-arrow">→</div>
-      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">Bet AWAY team ML $75</div><div class="bgs"><div class="bg"><span class="bg-l">Reverse</span><span class="bg-v g">75.9%</span></div></div></div><div class="cc-b"><div class="why">Skip O/U (42.9%). n=29 — a reliable repeatable pattern.</div></div></div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE — always check the named team. Skip O/U.</div><div class="bgs"><div class="bg"><span class="bg-v g">72.5%</span></div></div></div><div class="cc-b"><div class="why">n=40 makes this the highest-confidence fade once verified per game.</div></div></div>
       </div>
 
       <div class="fade-vs">
-      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">10</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">Line 8–9 + RCF active + Away RED&lt;–1.0</div><div class="bgs"><div class="bg"><span class="bg-l">n</span><span class="bg-v">13</span></div></div></div><div class="cc-b"><div class="why">Standard line + home SP overvalued + away SP confirmed surging.</div><div class="flags" style="margin-top:6px"><span class="flag flag-r">Model backs HOME — 23.1% correct (3/13)</span></div></div></div>
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">10</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">OU-A + TMF + Away surge RED</div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">27.8%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">18</span></div></div></div><div class="cc-b"><div class="why">Correct only 5/18. Named home 3×, away 15× — mostly one-sided.</div></div></div>
       <div class="fade-arrow">→</div>
-      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">Bet AWAY team ML $75</div><div class="bgs"><div class="bg"><span class="bg-l">Reverse</span><span class="bg-v g">76.9%</span></div></div></div><div class="cc-b"><div class="why">O/U borderline (61.5%) — optional small stake.</div></div></div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE model's named team — usually home.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">72.2%</span></div></div></div><div class="cc-b"><div class="why">Mostly one-sided.</div></div></div>
       </div>
 
       <div style="font-size:9.5px;color:var(--color-text-secondary);margin-top:10px;line-height:1.72;padding:8px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-        <b style="color:var(--color-text-primary)">#5</b> (RED mismatch + OU-B + Away surge, n=41 ★) — largest sample, highest-confidence fade.
-        <b style="color:var(--color-text-primary)">#1</b> (OU-A + Away surge, 88.9%) — strongest reverse rate.
-        All 10 signals confirmed across 931 games — every one requires a confirmed surging away SP.
+        <b style="color:var(--color-text-primary)">away_surge anchors all 10</b> — unchanged from every prior review. New this update: cross-referencing against the both-correct/both-wrong joint analysis shows <b style="color:#e24b4a">2 of these 10 fade signals (FD2 and FD4) are also top-5 both-wrong combos</b> — meaning the failure there isn't clean enough to confidently reverse on. For those two specifically, a full PASS is safer than a confident reverse bet.
       </div>
       </div>
 
-      <!-- ══ TOP 10 TEAMS ══ -->
+      <!-- ══ REVERSE O/U SIGNALS (NEW) ══ -->
+      <div class="panel" id="p5b">
+      <div class="sh">10 reverse O/U signals — 1363 games (new this update) · flip the OVER/UNDER call the model actually made, not the ML pick</div>
+      <div class="notice">
+        <div class="notice-t">New signal family: the model's O/U call itself is wrong under these combos — flip direction, not team</div>
+        <div class="notice-b">Distinct from the reverse ML tab. Rule: bet the opposite of whatever OVER/UNDER direction the model actually called for that game — never assume a fixed direction. Also new this update: <b>a GVI&lt;35 + TMF family (FDOU5/FDOU6) where the model's UNDER call fails and OVER is the correct reverse</b> — the opposite direction from most other O/U fades here, worth flagging since it contradicts the general OVER-bias correction applied elsewhere in the framework.</div>
+      </div>
+
+      <div class="fade-vs">
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">1</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">GVI≥65 + Conf 55–65 + Away surge RED</div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">14.3%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">14</span></div></div></div><div class="cc-b"><div class="why">O/U call correct only 2/14. Called OVER 11×, UNDER 3× — mostly OVER-named. Strongest O/U fade found in the entire audit.</div></div></div>
+      <div class="fade-arrow">→</div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE the model's called direction — mostly means bet UNDER here.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">85.7%</span></div></div></div><div class="cc-b"><div class="why">Confirm each game's actual call first.</div></div></div>
+      </div>
+
+      <div class="fade-vs">
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">2</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">TMS home higher + Conf 55–65 + Away surge RED</div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">15.4%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">13</span></div></div></div><div class="cc-b"><div class="why">Correct only 2/13. Called OVER 7×, UNDER 6× — genuinely mixed.</div></div></div>
+      <div class="fade-arrow">→</div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE — check the actual O/U call each game.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">84.6%</span></div></div></div><div class="cc-b"><div class="why">Close to a 50/50 split on which direction was named.</div></div></div>
+      </div>
+
+      <div class="fade-vs">
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">3</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">RED mismatch + Conf 55–65 + Away surge RED <span class="cnew">largest n</span></div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">15.8%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">19</span></div></div></div><div class="cc-b"><div class="why">Correct only 3/19 — <b>the largest-sample O/U fade found.</b> Called OVER 11×, UNDER 8× — mixed.</div></div></div>
+      <div class="fade-arrow">→</div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE — highest-confidence O/U fade by sample size.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">84.2%</span></div></div></div><div class="cc-b"><div class="why">Always verify the model's actual call per game before flipping.</div></div></div>
+      </div>
+
+      <div class="fade-vs">
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">4</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">OVER + Conf 55–65 + Away surge RED <span class="cnew">one-sided</span></div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">22.2%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">18</span></div></div></div><div class="cc-b"><div class="why">Correct only 4/18. By definition all 18 are OVER-named — fully one-sided, unambiguous flip.</div></div></div>
+      <div class="fade-arrow">→</div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE — bet UNDER $75. Unambiguous.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">77.8%</span></div></div></div><div class="cc-b"><div class="why">This specific combo names OVER every time.</div></div></div>
+      </div>
+
+      <div class="fade-vs">
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">5</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">OU-B + GVI&lt;35 + TMF <span class="cnew">one-sided UNDER</span></div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">21.4%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">14</span></div></div></div><div class="cc-b"><div class="why">Correct only 3/14. Called UNDER 12×, OVER 2× — mostly one-sided the OTHER way. A rare combo where UNDER is the failing call, not OVER.</div></div></div>
+      <div class="fade-arrow">→</div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE — bet OVER $75. Opposite pattern from most other fades.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">78.6%</span></div></div></div><div class="cc-b"><div class="why">This combo's model call skews UNDER and fails.</div></div></div>
+      </div>
+
+      <div class="fade-vs">
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">6</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">UNDER + GVI&lt;35 + TMF <span class="cnew">one-sided</span></div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">23.8%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">21</span></div></div></div><div class="cc-b"><div class="why">Correct only 5/21. All 21 UNDER-named by definition — fully one-sided, same underlying pattern as #5, larger sample.</div></div></div>
+      <div class="fade-arrow">→</div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE — bet OVER $75.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">76.2%</span></div></div></div><div class="cc-b"><div class="why">n=21 makes this the most reliable "UNDER fails" signal in the dataset — GVI&lt;35+TMF apparently over-predicts UNDER.</div></div></div>
+      </div>
+
+      <div class="fade-vs">
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">7</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">WP gap≥20% + WPB + GVI≥65</div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">25.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">16</span></div></div></div><div class="cc-b"><div class="why">Correct only 4/16. Called OVER 15×, UNDER 1× — nearly one-sided OVER.</div></div></div>
+      <div class="fade-arrow">→</div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE — bet UNDER $75 in almost every case.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">75.0%</span></div></div></div><div class="cc-b"><div class="why">Nearly one-sided OVER.</div></div></div>
+      </div>
+
+      <div class="fade-vs">
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">8</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">Slumping SP + WPB + Line 8–9</div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">23.5%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">17</span></div></div></div><div class="cc-b"><div class="why">Correct only 4/17. Called OVER 10×, UNDER 7× — mixed.</div></div></div>
+      <div class="fade-arrow">→</div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE — verify the model's actual call each game.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">76.5%</span></div></div></div><div class="cc-b"><div class="why">Mixed directional.</div></div></div>
+      </div>
+
+      <div class="fade-vs">
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">9</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">HFCF + Home Fortress + WPB</div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">25.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">12</span></div></div></div><div class="cc-b"><div class="why">Correct only 3/12. Called OVER 5×, UNDER 7× — mixed. Three normally-strong ML flags stacked together mislead the O/U call specifically.</div></div></div>
+      <div class="fade-arrow">→</div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE — verify per game. Fine for ML, fade for O/U.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">75.0%</span></div></div></div><div class="cc-b"><div class="why">This combo is fine for ML but should be faded for O/U.</div></div></div>
+      </div>
+
+      <div class="fade-vs">
+      <div class="rc"><div class="rc-h"><div class="rk" style="background:#e24b4a">10</div><div style="flex:1;font-size:11px;font-weight:700;color:#e24b4a">Conf 55–65 + Surging SP + Away surge RED <span class="cnew">⚠ data caveat</span></div><div class="bgs"><div class="bg"><span class="bg-l">Model</span><span class="bg-v r">21.4%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">14</span></div></div></div><div class="cc-b"><div class="why">Correct only 3/14. Called OVER 8×, UNDER 6× — mixed. Source analysis lists "surging SP" and "away surge RED" as separate conditions though they may reflect the same underlying signal — treat with slightly less confidence than the other 9 until independently re-verified.</div></div></div>
+      <div class="fade-arrow">→</div>
+      <div class="cc"><div class="cc-h"><div style="font-size:11px;font-weight:700;flex:1" class="g">REVERSE — verify per game.</div><div class="bgs"><div class="bg"><span class="bg-l">Fade</span><span class="bg-v g">78.6%</span></div></div></div><div class="cc-b"><div class="why">Weakest-verified of the 10 — data-quality caveat noted above.</div></div></div>
+      </div>
+
+      <div style="font-size:9.5px;color:var(--color-text-secondary);margin-top:10px;line-height:1.72;padding:8px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+        <b style="color:var(--color-text-primary)">New structural finding:</b> a distinct family of reverse O/U signals has emerged around <b>Conf 55–65 + away_surge</b> (FDOU1, FDOU2, FDOU3 — 3 of the top 10), separate from the "away surge RED" ML-fade family. There's also a genuinely new pattern at FDOU5/FDOU6 — <b>GVI&lt;35 + TMF</b> combos where the model's UNDER call fails and OVER is the correct reverse — the opposite direction from most other O/U fades in this dataset, worth flagging to the framework since it contradicts the general OVER-bias correction being applied elsewhere.
+      </div>
+      </div>
+
+      <!-- ══ BC/BW TREND (NEW) ══ -->
+      <div class="panel" id="bctrend">
+      <div class="kpi">
+        <div class="kc"><div class="kl">Total graded</div><div class="kv b">1239</div></div>
+        <div class="kc"><div class="kl">Baseline BC%</div><div class="kv g">26.5%</div></div>
+        <div class="kc"><div class="kl">Baseline BW%</div><div class="kv a">24.7%</div></div>
+        <div class="kc"><div class="kl">Jul 21–28 BW</div><div class="kv r">25.0%</div></div>
+      </div>
+      <p style="font-size:10px;color:var(--color-text-secondary);margin-bottom:10px;line-height:1.6">New this update: a joint-outcome lens on top of the existing single-market combos — <b style="color:var(--color-text-primary)">Both-Correct (BC)</b> tracks when ML and O/U are correct on the same game, <b style="color:var(--color-text-primary)">Both-Wrong (BW)</b> tracks when they fail together. See the two new tabs for the actual combo codes.</p>
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-secondary);margin:10px 0 6px">Recent 3-week trend</div>
+      <table class="ptbl">
+      <thead><tr><th>Period</th><th>Stk ML%</th><th>n</th><th>Stk OU%</th><th>n</th><th>BC</th><th>BW</th><th>n</th></tr></thead>
+      <tbody>
+      <tr class="lo"><td>Jul 6–13</td><td>49.3</td><td>71</td><td class="r">44.8</td><td>67</td><td>28</td><td>29</td><td>92</td></tr>
+      <tr class="hi"><td>Jul 14–20</td><td class="g">59.3</td><td>27</td><td class="a">52.0</td><td>25</td><td>15</td><td>14</td><td>49</td></tr>
+      <tr class="warn"><td><b>Jul 21–28</b></td><td class="g">57.7</td><td>26</td><td class="r">41.7</td><td>24</td><td>14</td><td class="r">18</td><td>72</td></tr>
+      </tbody>
+      </table>
+      <div class="ok">
+        <div class="ok-t">ML recovering well post-All-Star-break — two straight weeks above 57%</div>
+        <div class="ok-b">Staked ML held at <b>57.7%</b> this week following 59.3% the week before — a solid rebound from the sub-50% stretch in early July. The favorite-collapse dynamic identified two weeks ago appears to have normalized.</div>
+      </div>
+      <div class="alarm">
+        <div class="alarm-t">O/U remains the weak link — 41.7% this week, BW (18) now outpacing BC (14)</div>
+        <div class="alarm-b">Staked O/U dropped to <b>41.7%</b>, and the joint-outcome ratio flipped negative — <b>18 both-wrong days vs 14 both-correct</b> across a larger 72-game graded window. This motivated the BC/BW deep dive: which flag combinations actually drive the both-correct wins vs. the both-wrong losses, so the framework can lean into the former and gate around the latter.</div>
+      </div>
+      </div>
+
+      <!-- ══ BOTH-CORRECT COMBOS (NEW) ══ -->
+      <div class="panel" id="bc">
+      <div class="sh">Top Both-Correct (BC) combos — 1239 games, min n=12 · baseline BC rate is 26.5% — everything below beats that baseline by a wide margin</div>
+      <div class="cc"><div class="cc-h">
+        <div class="rk" style="background:linear-gradient(135deg,#FFD700,#FFA500);color:#000">1</div>
+        <div class="cc-n g">WP-Override A + Line 8–9 + Conf 50–55</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">BC</span><span class="bg-v g">58.3%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">12</span></div></div>
+      </div><div class="cc-b">
+        <div class="flags"><span class="flag flag-g">WPA</span><span class="flag flag-p">line_8-9</span><span class="flag flag-a">conf_50-55</span></div>
+        <div class="why">7/12 both-correct, only 1/12 both-wrong. More than double the baseline BC rate — the strongest joint-market signal found.</div>
+        <div class="act act-g">BET BOTH: ML $75 + O/U direction $75 (full dual stake justified).</div>
+      </div></div>
+      <div class="cc"><div class="cc-h">
+        <div class="rk" style="background:linear-gradient(135deg,#C0C0C0,#888)">2</div>
+        <div class="cc-n g">WP-Override A + UNDER + Line 8–9 <span class="cnew">0 BW</span></div>
+        <div class="bgs"><div class="bg"><span class="bg-l">BC</span><span class="bg-v g">52.4%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">21</span></div></div>
+      </div><div class="cc-b">
+        <div class="why">11/21 both-correct, and remarkably <b>0/21 both-wrong</b> — this combo has never produced a joint loss in the dataset. n=21 makes it the largest reliable BC signal.</div>
+        <div class="act act-g">BET BOTH: ML $75 + UNDER $75. Zero recorded both-wrong instances.</div>
+      </div></div>
+      <div class="cc"><div class="cc-h">
+        <div class="rk" style="background:linear-gradient(135deg,#CD7F32,#A0522D);color:#fff">3</div>
+        <div class="cc-n g">Slumping SP + UNDER + RCF</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">BC</span><span class="bg-v g">55.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">20</span></div></div>
+      </div><div class="cc-b">
+        <div class="why">11/20 both-correct, only 2/20 both-wrong. A slumping pitcher confirmed by an xFIP-corrected read, pointing UNDER — both markets align cleanly.</div>
+        <div class="act act-g">BET BOTH: ML $75 + UNDER $75.</div>
+      </div></div>
+      <div class="cc"><div class="cc-h">
+        <div class="rk" style="background:#378ADD">4</div>
+        <div class="cc-n g">Home pred + WP-Override A + UNDER <span class="cnew">0 BW</span></div>
+        <div class="bgs"><div class="bg"><span class="bg-l">BC</span><span class="bg-v g">47.4%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">19</span></div></div>
+      </div><div class="cc-b">
+        <div class="why">9/19 both-correct, <b>0/19 both-wrong</b> — a second combo with zero recorded joint failures. Confirms WPA+UNDER as the framework's most reliable dual-market backbone.</div>
+        <div class="act act-g">BET BOTH: ML $75 + UNDER $75. Zero both-wrong on record.</div>
+      </div></div>
+      <div class="cc"><div class="cc-h">
+        <div class="rk" style="background:#7D3C98;color:#fff">5</div>
+        <div class="cc-n g">Conf 50–55 + UNDER + TMF</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">BC</span><span class="bg-v g">52.2%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">23</span></div></div>
+      </div><div class="cc-b">
+        <div class="why">12/23 both-correct — largest sample in the BC top tier. Calibrated confidence + UNDER + meltdown opponent.</div>
+        <div class="act act-g">BET BOTH: ML $75 + UNDER $75.</div>
+      </div></div>
+      <div class="cc"><div class="cc-h">
+        <div class="rk" style="background:#145A32;color:#fff">6</div>
+        <div class="cc-n g">HFCF + GVI&lt;35 (2-flag)</div>
+        <div class="bgs"><div class="bg"><span class="bg-l">BC</span><span class="bg-v g">53.8%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">13</span></div></div>
+      </div><div class="cc-b">
+        <div class="why">7/13 both-correct. Heavy favorite in a genuinely suppressed-volatility matchup — the cleanest 2-flag BC signal.</div>
+        <div class="act act-g">BET BOTH: ML $75 + O/U direction $75.</div>
+      </div></div>
+      <div class="cc"><div class="cc-h">
+        <div class="rk" style="background:#0E6655;color:#fff">7</div>
+        <div class="cc-n g">Golden Condition + Conf 50–55 <span class="cnew">n=83★ largest</span></div>
+        <div class="bgs"><div class="bg"><span class="bg-l">BC</span><span class="bg-v g">41.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">83</span></div></div>
+      </div><div class="cc-b">
+        <div class="why">34/83 both-correct — <b>the largest sample of any BC combo</b>, and still well above the 26.5% baseline. Highest-confidence recurring dual play by volume.</div>
+        <div class="act act-g">BET BOTH: ML $75 + O/U direction $75 (n=83 — most trustworthy by sample).</div>
+      </div></div>
+      <div class="notice" style="margin-top:4px"><div class="notice-b"><b style="color:var(--color-text-primary)">The dominant pattern:</b> WPA + UNDER appears in nearly every top BC combo, and two of them (BC2, BC4) have <b>zero recorded both-wrong games</b> across n=19–21 each. This is the single most trustworthy dual-stake signal in the framework — when a surging ace points toward UNDER, both markets have historically aligned without exception.</div></div>
+      </div>
+
+      <!-- ══ BOTH-WRONG COMBOS (NEW) ══ -->
+      <div class="panel" id="bw">
+      <div class="sh">Top Both-Wrong (BW) combos — 1239 games, min n=12 · baseline BW rate is 24.7% — treat these as PASS-both-markets signals, not fades</div>
+      <div class="alarm">
+        <div class="alarm-t">These are double-skip signals, not double-reverse signals</div>
+        <div class="alarm-b">BW = ML AND O/U both wrong on the same game. The failure direction isn't clean enough to confidently bet the opposite side on both markets simultaneously — the correct action when a BW code fires is to <b>PASS both markets entirely</b>, not to fade either one.</div>
+      </div>
+      <div class="cc"><div class="cc-h">
+        <div class="rk" style="background:#e24b4a">1</div>
+        <div class="cc-n r">Surging Away SP + Golden Condition</div>
+        <div class="bgs"><div class="bg" style="background:rgba(226,75,74,.15)"><span class="bg-l">BW</span><span class="bg-v r">60.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">15</span></div></div>
+      </div><div class="cc-b">
+        <div class="flags"><span class="flag flag-r">surge_a</span><span class="flag flag-r">golden_cond</span></div>
+        <div class="why">9/15 both-wrong — the single worst combo in the dataset. Golden Condition is normally a strong O/U signal, but when it's driven by a surging away arm, both the ML pick AND the O/U call fail together at more than double the baseline rate.</div>
+        <div class="act act-r"><b>PASS BOTH MARKETS.</b> Do not bet ML or O/U when this combo fires.</div>
+      </div></div>
+      <div class="cc"><div class="cc-h">
+        <div class="rk" style="background:#e24b4a">2</div>
+        <div class="cc-n r">OVER + Line 8–9 + Surging Away SP <span class="cnew">NEW</span></div>
+        <div class="bgs"><div class="bg" style="background:rgba(226,75,74,.15)"><span class="bg-l">BW</span><span class="bg-v r">61.5%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">13</span></div></div>
+      </div><div class="cc-b">
+        <div class="flags"><span class="flag flag-r">over</span><span class="flag flag-r">line_8-9</span><span class="flag flag-r">surge_a</span></div>
+        <div class="why">8/13 both-wrong — the highest BW rate of any 3-flag combo. The model calls OVER on a surging-away-arm game at the standard line and both markets collapse together.</div>
+        <div class="act act-r"><b>PASS BOTH MARKETS.</b> Worst 3-flag combo found — automatic double-skip.</div>
+      </div></div>
+      <div class="cc"><div class="cc-h">
+        <div class="rk" style="background:#e24b4a">3</div>
+        <div class="cc-n r">HFCF + WP-Override A + OVER <span class="cnew">NEW</span></div>
+        <div class="bgs"><div class="bg" style="background:rgba(226,75,74,.15)"><span class="bg-l">BW</span><span class="bg-v r">57.1%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">14</span></div></div>
+      </div><div class="cc-b">
+        <div class="flags"><span class="flag flag-r">HFCF</span><span class="flag flag-r">WPA</span><span class="flag flag-r">over</span></div>
+        <div class="why">8/14 both-wrong. Notable because HFCF and WPA are individually two of the framework's strongest ML signals — but paired with an OVER call, both markets fail together more than half the time.</div>
+        <div class="act act-r"><b>PASS BOTH MARKETS,</b> or at minimum drop to O/U-only skip — this specific OVER pairing poisons an otherwise-strong ML combo.</div>
+      </div></div>
+      <div class="cc"><div class="cc-h">
+        <div class="rk" style="background:#e24b4a">4</div>
+        <div class="cc-n r">WP gap≥20% + TMS home higher + Away surge RED <span class="cnew">NEW</span></div>
+        <div class="bgs"><div class="bg" style="background:rgba(226,75,74,.15)"><span class="bg-l">BW</span><span class="bg-v r">53.8%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">13</span></div></div>
+      </div><div class="cc-b">
+        <div class="flags"><span class="flag flag-r">wp_hi</span><span class="flag flag-r">tms_h</span><span class="flag flag-r">away_sg</span></div>
+        <div class="why">7/13 both-wrong. A large WP gap and home momentum both get overridden by the away pitcher's genuine surge — the model over-trusts the favorite signals here.</div>
+        <div class="act act-r"><b>PASS BOTH MARKETS.</b></div>
+      </div></div>
+      <div class="cc"><div class="cc-h">
+        <div class="rk" style="background:#e24b4a">5</div>
+        <div class="cc-n r">HFCF + WP-Override A + Away surge RED</div>
+        <div class="bgs"><div class="bg" style="background:rgba(226,75,74,.15)"><span class="bg-l">BW</span><span class="bg-v r">50.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">12</span></div></div>
+      </div><div class="cc-b">
+        <div class="flags"><span class="flag flag-r">HFCF</span><span class="flag flag-r">WPA</span><span class="flag flag-r">away_sg</span></div>
+        <div class="why">6/12 both-wrong — the same HFCF+WPA pairing from #3, but this time poisoned by away_sg instead of OVER. Confirms HFCF+WPA is a strong combo that still needs a "no away_sg / no OVER" guard clause to avoid its failure mode.</div>
+        <div class="act act-r"><b>PASS BOTH MARKETS</b> when away_sg is also present, even if HFCF+WPA alone looks strong.</div>
+      </div></div>
+      <div class="cc"><div class="cc-h">
+        <div class="rk" style="background:#e24b4a">6</div>
+        <div class="cc-n r">Home Fortress + Away surge RED + MCF</div>
+        <div class="bgs"><div class="bg" style="background:rgba(226,75,74,.15)"><span class="bg-l">BW</span><span class="bg-v r">50.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">12</span></div></div>
+      </div><div class="cc-b">
+        <div class="flags"><span class="flag flag-r">home_fortress</span><span class="flag flag-r">away_sg</span><span class="flag flag-r">mcf</span></div>
+        <div class="why">6/12 both-wrong. The three-way collision of "home is proven strong," "away pitcher is hot," and "the market disagrees" produces the worst possible outcome combination.</div>
+        <div class="act act-r"><b>PASS BOTH MARKETS.</b></div>
+      </div></div>
+      <div class="cc"><div class="cc-h">
+        <div class="rk" style="background:#e24b4a">7</div>
+        <div class="cc-n r">OU-A + OU-B + Surging Away SP <span class="cnew">n=20★ largest</span></div>
+        <div class="bgs"><div class="bg" style="background:rgba(226,75,74,.15)"><span class="bg-l">BW</span><span class="bg-v r">50.0%</span></div><div class="bg"><span class="bg-l">n</span><span class="bg-v">20</span></div></div>
+      </div><div class="cc-b">
+        <div class="flags"><span class="flag flag-r">OU-A</span><span class="flag flag-r">OU-B</span><span class="flag flag-r">surge_a</span></div>
+        <div class="why">10/20 both-wrong — <b>the largest-sample BW combo found</b>, making it the most statistically trustworthy double-skip signal. Both O/U triggers firing off the same surging-away-arm read produces a coin-flip-or-worse outcome on both markets.</div>
+        <div class="act act-r"><b>PASS BOTH MARKETS.</b> Largest sample — highest-confidence double-skip in the dataset.</div>
+      </div></div>
+      <div class="notice" style="margin-top:4px;border-color:rgba(226,75,74,.3);background:rgba(226,75,74,.06)"><div class="notice-b"><b style="color:var(--color-text-primary)">The dominant BW pattern:</b> <b>surge_a / away_sg (surging away starter)</b> appears in 6 of the 7 top both-wrong combos — confirming, from an entirely different angle than the reverse-signal analysis, that this is the framework's single most damaging recurring blind spot. Critically, unlike the single-market reverse signals, these joint failures are NOT clean enough to bet the opposite side confidently on both markets — the correct action is a double-PASS, not a double-reverse.</div></div>
+      </div>
+
+      <!-- ══ SINGLE-FLAG BC/BW (NEW) ══ -->
+      <div class="panel" id="bcbwflag">
+      <div class="sh">Single-flag BC/BW rates — 1239 games, min n=15 · baseline: BC=26.5%, BW=24.7%</div>
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-secondary);margin:10px 0 6px">Top single flags by BC% (both-correct)</div>
+      <table class="ptbl">
+      <thead><tr><th>Flag</th><th>BC%</th><th>BW%</th><th>n</th></tr></thead>
+      <tbody>
+      <tr class="hi"><td>Conf 50–55</td><td class="gn" style="color:#3fb950;font-weight:700">33.3%</td><td>21.1%</td><td>318</td></tr>
+      <tr class="hi"><td>HFCF</td><td class="gn" style="color:#3fb950;font-weight:700">32.5%</td><td>25.0%</td><td>120</td></tr>
+      <tr class="hi"><td>WP-Override A</td><td class="gn" style="color:#3fb950;font-weight:700">31.3%</td><td>19.4%</td><td>67</td></tr>
+      <tr class="hi"><td>GVI&lt;35</td><td class="gn" style="color:#3fb950;font-weight:700">30.9%</td><td>18.1%</td><td>94</td></tr>
+      <tr><td>Golden Condition</td><td>29.9%</td><td>23.1%</td><td>221</td></tr>
+      <tr><td>UNDER pred</td><td>29.9%</td><td>19.0%</td><td>364</td></tr>
+      <tr><td>TMF active</td><td>29.6%</td><td>24.8%</td><td>230</td></tr>
+      <tr><td>RED mismatch</td><td>28.7%</td><td>24.7%</td><td>551</td></tr>
+      </tbody>
+      </table>
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-secondary);margin:14px 0 6px">Top single flags by BW% (both-wrong)</div>
+      <table class="ptbl">
+      <thead><tr><th>Flag</th><th>BW%</th><th>BC%</th><th>n</th></tr></thead>
+      <tbody>
+      <tr class="lo"><td>Surging Away SP</td><td class="rd" style="color:#e24b4a;font-weight:700">28.9%</td><td>20.5%</td><td>83</td></tr>
+      <tr class="lo"><td>Slumping SP (home)</td><td class="rd" style="color:#e24b4a;font-weight:700">28.6%</td><td>27.1%</td><td>133</td></tr>
+      <tr class="lo"><td>Away surge RED</td><td class="rd" style="color:#e24b4a;font-weight:700">27.3%</td><td>22.4%</td><td>183</td></tr>
+      <tr><td>WP gap&lt;10%</td><td>27.0%</td><td>22.9%</td><td>497</td></tr>
+      <tr><td>MCF</td><td>26.7%</td><td>26.5%</td><td>415</td></tr>
+      <tr><td>Away pred</td><td>26.2%</td><td>25.8%</td><td>652</td></tr>
+      <tr><td>TMS away higher</td><td>25.6%</td><td>25.4%</td><td>540</td></tr>
+      <tr><td>Dome</td><td>25.6%</td><td>25.0%</td><td>324</td></tr>
+      </tbody>
+      </table>
+      <div class="notice" style="margin-top:8px"><div class="notice-b"><b style="color:var(--color-text-primary)">Conf 50–55 is the single best BC-driving flag standalone</b> — 33.3% BC on the largest sample (n=318), confirming it as the framework's most important confidence gate across both markets simultaneously, not just individually. <b>Surging Away SP is the single worst BW-driving flag</b> — 28.9% BW on n=83, consistent with every other angle of analysis pointing at it as the framework's core weakness.</div></div>
+      </div>
+
+      <!-- ══ TEAM 2-FLAG COMBOS ══ -->
+      <div class="panel" id="p8">
+      <div class="sh">Most highly-correlated team-specific 2-flag combos — 1229 games, min n=8 per combo</div>
+      <p style="font-size:10px;color:var(--color-text-secondary);margin-bottom:10px;line-height:1.6">Each team's single strongest 2-flag pairing by ML win rate — higher precision than the single-flag table. <b style="color:var(--color-text-primary)">team_combo_signals[]</b> in the prediction output uses these pairs. Four teams now hold perfect or near-perfect ML records (ATH 100%/n=8, KC 100%/n=8, MIA 100%/n=9, TB 100%/n=11).</p>
+
+      <div class="tc"><div class="tc-h"><div class="tc-rank" style="background:linear-gradient(135deg,#FFD700,#FFA500);color:#000">1</div><div class="tc-name">Athletics (ATH) <span class="cnew">NEW</span></div><div class="tc-ov">overall 50.0% · n=60+</div></div>
+      <div class="tc-b"><div class="tc-combo"><div class="tc-tag">gvi65 + c50</div><div class="tc-stat">ML <b>100%</b> (n=8) · OU 75.0% (n=8)</div></div>
+      <div class="why">8/8 ML AND 75% OU — strongest dual-market for any team at this sample. Elevated scoring game + calibrated confidence unlocks ATH.</div></div></div>
+
+      <div class="tc"><div class="tc-h"><div class="tc-rank" style="background:linear-gradient(135deg,#C0C0C0,#888)">2</div><div class="tc-name">Kansas City Royals <span class="cnew">CHANGED</span></div><div class="tc-ov">overall 64.6% · n=64</div></div>
+      <div class="tc-b"><div class="tc-combo"><div class="tc-tag">ob_fired + under</div><div class="tc-stat">ML <b>100%</b> (n=8) · OU 71.4% (n=7)</div></div>
+      <div class="why">8/8 ML. OU-B environmental signal + UNDER direction. CHANGED from red_mm+wp_lo. Both markets viable.</div></div></div>
+
+      <div class="tc"><div class="tc-h"><div class="tc-rank" style="background:linear-gradient(135deg,#CD7F32,#A0522D);color:#fff">3</div><div class="tc-name">Miami Marlins</div><div class="tc-ov">overall 66.2% · n=68 (highest overall ML team)</div></div>
+      <div class="tc-b"><div class="tc-combo"><div class="tc-tag">tms_h + under</div><div class="tc-stat">ML <b>100%</b> (n=9) · OU 22.2% (n=9)</div></div>
+      <div class="why">9/9 ML. Home momentum + UNDER. Marlins remain highest overall ML team (66.2%). Pure ML — skip O/U.</div></div></div>
+
+      <div class="tc"><div class="tc-h"><div class="tc-rank" style="background:#378ADD">4</div><div class="tc-name">New York Mets</div><div class="tc-ov">overall 60.3% · n=67</div></div>
+      <div class="tc-b"><div class="tc-combo"><div class="tc-tag">home_p + under</div><div class="tc-stat">ML <b>91.7%</b> (n=12) · OU 36.4% (n=11)</div></div>
+      <div class="why">11/12 ML — n=12, most reliable sample among 90%+ team combos. Pure ML play.</div></div></div>
+
+      <div class="tc"><div class="tc-h"><div class="tc-rank" style="background:#7D3C98;color:#fff">5</div><div class="tc-name">St. Louis Cardinals <span class="cnew">CHANGED</span></div><div class="tc-ov">overall 53.3% · n=71</div></div>
+      <div class="tc-b"><div class="tc-combo"><div class="tc-tag">rcf + c50</div><div class="tc-stat">ML <b>90.0%</b> (n=10) · OU 55.6% (n=9)</div></div>
+      <div class="why">9/10 ML AND 55.6% OU. CHANGED from oua+home_ft. xFIP correction + calibrated confidence. Both markets viable.</div></div></div>
+
+      <div class="tc"><div class="tc-h"><div class="tc-rank" style="background:#145A32;color:#fff">6</div><div class="tc-name">Chicago White Sox</div><div class="tc-ov">overall 54.5% · n=64</div></div>
+      <div class="tc-b"><div class="tc-combo"><div class="tc-tag">oua + under</div><div class="tc-stat">ML <b>90.9%</b> (n=11) · OU 40.0% (n=10)</div></div>
+      <div class="why">10/11 ML. Pitcher mismatch + UNDER. Pure ML play.</div></div></div>
+
+      <div class="tc"><div class="tc-h"><div class="tc-rank" style="background:#922B21;color:#fff">7</div><div class="tc-name">Milwaukee Brewers</div><div class="tc-ov">overall 60.3% · n=69</div></div>
+      <div class="tc-b"><div class="tc-combo"><div class="tc-tag">oua + gvi65</div><div class="tc-stat">ML <b>90.9%</b> (n=11) · OU 45.5% (n=11)</div></div>
+      <div class="why">10/11 ML. Pitcher mismatch in an elevated-scoring game. Pure ML.</div></div></div>
+
+      <div class="tc"><div class="tc-h"><div class="tc-rank" style="background:#0E6655;color:#fff">8</div><div class="tc-name">New York Yankees</div><div class="tc-ov">overall 58.0% · n=70</div></div>
+      <div class="tc-b"><div class="tc-combo"><div class="tc-tag">red_mm + under</div><div class="tc-stat">ML <b>90.9%</b> (n=11) · OU 63.6% (n=11)</div></div>
+      <div class="why">10/11 ML AND 7/11 OU — <b>best dual-market team combo</b>. SP gap + UNDER works on both markets for the Yankees.</div></div></div>
+
+      <div class="tc"><div class="tc-h"><div class="tc-rank" style="background:#1A5276;color:#fff">9</div><div class="tc-name">Tampa Bay Rays</div><div class="tc-ov">overall 56.3% · n=70</div></div>
+      <div class="tc-b"><div class="tc-combo"><div class="tc-tag">rcf + home_ft</div><div class="tc-stat">ML <b>90.9%</b> (n=11) · OU 50.0% (n=10)</div></div>
+      <div class="why">10/11 ML. xFIP-corrected pitcher + home fortress. Updated to n=11 at 1229g.</div></div></div>
+
+      <div class="tc"><div class="tc-h"><div class="tc-rank" style="background:#4A235A;color:#fff">10</div><div class="tc-name">Los Angeles Angels</div><div class="tc-ov">overall 48.6% · n=69</div></div>
+      <div class="tc-b"><div class="tc-combo"><div class="tc-tag">home_p + under</div><div class="tc-stat">ML <b>88.9%</b> (n=9) · OU 50.0% (n=8)</div></div>
+      <div class="why">8/9 ML. <b>Critical:</b> the Angels remain the framework's worst overall team (48.6%). This home_p+under combo is the ONLY reliable way to back them — avoid every other Angels ML situation.</div></div></div>
+
+      <div class="notice" style="margin-top:4px"><div class="notice-b"><b style="color:var(--color-text-primary)">Four perfect/near-perfect ML records (1229g):</b> Athletics <b>gvi65+c50 (100%/n=8, new)</b>, Royals <b>ob_fired+under (100%/n=8, changed)</b>, Marlins <b>tms_h+under (100%/n=9)</b>, Rays <b>rcf+home_ft (90.9%/n=11, updated)</b>. Yankees <b>red_mm+under (90.9%/63.6%)</b> is the best dual-market team combo. STL changed to rcf+c50 (90%/55.6%). <b>Angels caution holds:</b> home_p+under is still the single spot to back them.</div></div>
+      </div>
+
+      <!-- ══ TOP 10 TEAMS (single-flag, 931g baseline) ══ -->
       <div class="panel" id="p6">
-      <div class="sh">Top 10 teams by strongest single-flag ML correlation — 931 games, min n=8</div>
-      <p style="font-size:10px;color:var(--color-text-secondary);margin-bottom:10px;line-height:1.6">These are the teams where a specific flag combination produces the most reliable edge. <b style="color:var(--color-text-primary)">team_signals[]</b> in the prediction output uses these same flags.</p>
+      <div class="sh">Top 10 teams by strongest single-flag ML correlation — 931-game baseline, min n=8</div>
+      <p style="font-size:10px;color:var(--color-text-secondary);margin-bottom:10px;line-height:1.6">These are the teams where a specific single flag produces the most reliable edge. <b style="color:var(--color-text-primary)">team_signals[]</b> in the prediction output uses these flags. See the "Team 2-flag combos" tab for the newer, higher-precision 1108-game companion data.</p>
 
       <div class="tcard"><div class="tcard-h"><div class="trank" style="background:linear-gradient(135deg,#FFD700,#FFA500);color:#000">1</div><div class="tname">Texas Rangers</div><div class="tn">overall ML 59.0% · n=61</div></div>
       <div class="tcard-b"><div class="tflag-row"><div class="tflag-tag">golden</div><div class="tstat">Golden Condition → ML <b>91.7%</b> (n=12) · OU 66.7% (n=12)</div></div></div></div>
@@ -469,9 +897,9 @@
       <div class="notice" style="margin-top:4px"><div class="notice-b"><b style="color:var(--color-text-primary)">Pattern note:</b> Mets, Athletics, Tigers and Toronto share <b>Conf 50–55</b> or <b>GVI&lt;35</b> as their strongest signal — confirming these calibrated-confidence and suppressed-scoring zones are broadly reliable across many franchises, not team-specific noise. Kansas City Royals' UNDER signal remains the strongest dual-market team correlation (86.7% ML AND 75.0% OU simultaneously).</div></div>
       </div>
 
-      <!-- ══ ALL 30 TEAMS ══ -->
+      <!-- ══ ALL 30 TEAMS (single-flag, 931g baseline) ══ -->
       <div class="panel" id="p7">
-      <div class="sh">All 30 teams — most associated winning flag, ranked by ML% · min n=8 per flag</div>
+      <div class="sh">All 30 teams — most associated winning flag, ranked by ML% · 931-game baseline, min n=8 per flag</div>
       <table class="attbl">
       <thead><tr><th>Team</th><th>n</th><th>Overall ML%</th><th>Best Flag</th><th>Flag ML%</th><th>n</th><th>Flag OU%</th></tr></thead>
       <tbody>
